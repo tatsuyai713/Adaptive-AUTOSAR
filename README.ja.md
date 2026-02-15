@@ -173,6 +173,7 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
   - `autosar_user_com_zerocopy_sub_template`
   - `autosar_user_com_dds_pub_template`
   - `autosar_user_com_dds_sub_template`
+  - `autosar_user_com_doip_diag_tester`
 - Feature:
   - `autosar_user_tpl_runtime_lifecycle`
   - `autosar_user_tpl_can_socketcan_receiver`
@@ -184,6 +185,7 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 - `user_apps/tutorials/README.ja.md`
 - `deployment/rpi_ecu/README.md`
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (Vector/ETAS/EB 向け資産の移植手順)
+- `user_apps/tutorials/11_doip_diag_tester.ja.md` (Ubuntu 側 DoIP/DIAG テスター手順)
 
 ## ARXML / コード生成
 ### YAML -> ARXML

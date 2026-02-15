@@ -78,6 +78,15 @@ namespace ara
 
                 return _result;
             }
+            else if (logMode == LogMode::kRemote)
+            {
+                sink::LogSink *_logSink =
+                    new sink::NetworkLogSink(appId, appDescription);
+                LoggingFramework *_result =
+                    new LoggingFramework(_logSink, logLevel);
+
+                return _result;
+            }
             else
             {
                 throw std::invalid_argument(

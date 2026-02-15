@@ -66,6 +66,7 @@ cmake --build build-user-apps-feature-only -j"$(nproc)"
 - `autosar_user_com_zerocopy_sub_template`
 - `autosar_user_com_dds_pub_template`
 - `autosar_user_com_dds_sub_template`
+- `autosar_user_com_doip_diag_tester`
 
 ### Feature apps (`user_apps/src/apps/feature/`)
 - `autosar_user_tpl_runtime_lifecycle`
@@ -100,6 +101,7 @@ All tutorials are under `user_apps/tutorials/`.
 - Full ECU flow: `user_apps/tutorials/08_ecu_full_stack.ja.md`
 - Raspberry Pi ECU deployment: `user_apps/tutorials/09_rpi_ecu_deployment.ja.md`
 - Porting from Vector/ETAS/EB assets: `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`
+- Ubuntu DoIP/DIAG tester for Raspberry Pi ECU: `user_apps/tutorials/11_doip_diag_tester.ja.md`
 
 ## Quick Start: Add Your Own App
 

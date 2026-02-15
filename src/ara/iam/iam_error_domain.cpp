@@ -27,6 +27,8 @@ namespace ara
                 return "Invalid IAM argument.";
             case IamErrc::kPolicyStoreError:
                 return "IAM policy store failure.";
+            case IamErrc::kPolicyFileParseError:
+                return "Policy file format is invalid.";
             default:
                 return "Unknown IAM error.";
             }

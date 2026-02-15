@@ -174,6 +174,7 @@ Status meanings:
   - `autosar_user_com_zerocopy_sub_template`
   - `autosar_user_com_dds_pub_template`
   - `autosar_user_com_dds_sub_template`
+  - `autosar_user_com_doip_diag_tester`
 - Feature:
   - `autosar_user_tpl_runtime_lifecycle`
   - `autosar_user_tpl_can_socketcan_receiver`
@@ -185,6 +186,7 @@ See also:
 - `user_apps/tutorials/README.ja.md`
 - `deployment/rpi_ecu/README.md`
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (porting Vector/ETAS/EB-oriented app assets)
+- `user_apps/tutorials/11_doip_diag_tester.ja.md` (Ubuntu-side DoIP/DIAG tester for Raspberry Pi ECU)
 
 ## ARXML and Code Generation
 ### YAML -> ARXML

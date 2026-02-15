@@ -33,3 +33,5 @@
    `09_rpi_ecu_deployment.ja.md`
 10. Vector/ETAS/EB 資産の移植  
    `10_vendor_autosar_asset_porting.ja.md`
+11. Ubuntu 側 DoIP/DIAG テスター  
+   `11_doip_diag_tester.ja.md`

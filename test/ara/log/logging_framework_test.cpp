@@ -38,5 +38,30 @@ namespace ara
 
             delete _loggingFramework;
         }
+
+        TEST(LoggingFrameworkTest, RemoteModeCreation)
+        {
+            const std::string cAppId{"APP02"};
+            const LogMode cLogMode{LogMode::kRemote};
+
+            LoggingFramework *_loggingFramework = nullptr;
+            ASSERT_NO_THROW(
+                _loggingFramework = LoggingFramework::Create(cAppId, cLogMode));
+            ASSERT_NE(_loggingFramework, nullptr);
+
+            const std::string cCtxId{"CTX02"};
+            const std::string cCtxDescription{"Remote Test Context"};
+            Logger _logger =
+                _loggingFramework->CreateLogger(cCtxId, cCtxDescription);
+
+            LogStream _logStream;
+            _logStream << "Network sink test message";
+
+            ASSERT_NO_THROW(
+                _loggingFramework->Log(
+                    _logger, LogLevel::kWarn, _logStream));
+
+            delete _loggingFramework;
+        }
     }
 }

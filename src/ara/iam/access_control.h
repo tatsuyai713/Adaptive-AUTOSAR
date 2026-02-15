@@ -6,6 +6,7 @@
 #define ACCESS_CONTROL_H
 
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -55,8 +56,15 @@ namespace ara
                 std::size_t operator()(const PolicyKey &key) const noexcept;
             };
 
+            using AuditCallback = std::function<void(
+                const std::string &subject,
+                const std::string &resource,
+                const std::string &action,
+                bool allowed)>;
+
             mutable std::mutex mMutex;
             std::unordered_map<PolicyKey, PermissionDecision, PolicyKeyHash> mPolicies;
+            AuditCallback mAuditCallback;
 
         public:
             /// @brief Register or overwrite one policy entry.
@@ -76,6 +84,20 @@ namespace ara
 
             /// @brief Remove all configured policies.
             void ClearPolicies();
+
+            /// @brief Save all policies to a text file.
+            /// @param filePath Path to the output file.
+            /// @returns Void result, or IAM domain error on I/O failure.
+            core::Result<void> SaveToFile(const std::string &filePath) const;
+
+            /// @brief Load policies from a text file (appends to existing).
+            /// @param filePath Path to the input file.
+            /// @returns Void result, or IAM domain error on I/O or parse failure.
+            core::Result<void> LoadFromFile(const std::string &filePath);
+
+            /// @brief Set an audit callback invoked on every IsAllowed evaluation.
+            /// @param callback Callback receiving (subject, resource, action, allowed).
+            void SetAuditCallback(AuditCallback callback);
         };
     }
 }

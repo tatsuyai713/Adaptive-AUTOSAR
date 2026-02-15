@@ -16,7 +16,8 @@ namespace ara
         enum class IamErrc : ara::core::ErrorDomain::CodeType
         {
             kInvalidArgument = 1,
-            kPolicyStoreError = 2
+            kPolicyStoreError = 2,
+            kPolicyFileParseError = 3   ///< Policy file format is invalid
         };
 
         /// @brief Error domain for ara::iam subset implementation.

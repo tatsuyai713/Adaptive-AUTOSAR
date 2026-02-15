@@ -11,6 +11,7 @@
 #include "./sink/log_sink.h"
 #include "./sink/console_log_sink.h"
 #include "./sink/file_log_sink.h"
+#include "./sink/network_log_sink.h"
 
 namespace ara
 {

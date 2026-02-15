@@ -22,7 +22,9 @@ namespace ara
             kVerificationFailed = 5,
             kSessionCancelled = 6,
             kDowngradeNotAllowed = 7,
-            kClusterNotFound = 8
+            kClusterNotFound = 8,
+            kTransferError = 9,
+            kTransferSizeMismatch = 10
         };
 
         /// @brief Error domain for ara::ucm subset implementation.

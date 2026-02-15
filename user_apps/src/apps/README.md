@@ -12,6 +12,7 @@ This directory contains executable application entry points grouped by function.
   - `someip/`
   - `zerocopy/`
   - `dds/`
+  - `diag/`
 - `feature/`
   - `runtime/`: lifecycle-focused feature app
   - `can/`: SocketCAN receive/decode feature app

@@ -403,6 +403,8 @@ add_library(
   ${source_ara_log_sink_dir}/file_log_sink.cpp
   ${source_ara_log_sink_dir}/log_sink.h
   ${source_ara_log_sink_dir}/log_sink.cpp
+  ${source_ara_log_sink_dir}/network_log_sink.h
+  ${source_ara_log_sink_dir}/network_log_sink.cpp
 )
 
 add_library(
@@ -627,6 +629,10 @@ add_library(
   ${source_ara_phm_dir}/supervised_entity.cpp
   ${source_ara_phm_dir}/recovery_action.h
   ${source_ara_phm_dir}/recovery_action.cpp
+  ${source_ara_phm_dir}/restart_recovery_action.h
+  ${source_ara_phm_dir}/restart_recovery_action.cpp
+  ${source_ara_phm_dir}/recovery_action_dispatcher.h
+  ${source_ara_phm_dir}/recovery_action_dispatcher.cpp
   ${source_ara_phm_dir}/health_channel.h
   ${source_ara_phm_dir}/health_channel.cpp
   ${source_ara_phm_supervisors_dir}/elementary_supervision.h
@@ -1428,6 +1434,8 @@ if(build_tests)
     ${test_ara_phm_supervisors_dir}/deadline_supervision_test.cpp
     ${test_ara_phm_supervisors_dir}/global_supervision_test.cpp
     ${test_ara_phm_dir}/health_channel_test.cpp
+    ${test_ara_phm_dir}/restart_recovery_action_test.cpp
+    ${test_ara_phm_dir}/recovery_action_dispatcher_test.cpp
     ${test_ara_com_dir}/com_error_domain_test.cpp
     ${test_ara_com_dir}/types_test.cpp
     ${test_ara_com_dir}/sample_ptr_test.cpp

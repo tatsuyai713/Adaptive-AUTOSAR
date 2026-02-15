@@ -40,6 +40,10 @@ namespace ara
                 return "Software downgrade is not allowed.";
             case UcmErrc::kClusterNotFound:
                 return "Software cluster is not known.";
+            case UcmErrc::kTransferError:
+                return "Software package transfer failed.";
+            case UcmErrc::kTransferSizeMismatch:
+                return "Transferred data size does not match expected size.";
             default:
                 return "Unknown update and configuration management error.";
             }
