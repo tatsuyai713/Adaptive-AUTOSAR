@@ -136,13 +136,48 @@ jobs:
   docs:
     runs-on: ubuntu-22.04
     needs: full-feature-test
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     steps:
     - uses: actions/checkout@v4
 
-    - uses: langroodi/doxygenize@v1
+    - name: Install Doxygen
+      run: |
+        set -euxo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends doxygen graphviz
+
+    - name: Generate API documentation
+      run: |
+        set -euxo pipefail
+        python3 ./scripts/generate_simulation_flow_png.py
+        ./scripts/generate_doxygen_docs.sh
+        test -s docs/api/index.html
+        test -s docs/index.html
+        test -s docs/simulation_flow_diagram.png
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
       with:
-        doxygenconf: './doc/doxygen.conf'
-        htmloutput: './doc/html/'
-        darkmode: true
-        customheader: 'https://raw.githubusercontent.com/langroodi/doxygenize/master/header/woman_life_freedom.html'
+        name: doxygen-html
+        path: docs
+        if-no-files-found: error
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs
+
+  deploy-pages:
+    runs-on: ubuntu-22.04
+    needs: docs
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

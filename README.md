@@ -215,8 +215,10 @@ Current CI verifies:
 4. ARXML generation and ARXML-based binding generation checks
 5. Split install workflow (`build_and_install_autosar_ap.sh`)
 6. External user app build and run against installed package (`build_user_apps_from_opt.sh --run`)
+7. Doxygen API documentation generation (`./scripts/generate_doxygen_docs.sh`) and artifact upload (`doxygen-html`)
 
 ## Documentation
-- Doxygen pages: https://langroodi.github.io/Adaptive-AUTOSAR/
+- GitHub Pages API docs: `https://tatsuyai713.github.io/Adaptive-AUTOSAR/`
+- Local/API docs generation: `./scripts/generate_doxygen_docs.sh` -> `docs/index.html` (`docs/api/index.html`)
 - Project Wiki: https://github.com/langroodi/Adaptive-AUTOSAR/wiki
 - Contributing guide: `CONTRIBUTING.md`

@@ -1,0 +1,91 @@
+<mxfile host="app.diagrams.net" modified="2026-02-15T22:00:00.000Z" agent="Codex" version="24.0.0" type="device">
+  <diagram id="rpi-ecu-flow" name="RPI-ECU-Flow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="can_input" value="CAN BUS&#xa;SOCKETCAN (can0/vcan0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="30" y="360" width="220" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="someip_peer" value="SOME/IP PEER ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="260" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dds_peer" value="DDS PEER ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="500" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rpi_boundary" value="RASPBERRY PI LINUX ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#333333;strokeWidth=2;dashed=1;fontStyle=1;align=center;verticalLabelPosition=top;verticalAlign=bottom;" vertex="1" parent="1">
+          <mxGeometry x="300" y="110" width="970" height="650" as="geometry" />
+        </mxCell>
+
+        <mxCell id="systemd" value="SYSTEMD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="350" y="160" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="roudi_service" value="AUTOSAR-IOX-ROUDI.SERVICE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="590" y="150" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="exec_service" value="AUTOSAR-EXEC-MANAGER.SERVICE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="920" y="150" width="320" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bringup" value="/ETC/AUTOSAR/BRINGUP.SH" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="860" y="280" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user_apps" value="USER APPS&#xa;(ARA::COM ONLY API)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#4a86e8;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="390" width="300" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="runtime" value="AUTOSAR AP RUNTIME LIBRARIES&#xa;ara::core / ara::com / ara::exec / ara::diag / ..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#6c757d;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="430" y="560" width="740" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="backends" value="TRANSPORT BACKENDS: vSomeIP + CycloneDDS + iceoryx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="510" y="670" width="580" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_can_to_apps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="can_input" target="user_apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_someip_to_apps" value="SOME/IP INPUT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="someip_peer" target="user_apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_apps_to_dds" value="DDS PUBLISH" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="user_apps" target="dds_peer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_systemd_to_roudi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="systemd" target="roudi_service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_systemd_to_exec" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="systemd" target="exec_service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_exec_to_bringup" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="exec_service" target="bringup">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_bringup_to_apps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="bringup" target="user_apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_runtime_to_apps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="runtime" target="user_apps">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge_backends_to_runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="backends" target="runtime">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -214,8 +214,10 @@ python3 tools/arxml_generator/generate_ara_com_binding.py \
 4. ARXML 生成および ARXML ベースの binding 生成チェック
 5. 分離インストールフロー (`build_and_install_autosar_ap.sh`)
 6. インストール済みパッケージに対する外部 user_apps ビルド/実行 (`build_user_apps_from_opt.sh --run`)
+7. Doxygen API ドキュメント生成 (`./scripts/generate_doxygen_docs.sh`) と artifact (`doxygen-html`) 保存
 
 ## ドキュメント
-- Doxygen: https://langroodi.github.io/Adaptive-AUTOSAR/
+- GitHub Pages API ドキュメント: `https://tatsuyai713.github.io/Adaptive-AUTOSAR/`
+- ローカル/API ドキュメント生成: `./scripts/generate_doxygen_docs.sh` -> `docs/index.html` (`docs/api/index.html`)
 - Wiki: https://github.com/langroodi/Adaptive-AUTOSAR/wiki
 - コントリビューション: `CONTRIBUTING.md`
