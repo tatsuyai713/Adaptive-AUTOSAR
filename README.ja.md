@@ -30,9 +30,13 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 `https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
 
 ```bash
-sudo ./scripts/install_dependemcy.sh
+sudo ./scripts/install_dependency.sh
 sudo ./scripts/install_middleware_stack.sh
 ```
+
+互換エイリアスとして次も利用できます:
+- `./scripts/install_dependemcy.sh`
+- `./scripts/install_dependencies.sh`
 
 1 コマンドでまとめて導入する場合:
 
@@ -63,6 +67,10 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
   --install-middleware \
   --install-base-deps
 ```
+
+`build_and_install_autosar_ap.sh` は既定でプラットフォーム実行バイナリ
+(`adaptive_autosar`) もビルドします。ライブラリのみを意図する場合のみ
+`--without-platform-app` を使ってください。
 
 ### 2) インストール済みランタイムのみ参照して user_apps をビルド
 
@@ -111,7 +119,8 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
-  --can-backend mock
+  --can-backend mock \
+  --require-platform-binary
 ```
 
 詳細ランブック:

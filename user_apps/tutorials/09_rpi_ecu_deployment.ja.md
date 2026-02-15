@@ -73,7 +73,8 @@ mock CAN で統合チェック:
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
-  --can-backend mock
+  --can-backend mock \
+  --require-platform-binary
 ```
 
 socketcan で統合チェック:
@@ -83,7 +84,8 @@ socketcan で統合チェック:
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
   --can-backend socketcan \
-  --can-if can0
+  --can-if can0 \
+  --require-platform-binary
 ```
 
 ## 6) 何を確認しているか

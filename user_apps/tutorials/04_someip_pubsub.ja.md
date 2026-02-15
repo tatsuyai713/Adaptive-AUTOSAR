@@ -16,8 +16,9 @@
 ## 実行前準備
 
 ```bash
-export VSOMEIP_CONFIGURATION=./configuration/vsomeip-pubsub-sample.json
-export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/vsomeip/lib:$LD_LIBRARY_PATH
+export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
+export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/vsomeip/lib:${LD_LIBRARY_PATH:-}
 ```
 
 ## 実行
@@ -25,13 +26,13 @@ export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/vsomeip/lib:$LD_LIBRARY_PATH
 端末1:
 
 ```bash
-./build-user-apps-opt/autosar_user_com_someip_provider_template
+./build-user-apps-opt/src/apps/communication/someip/autosar_user_com_someip_provider_template
 ```
 
 端末2:
 
 ```bash
-./build-user-apps-opt/autosar_user_com_someip_consumer_template
+./build-user-apps-opt/src/apps/communication/someip/autosar_user_com_someip_consumer_template
 ```
 
 ## 変更ポイント

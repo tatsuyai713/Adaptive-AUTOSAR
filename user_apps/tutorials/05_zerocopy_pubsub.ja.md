@@ -16,7 +16,8 @@
 ## 実行前準備
 
 ```bash
-export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/iceoryx/lib:$LD_LIBRARY_PATH
+export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/iceoryx/lib:${LD_LIBRARY_PATH:-}
 ```
 
 必要に応じて RouDi を起動してください。
@@ -26,13 +27,13 @@ export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/iceoryx/lib:$LD_LIBRARY_PATH
 端末1:
 
 ```bash
-./build-user-apps-opt/autosar_user_com_zerocopy_pub_template
+./build-user-apps-opt/src/apps/communication/zerocopy/autosar_user_com_zerocopy_pub_template
 ```
 
 端末2:
 
 ```bash
-./build-user-apps-opt/autosar_user_com_zerocopy_sub_template
+./build-user-apps-opt/src/apps/communication/zerocopy/autosar_user_com_zerocopy_sub_template
 ```
 
 ## 変更ポイント

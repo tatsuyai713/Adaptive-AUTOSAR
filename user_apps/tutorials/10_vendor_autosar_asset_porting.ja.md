@@ -137,7 +137,8 @@ export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
-  --can-backend mock
+  --can-backend mock \
+  --require-platform-binary
 ```
 
 ### B. あなたの移植アプリで確認

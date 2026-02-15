@@ -15,7 +15,7 @@
 Mock バックエンド:
 
 ```bash
-./build-user-apps-opt/autosar_user_tpl_can_socketcan_receiver \
+./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver \
   --can-backend=mock \
   --recv-timeout-ms=20
 ```
@@ -23,7 +23,7 @@ Mock バックエンド:
 SocketCAN バックエンド:
 
 ```bash
-./build-user-apps-opt/autosar_user_tpl_can_socketcan_receiver \
+./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver \
   --can-backend=socketcan \
   --ifname=can0 \
   --powertrain-can-id=0x100 \

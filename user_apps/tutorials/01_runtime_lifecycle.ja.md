@@ -13,7 +13,7 @@
 ## 実行
 
 ```bash
-./build-user-apps-opt/autosar_user_tpl_runtime_lifecycle
+./build-user-apps-opt/src/apps/feature/runtime/autosar_user_tpl_runtime_lifecycle
 ```
 
 ## 変更ポイント

@@ -13,7 +13,7 @@
 ## 実行
 
 ```bash
-./build-user-apps-opt/autosar_user_per_phm_demo
+./build-user-apps-opt/src/apps/basic/autosar_user_per_phm_demo
 ```
 
 ## 変更ポイント

@@ -15,8 +15,9 @@
 ## 実行前準備
 
 ```bash
-export VSOMEIP_CONFIGURATION=./configuration/vsomeip-pubsub-sample.json
-export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib:$LD_LIBRARY_PATH
+export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
+export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib:${LD_LIBRARY_PATH:-}
 ```
 
 ## 実行
@@ -24,7 +25,7 @@ export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/vsomeip/lib:/opt/cyclonedds/lib:
 Mock CAN + SOME/IP 有効:
 
 ```bash
-./build-user-apps-opt/autosar_user_tpl_ecu_full_stack \
+./build-user-apps-opt/src/apps/feature/ecu/autosar_user_tpl_ecu_full_stack \
   --can-backend=mock \
   --enable-can=true \
   --enable-someip=true \
@@ -45,7 +46,7 @@ SOME/IP 入力のみを使う場合 (別ターミナルでソース起動):
 CAN のみ:
 
 ```bash
-./build-user-apps-opt/autosar_user_tpl_ecu_full_stack \
+./build-user-apps-opt/src/apps/feature/ecu/autosar_user_tpl_ecu_full_stack \
   --can-backend=socketcan \
   --ifname=can0 \
   --enable-someip=false

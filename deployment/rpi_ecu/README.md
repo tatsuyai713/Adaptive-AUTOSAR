@@ -138,7 +138,8 @@ This is the recommended way to run user-defined applications on Raspberry Pi.
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
-  --can-backend mock
+  --can-backend mock \
+  --require-platform-binary
 ```
 
 For real CAN input:
@@ -148,7 +149,8 @@ For real CAN input:
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
   --can-backend socketcan \
-  --can-if can0
+  --can-if can0 \
+  --require-platform-binary
 ```
 
 ## Operational Notes

@@ -9,7 +9,7 @@
 ./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
 ```
 
-ビルド後の実行ファイルは通常 `build-user-apps-opt/` 配下に生成されます。
+ビルド後の実行ファイルは通常 `build-user-apps-opt/src/apps/...` 配下に生成されます。
 
 ## 目次
 

@@ -30,9 +30,13 @@ These scripts are based on the installation flow used in:
 `https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
 
 ```bash
-sudo ./scripts/install_dependemcy.sh
+sudo ./scripts/install_dependency.sh
 sudo ./scripts/install_middleware_stack.sh
 ```
+
+Compatibility aliases are also available:
+- `./scripts/install_dependemcy.sh`
+- `./scripts/install_dependencies.sh`
 
 Or run everything from one command:
 
@@ -63,6 +67,10 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
   --install-middleware \
   --install-base-deps
 ```
+
+`build_and_install_autosar_ap.sh` builds the platform runtime binary
+(`adaptive_autosar`) by default. Use `--without-platform-app` only when you
+intentionally want a library-only install.
 
 ### 2) Build user apps against installed runtime only
 
@@ -112,7 +120,8 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
-  --can-backend mock
+  --can-backend mock \
+  --require-platform-binary
 ```
 
 Detailed runbook:

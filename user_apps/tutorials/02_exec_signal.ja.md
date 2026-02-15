@@ -13,7 +13,7 @@
 ## 実行
 
 ```bash
-./build-user-apps-opt/autosar_user_exec_signal_template
+./build-user-apps-opt/src/apps/basic/autosar_user_exec_signal_template
 ```
 
 `Ctrl+C` で停止させ、終了処理が実行されることを確認します。
