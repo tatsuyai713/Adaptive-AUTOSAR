@@ -13,9 +13,147 @@ set -euo pipefail
 #   VSOMEIP_CONFIGURATION (if available)
 
 declare -a app_pids=()
+declare -a app_names=()
+
+AUTOSAR_RUN_DIR="${AUTOSAR_RUN_DIR:-/run/autosar}"
+AUTOSAR_USER_APP_REGISTRY_FILE="${AUTOSAR_USER_APP_REGISTRY_FILE:-${AUTOSAR_RUN_DIR}/user_apps_registry.csv}"
+AUTOSAR_USER_APP_STATUS_DIR="${AUTOSAR_USER_APP_STATUS_DIR:-${AUTOSAR_RUN_DIR}/user_apps}"
+AUTOSAR_PHM_HEALTH_DIR="${AUTOSAR_PHM_HEALTH_DIR:-${AUTOSAR_RUN_DIR}/phm/health}"
+AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS="${AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS:-0}"
+AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT="${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT:-5}"
+AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS="${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS:-60000}"
+AUTOSAR_USER_APP_INSTANCE_PREFIX="${AUTOSAR_USER_APP_INSTANCE_PREFIX:-AdaptiveAutosar/UserApps}"
+
+mkdir -p "${AUTOSAR_RUN_DIR}"
+mkdir -p "${AUTOSAR_USER_APP_STATUS_DIR}"
+mkdir -p "${AUTOSAR_PHM_HEALTH_DIR}"
+: > "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+
+# Export PHM runtime path so user apps using ara::phm::HealthChannel publish
+# their health status into the same runtime location monitored by the daemon.
+export AUTOSAR_PHM_HEALTH_DIR
+
+echo "# name,pid,heartbeat_file,heartbeat_timeout_ms,instance_specifier,restart_limit,restart_window_ms,restart_command" >> "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+
+sanitize_name() {
+  local value="$1"
+  # Keep app names filesystem-safe for status/heartbeat file names.
+  value="${value//\//_}"
+  value="${value// /_}"
+  value="${value//:/_}"
+  echo "${value}"
+}
+
+default_instance_specifier() {
+  local app_name="$1"
+  local short_name
+  short_name="$(sanitize_name "${app_name}")"
+  echo "${AUTOSAR_USER_APP_INSTANCE_PREFIX}/${short_name}"
+}
+
+build_command_line() {
+  local token
+  local escaped
+  local output=""
+
+  for token in "$@"; do
+    printf -v escaped '%q' "${token}"
+    if [[ -n "${output}" ]]; then
+      output+=" "
+    fi
+    output+="${escaped}"
+  done
+
+  echo "${output}"
+}
+
+register_app() {
+  local app_name="$1"
+  local app_pid="$2"
+  local heartbeat_file="$3"
+  local heartbeat_timeout_ms="$4"
+  local instance_specifier="$5"
+  local restart_limit="$6"
+  local restart_window_ms="$7"
+  local restart_command="$8"
+
+  echo "${app_name},${app_pid},${heartbeat_file},${heartbeat_timeout_ms},${instance_specifier},${restart_limit},${restart_window_ms},${restart_command}" >> "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+}
+
+launch_app_managed() {
+  local app_name="$1"
+  local instance_specifier="$2"
+  local heartbeat_file="$3"
+  local heartbeat_timeout_ms="$4"
+  local restart_limit="$5"
+  local restart_window_ms="$6"
+  shift 6
+
+  "$@" &
+  local app_pid="$!"
+  local restart_command
+  restart_command="$(build_command_line "$@")"
+
+  app_pids+=("${app_pid}")
+  app_names+=("${app_name}")
+
+  if [[ -n "${heartbeat_file}" ]]; then
+    mkdir -p "$(dirname "${heartbeat_file}")"
+    date +%s > "${heartbeat_file}" || true
+  fi
+
+  register_app \
+    "${app_name}" \
+    "${app_pid}" \
+    "${heartbeat_file}" \
+    "${heartbeat_timeout_ms}" \
+    "${instance_specifier}" \
+    "${restart_limit}" \
+    "${restart_window_ms}" \
+    "${restart_command}"
+
+  echo "[INFO] bringup: launched ${app_name} (pid=${app_pid}, instance=${instance_specifier}, restart_limit=${restart_limit}, restart_window_ms=${restart_window_ms})"
+}
+
+launch_app() {
+  local app_name="$1"
+  shift
+
+  local instance_specifier
+  instance_specifier="$(default_instance_specifier "${app_name}")"
+
+  launch_app_managed \
+    "${app_name}" \
+    "${instance_specifier}" \
+    "" \
+    "${AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS}" \
+    "${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT}" \
+    "${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS}" \
+    "$@"
+}
+
+launch_app_with_heartbeat() {
+  local app_name="$1"
+  local heartbeat_file="$2"
+  local heartbeat_timeout_ms="$3"
+  shift 3
+
+  local instance_specifier
+  instance_specifier="$(default_instance_specifier "${app_name}")"
+
+  launch_app_managed \
+    "${app_name}" \
+    "${instance_specifier}" \
+    "${heartbeat_file}" \
+    "${heartbeat_timeout_ms}" \
+    "${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT}" \
+    "${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS}" \
+    "$@"
+}
 
 cleanup() {
   local pid
+  : > "${AUTOSAR_USER_APP_REGISTRY_FILE}"
   for pid in "${app_pids[@]:-}"; do
     if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
       kill "${pid}" >/dev/null 2>&1 || true
@@ -30,33 +168,40 @@ trap cleanup EXIT SIGINT SIGTERM
 # Example 1) Launch your own app binary (recommended)
 #
 # MY_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/feature/ecu/my_custom_ecu_app"
-# "${MY_APP}" --arg1=value1 --arg2=value2 &
-# app_pids+=($!)
+# launch_app "my_custom_ecu_app" \
+#   "${MY_APP}" --arg1=value1 --arg2=value2
 # -------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------
-# Example 2) Launch the built-in full-stack template
+# Example 2) Launch with heartbeat freshness checks
 #
-# ECU_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/feature/ecu/autosar_user_tpl_ecu_full_stack"
-# "${ECU_APP}" \
-#   --can-backend=socketcan \
-#   --ifname=can0 \
-#   --enable-can=true \
-#   --enable-someip=true \
-#   --publish-period-ms=50 &
-# app_pids+=($!)
+# HEALTH_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/basic/autosar_user_exec_signal_template"
+# HB_FILE="${AUTOSAR_USER_APP_STATUS_DIR}/$(sanitize_name "autosar_user_exec_signal_template").heartbeat"
+# launch_app_with_heartbeat "autosar_user_exec_signal_template" "${HB_FILE}" "5000" \
+#   "${HEALTH_APP}"
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Example 3) Full managed entry with explicit instance specifier/restart policy
+#
+# PHM_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/basic/autosar_user_per_phm_template"
+# launch_app_managed \
+#   "autosar_user_per_phm_template" \
+#   "AdaptiveAutosar/UserApps/PerPhmDemo" \
+#   "" \
+#   "0" \
+#   "5" \
+#   "60000" \
+#   "${PHM_APP}"
 # -------------------------------------------------------------------------
 
 if [[ ${#app_pids[@]} -eq 0 ]]; then
   echo "[INFO] bringup: no applications configured yet."
   echo "[INFO] edit /etc/autosar/bringup.sh and add your app startup commands."
-  # Keep process alive so systemd service stays active until user configures apps.
-  while true; do
-    sleep 3600
-  done
 fi
 
-# Wait while at least one app is alive; stop all if one exits unexpectedly.
-wait -n "${app_pids[@]}"
-echo "[ERROR] bringup: one of the applications exited. shutting down remaining apps." >&2
-exit 1
+# Keep the bringup process alive while autosar-user-app-monitor.service handles
+# health supervision and per-app restart recovery.
+while true; do
+  sleep 3600
+done

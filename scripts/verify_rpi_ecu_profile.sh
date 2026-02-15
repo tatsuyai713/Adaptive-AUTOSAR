@@ -283,6 +283,12 @@ else
   record_result "Watchdog daemon binary" "FAIL" "autosar_watchdog_supervisor not found under ${INSTALL_PREFIX}"
 fi
 
+if resolve_runtime_binary autosar_user_app_monitor >/dev/null; then
+  record_result "User-app monitor binary" "PASS" "autosar_user_app_monitor found"
+else
+  record_result "User-app monitor binary" "FAIL" "autosar_user_app_monitor not found under ${INSTALL_PREFIX}"
+fi
+
 SOMEIP_PROVIDER_BIN="$(resolve_binary autosar_user_com_someip_provider_template || true)"
 SOMEIP_CONSUMER_BIN="$(resolve_binary autosar_user_com_someip_consumer_template || true)"
 DDS_PUB_BIN="$(resolve_binary autosar_user_com_dds_pub_template || true)"

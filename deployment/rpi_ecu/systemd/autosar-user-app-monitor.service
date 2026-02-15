@@ -1,0 +1,15 @@
+[Unit]
+Description=Adaptive AUTOSAR user application monitor daemon
+After=autosar-platform-app.service autosar-exec-manager.service
+Wants=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-user-app-monitor
+ExecStart=/usr/local/bin/autosar-user-app-monitor-wrapper.sh
+Restart=always
+RestartSec=1
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

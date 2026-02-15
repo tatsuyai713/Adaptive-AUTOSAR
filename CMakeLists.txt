@@ -945,6 +945,17 @@ add_executable(
   ${source_dir}/main_watchdog_supervisor.cpp
 )
 
+add_executable(
+  autosar_user_app_monitor
+  ${source_dir}/main_user_app_monitor.cpp
+)
+
+target_link_libraries(
+  autosar_user_app_monitor
+  ara_core
+  ara_phm
+)
+
 set(has_pubsub_sample_entrypoints OFF)
 if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
    EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
@@ -1553,6 +1564,7 @@ install(
     autosar_iam_policy_loader
     autosar_can_interface_manager
     autosar_watchdog_supervisor
+    autosar_user_app_monitor
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
