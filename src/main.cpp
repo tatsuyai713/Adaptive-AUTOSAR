@@ -1,39 +1,72 @@
+/// @file src/main.cpp
+/// @brief Entry point for the platform-side Adaptive AUTOSAR process stack.
+
+#include <atomic>
+#include <cstdio>
+#include <csignal>
+#include <future>
+#include <memory>
+#include <thread>
+#include <unistd.h>
 #include "./application/helper/argument_configuration.h"
 #include "./application/platform/execution_management.h"
 
-bool running;
-AsyncBsdSocketLib::Poller poller;
-application::platform::ExecutionManagement *executionManagement;
-
-void performPolling()
+namespace
 {
-    const std::chrono::milliseconds cSleepDuration{
-        ara::exec::DeterministicClient::cCycleDelayMs};
+    std::atomic_bool gRunning{false};
+    std::atomic_bool gStopRequested{false};
+    AsyncBsdSocketLib::Poller gPoller;
+    std::unique_ptr<application::platform::ExecutionManagement> gExecutionManagement;
 
-    while (running)
+    void RequestStop(int) noexcept
     {
-        poller.TryPoll();
-        std::this_thread::sleep_for(cSleepDuration);
+        gStopRequested = true;
+        gRunning = false;
+    }
+
+    void PerformPolling()
+    {
+        const std::chrono::milliseconds cSleepDuration{
+            ara::exec::DeterministicClient::cCycleDelayMs};
+
+        while (gRunning.load())
+        {
+            gPoller.TryPoll();
+            std::this_thread::sleep_for(cSleepDuration);
+        }
     }
 }
 
 int main(int argc, char *argv[])
 {
-    application::helper::ArgumentConfiguration _argumentConfiguration(argc, argv);
+    std::signal(SIGINT, RequestStop);
+    std::signal(SIGTERM, RequestStop);
 
-    running = true;
-    executionManagement = new application::platform::ExecutionManagement(&poller);
-    executionManagement->Initialize(_argumentConfiguration.GetArguments());
+    application::helper::ArgumentConfiguration argumentConfiguration(argc, argv);
 
-    std::future<void> _future{std::async(std::launch::async, performPolling)};
+    gExecutionManagement.reset(
+        new application::platform::ExecutionManagement(&gPoller));
+    gExecutionManagement->Initialize(argumentConfiguration.GetArguments());
 
-    std::getchar();
-    std::getchar();
+    gRunning = true;
+    std::future<void> pollFuture{std::async(std::launch::async, PerformPolling)};
 
-    int _result{executionManagement->Terminate()};
-    running = false;
-    _future.get();
-    delete executionManagement;
+    if (isatty(STDIN_FILENO) == 1)
+    {
+        std::getchar();
+        RequestStop(0);
+    }
+    else
+    {
+        while (!gStopRequested.load())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+    }
 
-    return _result;
+    const int result{gExecutionManagement->Terminate()};
+    gRunning = false;
+    pollFuture.get();
+    gExecutionManagement.reset();
+    return result;
 }

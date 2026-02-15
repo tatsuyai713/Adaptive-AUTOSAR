@@ -120,7 +120,8 @@ Detailed runbook:
 
 User-app bringup entry points:
 - `/etc/autosar/bringup.sh` (edit this to launch your own applications)
-- `autosar-exec-manager.service` (starts first and executes `bringup.sh`)
+- `autosar-platform-app.service` (starts platform-side built-in process stack)
+- `autosar-exec-manager.service` (runs `bringup.sh` after platform service)
 
 ### Porting Vector/ETAS/EB-oriented app assets
 This repository can be used to rebuild vendor-developed C++ app assets at source

@@ -2,6 +2,8 @@
 /// @brief Implementation for diagnostic manager.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
+#include <exception>
+
 #include "../../ara/com/someip/sd/sd_network_layer.h"
 #include "../../application/helper/argument_configuration.h"
 #include "./diagnostic_manager.h"
@@ -123,58 +125,84 @@ namespace application
         void DiagnosticManager::onEventStatusChanged(
             ara::diag::EventStatusByte eventStatus)
         {
-            const auto cDebouncingStatusResult{mEvent->GetDebouncingStatus()};
-
-            if (!cDebouncingStatusResult.HasValue())
+            try
             {
-                return;
-            }
+                const auto cDebouncingStatusResult{mEvent->GetDebouncingStatus()};
 
-            const ara::diag::DebouncingState cDebouncingStatus{
-                cDebouncingStatusResult.Value()};
-
-            if (cDebouncingStatus ==
-                ara::diag::DebouncingState::kFinallyHealed)
-            {
-                ara::log::LogStream _logStream;
-                _logStream << "Telematic Control Module (Extended Vehicle AA) is discovered.";
-                Log(cLogLevel, _logStream);
-
-                std::string _ipAddress;
-                uint16_t _port;
-                bool _successful{
-                    mSdClient->TryGetOfferedEndpoint(_ipAddress, _port)};
-                if (!_successful)
+                if (!cDebouncingStatusResult.HasValue())
                 {
-                    throw std::runtime_error("Fetching offered endpoint failed.");
+                    return;
                 }
 
-                mObdToDoipConverter =
-                    new doip::ObdToDoipConverter(Poller, _ipAddress, _port);
+                const ara::diag::DebouncingState cDebouncingStatus{
+                    cDebouncingStatusResult.Value()};
 
-                mObdEmulator =
-                    new ObdEmulator::ObdEmulator(
-                        &mSerialCommunication,
-                        &mCanDriver,
-                        {mObdToDoipConverter});
-
-                _successful = mObdEmulator->TryStartAsync();
-                if (!_successful)
+                if (cDebouncingStatus ==
+                    ara::diag::DebouncingState::kFinallyHealed)
                 {
-                    throw std::runtime_error("Starting OBD-II emulator failed.");
+                    ara::log::LogStream _logStream;
+                    _logStream << "Telematic Control Module (Extended Vehicle AA) is discovered.";
+                    Log(cLogLevel, _logStream);
+
+                    // Avoid recreating runtime bridges when healed notification repeats.
+                    if (mObdEmulator != nullptr)
+                    {
+                        return;
+                    }
+
+                    std::string _ipAddress;
+                    uint16_t _port;
+                    bool _successful{
+                        mSdClient->TryGetOfferedEndpoint(_ipAddress, _port)};
+                    if (!_successful)
+                    {
+                        _logStream.Flush();
+                        _logStream << "Fetching offered endpoint failed.";
+                        Log(cErrorLevel, _logStream);
+                        return;
+                    }
+
+                    doip::ObdToDoipConverter *_converter{
+                        new doip::ObdToDoipConverter(Poller, _ipAddress, _port)};
+
+                    ObdEmulator::ObdEmulator *_emulator{
+                        new ObdEmulator::ObdEmulator(
+                            &mSerialCommunication,
+                            &mCanDriver,
+                            {_converter})};
+
+                    _successful = _emulator->TryStartAsync();
+                    if (!_successful)
+                    {
+                        _logStream.Flush();
+                        _logStream << "Starting OBD-II emulator failed.";
+                        Log(cErrorLevel, _logStream);
+                        delete _emulator;
+                        delete _converter;
+                        return;
+                    }
+
+                    mObdToDoipConverter = _converter;
+                    mObdEmulator = _emulator;
+                }
+                else if (cDebouncingStatus ==
+                         ara::diag::DebouncingState::kFinallyDefective)
+                {
+                    const ara::diag::DTCFormatType cDtcFormat{
+                        ara::diag::DTCFormatType::kDTCFormatUDS};
+                    const auto cDtcNumberResult{mEvent->GetDTCNumber(cDtcFormat)};
+
+                    ara::log::LogStream _logStream;
+                    _logStream << mEventSpecifier->ToString()
+                               << " is failed with DTC "
+                               << cDtcNumberResult.Value();
+                    Log(cErrorLevel, _logStream);
                 }
             }
-            else if (cDebouncingStatus ==
-                     ara::diag::DebouncingState::kFinallyDefective)
+            catch (const std::exception &ex)
             {
-                const ara::diag::DTCFormatType cDtcFormat{
-                    ara::diag::DTCFormatType::kDTCFormatUDS};
-                const auto cDtcNumberResult{mEvent->GetDTCNumber(cDtcFormat)};
-
                 ara::log::LogStream _logStream;
-                _logStream << mEventSpecifier->ToString()
-                           << " is failed with DTC "
-                           << cDtcNumberResult.Value();
+                _logStream << "Diagnostic event handler failure: " << ex.what();
                 Log(cErrorLevel, _logStream);
             }
         }

@@ -15,6 +15,7 @@ RUN_VERIFY="OFF"
 USE_VSOMEIP="ON"
 USE_ICEORYX="ON"
 USE_CYCLONEDDS="ON"
+BUILD_PLATFORM_APP="ON"
 INSTALL_MIDDLEWARE="OFF"
 INSTALL_BASE_DEPS="OFF"
 SKIP_MIDDLEWARE_SYSTEM_DEPS="OFF"
@@ -69,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       USE_CYCLONEDDS="OFF"
       shift
       ;;
+    --without-platform-app)
+      BUILD_PLATFORM_APP="OFF"
+      shift
+      ;;
     --install-middleware)
       INSTALL_MIDDLEWARE="ON"
       shift
@@ -116,6 +121,7 @@ echo "       install_prefix=${INSTALL_PREFIX}"
 echo "       runtime_build_dir=${RUNTIME_BUILD_DIR}"
 echo "       user_app_build_dir=${USER_APP_BUILD_DIR}"
 echo "       backends: vsomeip=${USE_VSOMEIP} iceoryx=${USE_ICEORYX} cyclonedds=${USE_CYCLONEDDS}"
+echo "       build_platform_app=${BUILD_PLATFORM_APP}"
 echo "       middleware prefixes: vsomeip=${VSOMEIP_PREFIX} iceoryx=${ICEORYX_PREFIX} cyclonedds=${CYCLONEDDS_PREFIX}"
 echo "       build_user_apps=${BUILD_USER_APPS} install_deployment_assets=${INSTALL_DEPLOYMENT_ASSETS} run_verify=${RUN_VERIFY}"
 
@@ -137,6 +143,11 @@ if [[ "${USE_ICEORYX}" == "OFF" ]]; then
 fi
 if [[ "${USE_CYCLONEDDS}" == "OFF" ]]; then
   runtime_args+=(--without-cyclonedds)
+fi
+if [[ "${BUILD_PLATFORM_APP}" == "ON" ]]; then
+  runtime_args+=(--with-platform-app)
+else
+  runtime_args+=(--without-platform-app)
 fi
 if [[ "${INSTALL_MIDDLEWARE}" == "ON" ]]; then
   runtime_args+=(--install-middleware)
@@ -165,10 +176,8 @@ if [[ "${INSTALL_DEPLOYMENT_ASSETS}" == "ON" ]]; then
   cp -a "${SOURCE_DIR}/deployment/rpi_ecu" "${INSTALL_PREFIX}/deployment/"
 
   mkdir -p "${INSTALL_PREFIX}/configuration"
-  if [[ -f "${SOURCE_DIR}/configuration/vsomeip-pubsub-sample.json" ]]; then
-    cp -f \
-      "${SOURCE_DIR}/configuration/vsomeip-pubsub-sample.json" \
-      "${INSTALL_PREFIX}/configuration/"
+  if [[ -d "${SOURCE_DIR}/configuration" ]]; then
+    cp -a "${SOURCE_DIR}/configuration/." "${INSTALL_PREFIX}/configuration/"
   fi
 fi
 
@@ -183,5 +192,6 @@ echo "[OK] Raspberry Pi ECU profile build/install completed."
 echo "[INFO] Next step:"
 echo "       sudo ./scripts/install_rpi_ecu_services.sh --prefix ${INSTALL_PREFIX} --user-app-build-dir ${USER_APP_BUILD_DIR}"
 echo "       # edit /etc/autosar/bringup.sh and write your app startup commands"
+echo "       sudo systemctl start autosar-platform-app.service"
 echo "       sudo systemctl start autosar-exec-manager.service"
 echo "       ./scripts/verify_rpi_ecu_profile.sh --prefix ${INSTALL_PREFIX} --user-app-build-dir ${USER_APP_BUILD_DIR} --can-backend mock"

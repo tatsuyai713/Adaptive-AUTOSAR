@@ -10,6 +10,7 @@ using this repository runtime and user apps.
 - Configure SocketCAN on Linux
 - Install `systemd` units for:
   - iceoryx RouDi
+  - platform application stack (`adaptive_autosar`, EM/SM/PHM/Diag/Vehicle)
   - execution-manager bridge service (runs user bringup script)
   - ECU full-stack app (`CAN + SOME/IP` receive, `DDS` publish)
 - Verify transport and ECU paths with a single script
@@ -66,6 +67,7 @@ sudo ./scripts/install_rpi_ecu_services.sh \
 Edit runtime options in:
 
 - `/etc/default/autosar-ecu-full-stack`
+- `/etc/default/autosar-platform-app`
 - `/etc/default/autosar-exec-manager`
 
 Edit user startup script in:
@@ -77,8 +79,10 @@ Edit user startup script in:
 
 ```bash
 sudo systemctl start autosar-iox-roudi.service
+sudo systemctl start autosar-platform-app.service
 sudo systemctl start autosar-exec-manager.service
 sudo systemctl start autosar-ecu-full-stack.service
+sudo systemctl status autosar-platform-app.service --no-pager
 sudo systemctl status autosar-exec-manager.service --no-pager
 ```
 
@@ -99,7 +103,8 @@ sudo systemctl disable --now autosar-ecu-full-stack.service
 sudo systemctl restart autosar-exec-manager.service
 ```
 
-`autosar-exec-manager.service` starts first and executes your bringup script.
+`autosar-platform-app.service` starts the built-in platform process stack first.
+Then `autosar-exec-manager.service` executes your bringup script.
 This is the recommended way to run user-defined applications on Raspberry Pi.
 
 ## 5) Validate readiness and communication paths

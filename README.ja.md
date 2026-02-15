@@ -119,7 +119,8 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 
 ユーザーアプリ起動の導線:
 - `/etc/autosar/bringup.sh` (ユーザーが自分の起動コマンドを記述)
-- `autosar-exec-manager.service` (`bringup.sh` を先に実行する常駐サービス)
+- `autosar-platform-app.service` (プラットフォーム側の常駐プロセス群を先に起動)
+- `autosar-exec-manager.service` (`bringup.sh` を起動する常駐サービス)
 
 ### Vector/ETAS/EB 向け資産を移植して使う
 本実装は、ベンダ実装で開発した C++ 資産を「ソース互換で再ビルド」して、

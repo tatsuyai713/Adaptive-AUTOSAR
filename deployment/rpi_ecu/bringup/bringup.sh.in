@@ -2,6 +2,8 @@
 set -euo pipefail
 
 # This script is launched by autosar-exec-manager.service.
+# Platform-side built-in processes are launched separately by
+# autosar-platform-app.service before this script.
 # Put your own application startup commands here.
 
 # Runtime variables passed from the execution-manager wrapper:

@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR platform process stack (EM/SM/PHM/Diag/Vehicle)
+After=network-online.target autosar-iox-roudi.service
+Wants=network-online.target autosar-iox-roudi.service
+Before=autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-platform-app
+ExecStart=/usr/local/bin/autosar-platform-app-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

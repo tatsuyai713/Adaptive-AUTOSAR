@@ -1477,6 +1477,13 @@ install(
   PATTERN "*.hpp"
 )
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/configuration")
+  install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/configuration/
+    DESTINATION configuration
+  )
+endif()
+
 if(DEFINED ASYNC_BSD_SOCKET_LIB_SOURCE_DIR AND EXISTS "${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include")
   install(
     DIRECTORY ${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include/

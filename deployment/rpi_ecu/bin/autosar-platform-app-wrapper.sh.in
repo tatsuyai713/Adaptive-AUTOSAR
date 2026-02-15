@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEFAULT_AUTOSAR_AP_PREFIX="__AUTOSAR_AP_PREFIX__"
+DEFAULT_ENV_FILE="/etc/default/autosar-platform-app"
+
+if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${DEFAULT_ENV_FILE}"
+fi
+
+: "${AUTOSAR_AP_PREFIX:=${DEFAULT_AUTOSAR_AP_PREFIX}}"
+: "${AUTOSAR_PLATFORM_APP_BIN:=${AUTOSAR_AP_PREFIX}/bin/adaptive_autosar}"
+: "${AUTOSAR_PLATFORM_EXEC_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/execution_manifest.arxml}"
+: "${AUTOSAR_PLATFORM_EV_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/extended_vehicle_manifest.arxml}"
+: "${AUTOSAR_PLATFORM_DM_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/diagnostic_manager_manifest.arxml}"
+: "${AUTOSAR_PLATFORM_PHM_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/health_monitoring_manifest.arxml}"
+
+if [[ ! -x "${AUTOSAR_PLATFORM_APP_BIN}" ]]; then
+  echo "[ERROR] platform app binary not found: ${AUTOSAR_PLATFORM_APP_BIN}" >&2
+  exit 1
+fi
+
+for f in \
+  "${AUTOSAR_PLATFORM_EXEC_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_EV_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_DM_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_PHM_MANIFEST}"; do
+  if [[ ! -f "${f}" ]]; then
+    echo "[ERROR] platform manifest not found: ${f}" >&2
+    exit 1
+  fi
+done
+
+if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
+  for candidate in \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-local.json" \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-local.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json"; do
+    if [[ -f "${candidate}" ]]; then
+      export VSOMEIP_CONFIGURATION="${candidate}"
+      break
+    fi
+  done
+fi
+
+extra_libdirs=""
+for candidate in \
+  "${AUTOSAR_AP_PREFIX}/lib" \
+  "${AUTOSAR_AP_PREFIX}/lib64" \
+  "/opt/vsomeip/lib" \
+  "/opt/cyclonedds/lib" \
+  "/opt/iceoryx/lib"; do
+  if [[ -d "${candidate}" ]]; then
+    if [[ -n "${extra_libdirs}" ]]; then
+      extra_libdirs="${extra_libdirs}:"
+    fi
+    extra_libdirs="${extra_libdirs}${candidate}"
+  fi
+done
+export LD_LIBRARY_PATH="${extra_libdirs}:${LD_LIBRARY_PATH:-}"
+
+exec "${AUTOSAR_PLATFORM_APP_BIN}" \
+  "${AUTOSAR_PLATFORM_EXEC_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_EV_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_DM_MANIFEST}" \
+  "${AUTOSAR_PLATFORM_PHM_MANIFEST}" \
+  "$@"

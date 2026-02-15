@@ -11,6 +11,7 @@ BUILD_TYPE="Release"
 USE_VSOMEIP="ON"
 USE_ICEORYX="ON"
 USE_CYCLONEDDS="ON"
+BUILD_PLATFORM_APP="OFF"
 INSTALL_MIDDLEWARE="OFF"
 INSTALL_BASE_DEPS="OFF"
 SKIP_MIDDLEWARE_SYSTEM_DEPS="OFF"
@@ -47,6 +48,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-cyclonedds)
       USE_CYCLONEDDS="OFF"
+      shift
+      ;;
+    --with-platform-app)
+      BUILD_PLATFORM_APP="ON"
+      shift
+      ;;
+    --without-platform-app)
+      BUILD_PLATFORM_APP="OFF"
       shift
       ;;
     --install-middleware)
@@ -96,6 +105,7 @@ echo "       source_dir=${REPO_ROOT}"
 echo "       install_prefix=${INSTALL_PREFIX}"
 echo "       build_dir=${BUILD_DIR}"
 echo "       backends: vsomeip=${USE_VSOMEIP} iceoryx=${USE_ICEORYX} cyclonedds=${USE_CYCLONEDDS}"
+echo "       build_platform_app=${BUILD_PLATFORM_APP}"
 echo "       middleware prefixes: vsomeip=${VSOMEIP_PREFIX} iceoryx=${ICEORYX_PREFIX} cyclonedds=${CYCLONEDDS_PREFIX}"
 
 if [[ "${INSTALL_MIDDLEWARE}" == "ON" ]]; then
@@ -130,7 +140,7 @@ cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
   -Dbuild_tests=OFF \
   -DARA_COM_ENABLE_ARXML_CODEGEN=OFF \
-  -DAUTOSAR_AP_BUILD_PLATFORM_APP=OFF \
+  -DAUTOSAR_AP_BUILD_PLATFORM_APP="${BUILD_PLATFORM_APP}" \
   -DAUTOSAR_AP_BUILD_SAMPLES=OFF \
   -DARA_COM_USE_VSOMEIP="${USE_VSOMEIP}" \
   -DARA_COM_USE_ICEORYX="${USE_ICEORYX}" \
