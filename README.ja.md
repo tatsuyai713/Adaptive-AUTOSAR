@@ -152,6 +152,7 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 ステータス定義:
 - `実装あり (一部)`: リポジトリ内に実装あり。ただし AUTOSAR 仕様全体としては部分対応。
 - `未実装`: 現在のリポジトリ対象外。
+- **カバレッジ %** は AUTOSAR AP SWS 仕様の各機能クラスタに対する主要標準 API クラス/メソッドの実装比率の概算です。あくまでも目安としてご参照ください。
 
 本リポジトリの準拠ポリシー:
 - AUTOSAR AP 標準に対応するAPIは、標準形のシグネチャを維持します。
@@ -163,26 +164,26 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
   - `src/ara/exec/extension/non_standard.h`
   - `src/ara/phm/extension/non_standard.h`
 
-| AUTOSAR AP 領域 | 状態 | このリポジトリで提供されるもの | 未対応/備考 |
-| --- | --- | --- | --- |
-| `ara::core` | 実装あり (一部) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, init/deinit, 初期化状態照会 API | 標準 API 全面対応ではない |
-| `ara::log` | 実装あり (一部) | Logging framework, logger, sink (console/file), 実行時 LogLevel 上書き/照会 API | 商用実装比で設定/機能は限定的 |
-| `ara::com` 共通 API | 実装あり (一部) | Event/Method/Field, Proxy/Skeleton base, Subscribe/Unsubscribe, handler, sample 抽象, 複数同時 `StartFindService`/handle 指定 `StopFindService`, Field 能力フラグ準拠動作 | 生成 API と SWS の全角ケースは未網羅 |
-| `ara::com` SOME/IP | 実装あり (一部) | vSomeIP backend による SD, pub/sub, RPC | すべての SOME/IP/AP オプションは未対応 |
-| `ara::com` DDS | 実装あり (一部) | Cyclone DDS wrapper (`ara::com::dds`) | QoS/運用プロファイルは部分対応 |
-| `ara::com` ZeroCopy | 実装あり (一部) | iceoryx wrapper (`ara::com::zerocopy`) | バックエンド隠蔽実装。AUTOSAR 全標準化範囲を完全網羅するものではない |
-| `ara::com` E2E | 実装あり (一部) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) + event decorator | 他プロファイルは未実装 |
-| `ara::exec` | 実装あり (一部) | Execution/State client-server helper, signal handler, worker thread, 実行状態変更コールバック API, 拡張 `ProcessWatchdog`（起動猶予/連続期限切れ監視/コールバッククールダウン/期限切れ回数） | EM 全機能を網羅するものではない |
-| `ara::diag` | 実装あり (一部) | UDS/DoIP 系コンポーネント、routing/debouncing helper、Monitor の FDC しきい値到達アクション対応 | Diagnostic Manager 全仕様の網羅ではない |
-| `ara::phm` | 実装あり (一部) | Health channel, supervision primitives | PHM 全体統合仕様は部分対応 |
-| `ara::per` | 実装あり (一部) | Key-value/File storage API | 実運用向けポリシーは部分対応 |
-| `ara::sm` | 実装あり (一部) | state/trigger utility | AUTOSAR SM FC 全機能ではない |
-| ARXML ツール | 実装あり (一部) | YAML -> ARXML、ARXML -> ara::com binding 生成 | リポジトリ対象スコープ中心で全 ARXML 網羅ではない |
-| `ara::crypto` | 実装あり (一部) | エラードメイン、SHA-256 ダイジェスト API、乱数バイト生成 API | 最小プリミティブのみ（鍵管理/PKI は未実装） |
-| `ara::iam` | 実装あり (一部) | メモリ内 IAM ポリシー判定（subject/resource/action、ワイルドカード）、エラードメイン | ポリシー永続化やプラットフォーム IAM 連携は未実装 |
-| `ara::ucm` | 実装あり (一部) | UCM エラードメイン、更新セッション管理 (`Prepare/Stage/Verify/Activate/Rollback/Cancel`)、SHA-256 検証、状態/進捗コールバック、クラスタ別バージョン管理とダウングレード拒否 | 簡易更新モデル（installer daemon/campaign 管理/secure boot 連携は未実装） |
-| 時刻同期 (`ara::tsync`) | 実装あり (一部) | 参照時刻更新、同期時刻変換、オフセット/状態 API、エラードメイン | NTP/PTP デーモンとの統合は未実装 |
-| Raspberry Pi ECU 配備プロファイル | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`user-app-monitor`/`watchdog`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
+| AUTOSAR AP 領域 | カバレッジ | 状態 | このリポジトリで提供されるもの | 未対応/備考 |
+| --- | :---: | --- | --- | --- |
+| `ara::core` | ~50 % | 実装あり (一部) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, init/deinit, 初期化状態照会 API | `Variant`, `String`/`StringView`, コンテナラッパー (`Vector`/`Map`/`Array`/`Span`), `SteadyClock`, `CoreErrorDomain`, 例外クラス階層 |
+| `ara::log` | ~75 % | 実装あり (一部) | `Logger`（全重要度レベル + `WithLevel` ログレベルフィルタリング）、`LogStream`、`LoggingFramework`、3 種シンク (console/file/network)、実行時 LogLevel 上書き/照会 | DLT バックエンド統合、`LogHex`/`LogBin` フォーマッタ |
+| `ara::com` 共通 API | ~60 % | 実装あり (一部) | `Event`/`Method`/`Field` ラッパー、`ServiceProxyBase`/`ServiceSkeletonBase`、Subscribe/Unsubscribe、handler、`SamplePtr`、シリアライズフレームワーク、複数同時 `StartFindService`/handle 指定 `StopFindService`、Field 能力フラグ準拠動作 | 生成 API スタブ、communication group、SWS 全角ケース |
+| `ara::com` SOME/IP | ~60 % | 実装あり (一部) | SOME/IP SD client/server、pub/sub、RPC client/server (vSomeIP backend) | すべての SOME/IP/AP オプション・エッジ動作は未対応 |
+| `ara::com` DDS | ~40 % | 実装あり (一部) | Cyclone DDS wrapper (`ara::com::dds`) による pub/sub | QoS/運用プロファイルは部分対応 |
+| `ara::com` ZeroCopy | ~40 % | 実装あり (一部) | iceoryx wrapper (`ara::com::zerocopy`) による pub/sub | バックエンド隠蔽実装。AUTOSAR 全標準化範囲を完全網羅するものではない |
+| `ara::com` E2E | ~30 % | 実装あり (一部) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) + event decorator | 他プロファイル (P01/P02/P04/P05/P07) は未実装 |
+| `ara::exec` | ~55 % | 実装あり (一部) | `ExecutionClient`/`ExecutionServer`、`StateServer`、`DeterministicClient`、`FunctionGroup`/`FunctionGroupState`、`SignalHandler`、`WorkerThread`、拡張 `ProcessWatchdog`（起動猶予/連続期限切れ/コールバッククールダウン/期限切れ回数）、実行状態変更コールバック | EM フルオーケストレーション、`StateClient` 標準インタフェース |
+| `ara::diag` | ~70 % | 実装あり (一部) | `Monitor`（デバウンス・FDC 照会・現在ステータス照会）、`Event`、`Conversation`、`DTCInformation`、`Condition`、`OperationCycle`、`GenericUDSService`、`SecurityAccess`、`GenericRoutine`、`DataTransfer` (Upload/Download)、カウンタ/タイマー方式デバウンス付き routing | Diagnostic Manager フルオーケストレーション、全 UDS サブファンクション |
+| `ara::phm` | ~50 % | 実装あり (一部) | `SupervisedEntity`、`HealthChannel`（`Offer`/`StopOffer` ライフサイクル）、`RecoveryAction`、`CheckpointCommunicator`、supervision helper | `AliveSupervision`/`DeadlineSupervision`/`LogicalSupervision` 詳細 SWS API |
+| `ara::per` | ~65 % | 実装あり (一部) | `KeyValueStorage`、`FileStorage`、`ReadAccessor`（`Seek`/`GetCurrentPosition`）、`ReadWriteAccessor`（`Seek`/`GetCurrentPosition`） | `SharedHandle`/`UniqueHandle` 標準ラッパー、冗長化/リカバリポリシー |
+| `ara::sm` | ~25 % | 実装あり (一部) | `TriggerIn`/`TriggerOut`/`TriggerInOut`、`Notifier` | 状態マネージャ全モード管理、ネットワーク/診断状態ハンドリング |
+| ARXML ツール | — | 実装あり (一部) | YAML -> ARXML、ARXML -> ara::com binding 生成 | リポジトリ対象スコープ中心で全 ARXML 網羅ではない |
+| `ara::crypto` | ~15 % | 実装あり (一部) | エラードメイン、SHA-256 ダイジェスト、HMAC、AES 暗号化、鍵生成、乱数バイト生成 | 鍵管理/PKI スタック、`CryptoProvider`、X.509、SecOC |
+| `ara::iam` | ~20 % | 実装あり (一部) | メモリ内 IAM ポリシー判定（subject/resource/action、ワイルドカード）、エラードメイン | ポリシー永続化、プラットフォーム IAM 連携、グラント管理 |
+| `ara::ucm` | ~40 % | 実装あり (一部) | UCM エラードメイン、更新セッション管理 (`Prepare`/`Stage`/`Verify`/`Activate`/`Rollback`/`Cancel`)、Transfer API (`TransferStart`/`TransferData`/`TransferExit`)、SHA-256 検証、状態/進捗コールバック、クラスタ別バージョン管理とダウングレード拒否 | campaign 管理、installer daemon、secure boot 連携 |
+| 時刻同期 (`ara::tsync`) | ~30 % | 実装あり (一部) | `TimeSyncClient`（参照時刻更新、同期時刻変換、オフセット/状態照会、状態変更通知コールバック）、エラードメイン | `TimeSyncServer`、NTP/PTP (gPTP) デーモン統合、レート補正 |
+| Raspberry Pi ECU 配備プロファイル | — | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`user-app-monitor`/`watchdog`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
 
 ## user_apps テンプレート (インストール先: `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:

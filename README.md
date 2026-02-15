@@ -153,6 +153,7 @@ Porting tutorial:
 Status meanings:
 - `Implemented (subset)`: Implemented in this repo, but not full AUTOSAR feature-complete.
 - `Not implemented`: Not provided in this repo currently.
+- **Coverage %** is an approximate ratio of implemented standard APIs vs. the full AUTOSAR AP SWS specification for each functional cluster. It is calculated based on the number of major standard API classes/methods implemented, and is provided as a rough guide only.
 
 Conformance policy in this repository:
 - APIs corresponding to AUTOSAR AP standard interfaces are kept in AUTOSAR-style signatures.
@@ -164,26 +165,26 @@ Conformance policy in this repository:
   - `src/ara/exec/extension/non_standard.h`
   - `src/ara/phm/extension/non_standard.h`
 
-| AUTOSAR AP area | Status | Available in this repo | Missing / Notes |
-| --- | --- | --- | --- |
-| `ara::core` | Implemented (subset) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, runtime init/deinit, initialization-state query API | Full standard API surface is not complete |
-| `ara::log` | Implemented (subset) | Logging framework, logger, sink abstraction (console/file), runtime log-level override/query API | Limited configuration/features compared to commercial stacks |
-| `ara::com` common API | Implemented (subset) | Event/Method/Field wrappers, Proxy/Skeleton base, Subscribe/Unsubscribe, receive/state handlers, sample pointer abstractions, concurrent `StartFindService`/handle-aware `StopFindService`, capability-aware Field behavior | Generated API coverage and SWS corner cases are partial |
-| `ara::com` SOME/IP transport | Implemented (subset) | SOME/IP SD, pub/sub, RPC paths over vSomeIP backend | Not all SOME/IP/AP options and edge behavior are covered |
-| `ara::com` DDS transport | Implemented (subset) | DDS pub/sub via Cyclone DDS wrappers (`ara::com::dds`) | DDS QoS/profile coverage is partial |
-| `ara::com` zero-copy transport | Implemented (subset) | Zero-copy pub/sub via iceoryx wrappers (`ara::com::zerocopy`) | Zero-copy is backend-mapped implementation, not full AUTOSAR transport standardization scope |
-| `ara::com` E2E | Implemented (subset) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) and event decorators | Other E2E profiles are not implemented |
-| `ara::exec` | Implemented (subset) | Execution/state client-server helpers, signal handler, worker thread utilities, execution-state change callback API, enhanced `ProcessWatchdog` options (startup grace / continuous expiry / callback cooldown / expiry count) | Full EM/Process orchestration behaviors are partial |
-| `ara::diag` | Implemented (subset) | UDS/DoIP-oriented components, routing and debouncing helpers, monitor FDC-threshold action support | Not full Diagnostic Manager feature set |
-| `ara::phm` | Implemented (subset) | Health channel, supervision primitives | Full PHM integration scope is partial |
-| `ara::per` | Implemented (subset) | Key-value/file storage abstractions and APIs | Production-grade persistence policies are partial |
-| `ara::sm` | Implemented (subset) | State/trigger utility abstractions | Not full AUTOSAR SM functional cluster |
-| ARXML tooling | Implemented (subset) | YAML -> ARXML, ARXML -> ara::com binding header generator | Supports repository scope and extensions, not full ARXML universe |
-| `ara::crypto` | Implemented (subset) | Error domain, SHA-256 digest API, random-byte API | Minimal primitives only (no key management/PKI stack yet) |
-| `ara::iam` | Implemented (subset) | In-memory IAM policy engine (subject/resource/action, wildcard rules), error domain | Policy persistence and platform IAM integration are not implemented |
-| `ara::ucm` | Implemented (subset) | UCM error domain and update-session manager (`Prepare/Stage/Verify/Activate/Rollback/Cancel`), SHA-256 payload verification, state/progress callbacks, per-cluster active-version tracking with downgrade rejection | Simplified software update model (no installer daemon, campaign management, secure boot integration) |
-| Time sync (`ara::tsync`) | Implemented (subset) | Time sync client with reference update, synchronized time conversion, offset/state APIs, error domain | No network time protocol daemon integration yet |
-| Raspberry Pi ECU deployment profile | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script, resident daemons (`vsomeip-routing`, `time-sync`, `persistency-guard`, `iam-policy`, `can-manager`, `user-app-monitor`, `watchdog`) | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
+| AUTOSAR AP area | Coverage | Status | Available in this repo | Missing / Notes |
+| --- | :---: | --- | --- | --- |
+| `ara::core` | ~50 % | Implemented (subset) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, runtime init/deinit, initialization-state query API | `Variant`, `String`/`StringView`, container wrappers (`Vector`/`Map`/`Array`/`Span`), `SteadyClock`, `CoreErrorDomain`, Exception class hierarchy |
+| `ara::log` | ~75 % | Implemented (subset) | `Logger` (all severity levels + `WithLevel` log-level filtering), `LogStream`, `LoggingFramework`, 3 sink types (console/file/network), runtime log-level override/query | DLT backend integration, `LogHex`/`LogBin` formatters |
+| `ara::com` common API | ~60 % | Implemented (subset) | `Event`/`Method`/`Field` wrappers, `ServiceProxyBase`/`ServiceSkeletonBase`, Subscribe/Unsubscribe, receive/state handlers, `SamplePtr`, serialization framework, concurrent `StartFindService`/handle-aware `StopFindService`, capability-aware Field behavior | Generated API stubs, communication groups, full SWS corner cases |
+| `ara::com` SOME/IP | ~60 % | Implemented (subset) | SOME/IP SD client/server, pub/sub, RPC client/server over vSomeIP backend | Not all SOME/IP/AP options and edge behavior are covered |
+| `ara::com` DDS | ~40 % | Implemented (subset) | DDS pub/sub via Cyclone DDS wrappers (`ara::com::dds`) | DDS QoS/profile coverage is partial |
+| `ara::com` zero-copy | ~40 % | Implemented (subset) | Zero-copy pub/sub via iceoryx wrappers (`ara::com::zerocopy`) | Backend-mapped implementation, not full AUTOSAR transport standardization scope |
+| `ara::com` E2E | ~30 % | Implemented (subset) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) and event decorators | Other E2E profiles (P01/P02/P04/P05/P07) are not implemented |
+| `ara::exec` | ~55 % | Implemented (subset) | `ExecutionClient`/`ExecutionServer`, `StateServer`, `DeterministicClient`, `FunctionGroup`/`FunctionGroupState`, `SignalHandler`, `WorkerThread`, enhanced `ProcessWatchdog` (startup grace / continuous expiry / callback cooldown / expiry count), execution-state change callback | Full EM/Process orchestration, `StateClient` standard interface |
+| `ara::diag` | ~70 % | Implemented (subset) | `Monitor` (with debouncing, FDC query, current status query), `Event`, `Conversation`, `DTCInformation`, `Condition`, `OperationCycle`, `GenericUDSService`, `SecurityAccess`, `GenericRoutine`, `DataTransfer` (Upload/Download), routing framework with counter/timer-based debouncing | Full Diagnostic Manager orchestration, all UDS sub-functions |
+| `ara::phm` | ~50 % | Implemented (subset) | `SupervisedEntity`, `HealthChannel` (with `Offer`/`StopOffer` lifecycle), `RecoveryAction`, `CheckpointCommunicator`, supervision helpers | `AliveSupervision`/`DeadlineSupervision`/`LogicalSupervision` detailed SWS APIs |
+| `ara::per` | ~65 % | Implemented (subset) | `KeyValueStorage`, `FileStorage`, `ReadAccessor` (with `Seek`/`GetCurrentPosition`), `ReadWriteAccessor` (with `Seek`/`GetCurrentPosition`) | `SharedHandle`/`UniqueHandle` standard wrappers, redundancy/recovery policies |
+| `ara::sm` | ~25 % | Implemented (subset) | `TriggerIn`/`TriggerOut`/`TriggerInOut`, `Notifier` | Full state-manager mode management, network/diagnostic state handling |
+| ARXML tooling | — | Implemented (subset) | YAML -> ARXML, ARXML -> ara::com binding header generator | Supports repository scope and extensions, not full ARXML universe |
+| `ara::crypto` | ~15 % | Implemented (subset) | Error domain, SHA-256 digest, HMAC, AES encryption, key generation, random-byte API | Key management/PKI stack, `CryptoProvider`, X.509, SecOC |
+| `ara::iam` | ~20 % | Implemented (subset) | In-memory IAM policy engine (subject/resource/action, wildcard rules), error domain | Policy persistence, platform IAM integration, grant management |
+| `ara::ucm` | ~40 % | Implemented (subset) | UCM error domain, update-session manager (`Prepare`/`Stage`/`Verify`/`Activate`/`Rollback`/`Cancel`), Transfer API (`TransferStart`/`TransferData`/`TransferExit`), SHA-256 payload verification, state/progress callbacks, per-cluster active-version tracking with downgrade rejection | Campaign management, installer daemon, secure boot integration |
+| `ara::tsync` | ~30 % | Implemented (subset) | `TimeSyncClient` (reference update, synchronized time conversion, offset/state query, state-change notification callback), error domain | `TimeSyncServer`, network time protocol (PTP/gPTP) daemon integration, rate correction |
+| Raspberry Pi ECU profile | — | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script, resident daemons (`vsomeip-routing`, `time-sync`, `persistency-guard`, `iam-policy`, `can-manager`, `user-app-monitor`, `watchdog`) | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
 
 ## User App Templates (Installed as `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:
