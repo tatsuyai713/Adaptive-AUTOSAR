@@ -15,6 +15,7 @@ RUN_DDS="ON"
 RUN_ZEROCOPY="ON"
 RUN_ECU="ON"
 STRICT_MODE="OFF"
+REQUIRE_PLATFORM_BINARY="OFF"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -60,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --strict)
       STRICT_MODE="ON"
+      shift
+      ;;
+    --require-platform-binary)
+      REQUIRE_PLATFORM_BINARY="ON"
       shift
       ;;
     *)
@@ -229,7 +234,13 @@ fi
 if resolve_runtime_binary adaptive_autosar >/dev/null; then
   record_result "Platform binary" "PASS" "adaptive_autosar found"
 else
-  record_result "Platform binary" "FAIL" "adaptive_autosar not found under ${INSTALL_PREFIX}"
+  if [[ "${REQUIRE_PLATFORM_BINARY}" == "ON" ]]; then
+    record_result "Platform binary" "FAIL" "adaptive_autosar not found under ${INSTALL_PREFIX} (--require-platform-binary)"
+  elif [[ "${STRICT_MODE}" == "ON" ]]; then
+    record_result "Platform binary" "FAIL" "adaptive_autosar not found under ${INSTALL_PREFIX} (strict mode)"
+  else
+    record_result "Platform binary" "SKIP" "adaptive_autosar not found under ${INSTALL_PREFIX} (platform app is optional unless --strict or build with --with-platform-app)"
+  fi
 fi
 
 if [[ "${RUN_SOMEIP}" == "ON" ]]; then

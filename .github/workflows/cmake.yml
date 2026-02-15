@@ -110,7 +110,8 @@ jobs:
           --prefix /tmp/autosar_ap \
           --build-dir build-install-ci \
           --build-type Release \
-          --source-dir "${GITHUB_WORKSPACE}"
+          --source-dir "${GITHUB_WORKSPACE}" \
+          --with-platform-app
 
         ./scripts/build_user_apps_from_opt.sh \
           --prefix /tmp/autosar_ap \
@@ -131,7 +132,8 @@ jobs:
         ./scripts/verify_rpi_ecu_profile.sh \
           --prefix /tmp/autosar_ap \
           --user-app-build-dir "${GITHUB_WORKSPACE}/build-user-apps-ci" \
-          --can-backend mock
+          --can-backend mock \
+          --require-platform-binary
 
   docs:
     runs-on: ubuntu-22.04
