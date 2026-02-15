@@ -23,78 +23,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install system packages
+    - name: Install system dependencies (repo script)
       run: |
         set -euxo pipefail
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          build-essential \
-          cmake \
-          ninja-build \
-          pkg-config \
-          git \
-          python3 \
-          python3-pip \
-          libboost-system-dev \
-          libboost-thread-dev \
-          libboost-filesystem-dev \
-          libboost-log-dev \
-          libboost-program-options-dev \
-          libacl1-dev \
-          libsystemd-dev \
-          libssl-dev \
-          libncurses5-dev
-        python3 -m pip install --upgrade pip
-        python3 -m pip install pyyaml
+        ./scripts/install_dependemcy.sh
 
-    - name: Build and install middleware dependencies
+    - name: Build and install middleware dependencies (repo scripts)
       env:
         VSOMEIP_PREFIX: ${{ env.VSOMEIP_PREFIX }}
         ICEORYX_PREFIX: ${{ env.ICEORYX_PREFIX }}
         CYCLONEDDS_PREFIX: ${{ env.CYCLONEDDS_PREFIX }}
       run: |
         set -euxo pipefail
-
-        if [[ ! -f "${VSOMEIP_PREFIX}/lib/libvsomeip3.so" ]]; then
-          git clone --depth 1 --branch 3.4.10 https://github.com/COVESA/vsomeip.git /tmp/vsomeip-src
-          cmake -S /tmp/vsomeip-src -B /tmp/vsomeip-build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${VSOMEIP_PREFIX}" \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build /tmp/vsomeip-build -j"$(nproc)"
-          sudo cmake --install /tmp/vsomeip-build
-        fi
-
-        if [[ ! -x "${CYCLONEDDS_PREFIX}/bin/idlc" ]]; then
-          git clone --depth 1 --branch 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds-src
-          cmake -S /tmp/cyclonedds-src -B /tmp/cyclonedds-build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${CYCLONEDDS_PREFIX}" \
-            -DBUILD_IDLC=ON
-          cmake --build /tmp/cyclonedds-build -j"$(nproc)"
-          sudo cmake --install /tmp/cyclonedds-build
-        fi
-
-        if [[ ! -f "${CYCLONEDDS_PREFIX}/include/ddscxx/dds/dds.hpp" ]]; then
-          git clone --depth 1 --branch 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx-src
-          cmake -S /tmp/cyclonedds-cxx-src -B /tmp/cyclonedds-cxx-build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${CYCLONEDDS_PREFIX}" \
-            -DCMAKE_PREFIX_PATH="${CYCLONEDDS_PREFIX}"
-          cmake --build /tmp/cyclonedds-cxx-build -j"$(nproc)"
-          sudo cmake --install /tmp/cyclonedds-cxx-build
-        fi
-
-        if [[ ! -f "${ICEORYX_PREFIX}/lib/cmake/iceoryx_posh/iceoryx_poshConfig.cmake" ]]; then
-          git clone --depth 1 --branch v2.0.5 https://github.com/eclipse-iceoryx/iceoryx.git /tmp/iceoryx-src
-          cmake -S /tmp/iceoryx-src/iceoryx_meta -B /tmp/iceoryx-build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${ICEORYX_PREFIX}" \
-            -DBUILD_TEST=OFF \
-            -DBUILD_SHARED_LIBS=ON
-          cmake --build /tmp/iceoryx-build -j"$(nproc)"
-          sudo cmake --install /tmp/iceoryx-build
-        fi
+        ./scripts/install_middleware_stack.sh \
+          --vsomeip-prefix "${VSOMEIP_PREFIX}" \
+          --iceoryx-prefix "${ICEORYX_PREFIX}" \
+          --cyclonedds-prefix "${CYCLONEDDS_PREFIX}" \
+          --skip-system-deps
 
         sudo ldconfig
 

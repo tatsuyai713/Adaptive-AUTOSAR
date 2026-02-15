@@ -15,6 +15,13 @@ RUN_VERIFY="OFF"
 USE_VSOMEIP="ON"
 USE_ICEORYX="ON"
 USE_CYCLONEDDS="ON"
+INSTALL_MIDDLEWARE="OFF"
+INSTALL_BASE_DEPS="OFF"
+SKIP_MIDDLEWARE_SYSTEM_DEPS="OFF"
+FORCE_MIDDLEWARE_REINSTALL="OFF"
+VSOMEIP_PREFIX="/opt/vsomeip"
+ICEORYX_PREFIX="/opt/iceoryx"
+CYCLONEDDS_PREFIX="/opt/cyclonedds"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -62,6 +69,35 @@ while [[ $# -gt 0 ]]; do
       USE_CYCLONEDDS="OFF"
       shift
       ;;
+    --install-middleware)
+      INSTALL_MIDDLEWARE="ON"
+      shift
+      ;;
+    --install-base-deps)
+      INSTALL_MIDDLEWARE="ON"
+      INSTALL_BASE_DEPS="ON"
+      shift
+      ;;
+    --skip-middleware-system-deps)
+      SKIP_MIDDLEWARE_SYSTEM_DEPS="ON"
+      shift
+      ;;
+    --force-middleware-reinstall)
+      FORCE_MIDDLEWARE_REINSTALL="ON"
+      shift
+      ;;
+    --vsomeip-prefix)
+      VSOMEIP_PREFIX="$2"
+      shift 2
+      ;;
+    --iceoryx-prefix)
+      ICEORYX_PREFIX="$2"
+      shift 2
+      ;;
+    --cyclonedds-prefix)
+      CYCLONEDDS_PREFIX="$2"
+      shift 2
+      ;;
     *)
       echo "[ERROR] Unknown argument: $1" >&2
       exit 1
@@ -80,6 +116,7 @@ echo "       install_prefix=${INSTALL_PREFIX}"
 echo "       runtime_build_dir=${RUNTIME_BUILD_DIR}"
 echo "       user_app_build_dir=${USER_APP_BUILD_DIR}"
 echo "       backends: vsomeip=${USE_VSOMEIP} iceoryx=${USE_ICEORYX} cyclonedds=${USE_CYCLONEDDS}"
+echo "       middleware prefixes: vsomeip=${VSOMEIP_PREFIX} iceoryx=${ICEORYX_PREFIX} cyclonedds=${CYCLONEDDS_PREFIX}"
 echo "       build_user_apps=${BUILD_USER_APPS} install_deployment_assets=${INSTALL_DEPLOYMENT_ASSETS} run_verify=${RUN_VERIFY}"
 
 runtime_args=(
@@ -87,6 +124,9 @@ runtime_args=(
   --prefix "${INSTALL_PREFIX}"
   --build-dir "${RUNTIME_BUILD_DIR}"
   --build-type "${BUILD_TYPE}"
+  --vsomeip-prefix "${VSOMEIP_PREFIX}"
+  --iceoryx-prefix "${ICEORYX_PREFIX}"
+  --cyclonedds-prefix "${CYCLONEDDS_PREFIX}"
 )
 
 if [[ "${USE_VSOMEIP}" == "OFF" ]]; then
@@ -97,6 +137,18 @@ if [[ "${USE_ICEORYX}" == "OFF" ]]; then
 fi
 if [[ "${USE_CYCLONEDDS}" == "OFF" ]]; then
   runtime_args+=(--without-cyclonedds)
+fi
+if [[ "${INSTALL_MIDDLEWARE}" == "ON" ]]; then
+  runtime_args+=(--install-middleware)
+fi
+if [[ "${INSTALL_BASE_DEPS}" == "ON" ]]; then
+  runtime_args+=(--install-base-deps)
+fi
+if [[ "${SKIP_MIDDLEWARE_SYSTEM_DEPS}" == "ON" ]]; then
+  runtime_args+=(--skip-middleware-system-deps)
+fi
+if [[ "${FORCE_MIDDLEWARE_REINSTALL}" == "ON" ]]; then
+  runtime_args+=(--force-middleware-reinstall)
 fi
 
 "${SCRIPT_DIR}/build_and_install_autosar_ap.sh" "${runtime_args[@]}"

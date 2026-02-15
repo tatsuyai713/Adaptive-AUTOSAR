@@ -1,5 +1,5 @@
 # Adaptive-AUTOSAR (日本語)
-![example workflow](https://github.com/langroodi/Adaptive-AUTOSAR/actions/workflows/cmake.yml/badge.svg)
+![CI](https://github.com/tatsuyai713/Adaptive-AUTOSAR/actions/workflows/cmake.yml/badge.svg)
 
 Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 
@@ -25,6 +25,21 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
   - iceoryx: `/opt/iceoryx`
   - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
+### 0) 依存ライブラリとミドルウェアを導入 (Linux / Raspberry Pi)
+以下は次のリポジトリの導入フローをベースに本リポジトリへ取り込んだスクリプトです:
+`https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
+
+```bash
+sudo ./scripts/install_dependemcy.sh
+sudo ./scripts/install_middleware_stack.sh
+```
+
+1 コマンドでまとめて導入する場合:
+
+```bash
+sudo ./scripts/install_middleware_stack.sh --install-base-deps
+```
+
 ### 1) AUTOSAR AP ランタイムをビルドしてインストール
 まずは root 権限不要な `/tmp` 例:
 
@@ -38,6 +53,15 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 
 ```bash
 sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
+```
+
+ミドルウェアが未導入の場合は、ビルドスクリプトから先に導入できます:
+
+```bash
+sudo ./scripts/build_and_install_autosar_ap.sh \
+  --prefix /opt/autosar_ap \
+  --install-middleware \
+  --install-base-deps
 ```
 
 ### 2) インストール済みランタイムのみ参照して user_apps をビルド
@@ -78,7 +102,8 @@ Raspberry Pi Linux マシンをプロトタイプ ECU として動作させる�
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --install-middleware
 
 sudo ./scripts/setup_socketcan_interface.sh --ifname can0 --bitrate 500000
 sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-build-dir /opt/autosar_ap/user_apps_build --enable

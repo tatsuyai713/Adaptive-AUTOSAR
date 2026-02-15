@@ -1,5 +1,5 @@
 # Adaptive-AUTOSAR
-![example workflow](https://github.com/langroodi/Adaptive-AUTOSAR/actions/workflows/cmake.yml/badge.svg)
+![CI](https://github.com/tatsuyai713/Adaptive-AUTOSAR/actions/workflows/cmake.yml/badge.svg)
 
 Linux-oriented educational implementation of Adaptive AUTOSAR style APIs.
 
@@ -25,6 +25,21 @@ The following commands were validated in Docker on **2026-02-15**.
   - iceoryx: `/opt/iceoryx`
   - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
+### 0) Install dependencies and middleware (Linux / Raspberry Pi)
+These scripts are based on the installation flow used in:
+`https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
+
+```bash
+sudo ./scripts/install_dependemcy.sh
+sudo ./scripts/install_middleware_stack.sh
+```
+
+Or run everything from one command:
+
+```bash
+sudo ./scripts/install_middleware_stack.sh --install-base-deps
+```
+
 ### 1) Build and install AUTOSAR AP runtime libraries
 Use `/tmp` first (no root privilege required):
 
@@ -38,6 +53,15 @@ If you want the production-like layout:
 
 ```bash
 sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
+```
+
+If middleware is not installed yet, build script can install it first:
+
+```bash
+sudo ./scripts/build_and_install_autosar_ap.sh \
+  --prefix /opt/autosar_ap \
+  --install-middleware \
+  --install-base-deps
 ```
 
 ### 2) Build user apps against installed runtime only
@@ -79,7 +103,8 @@ prototype ECU.
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --install-middleware
 
 sudo ./scripts/setup_socketcan_interface.sh --ifname can0 --bitrate 500000
 sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-build-dir /opt/autosar_ap/user_apps_build --enable

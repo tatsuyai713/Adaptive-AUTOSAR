@@ -11,6 +11,13 @@ BUILD_TYPE="Release"
 USE_VSOMEIP="ON"
 USE_ICEORYX="ON"
 USE_CYCLONEDDS="ON"
+INSTALL_MIDDLEWARE="OFF"
+INSTALL_BASE_DEPS="OFF"
+SKIP_MIDDLEWARE_SYSTEM_DEPS="OFF"
+FORCE_MIDDLEWARE_REINSTALL="OFF"
+VSOMEIP_PREFIX="/opt/vsomeip"
+ICEORYX_PREFIX="/opt/iceoryx"
+CYCLONEDDS_PREFIX="/opt/cyclonedds"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -42,6 +49,35 @@ while [[ $# -gt 0 ]]; do
       USE_CYCLONEDDS="OFF"
       shift
       ;;
+    --install-middleware)
+      INSTALL_MIDDLEWARE="ON"
+      shift
+      ;;
+    --install-base-deps)
+      INSTALL_MIDDLEWARE="ON"
+      INSTALL_BASE_DEPS="ON"
+      shift
+      ;;
+    --skip-middleware-system-deps)
+      SKIP_MIDDLEWARE_SYSTEM_DEPS="ON"
+      shift
+      ;;
+    --force-middleware-reinstall)
+      FORCE_MIDDLEWARE_REINSTALL="ON"
+      shift
+      ;;
+    --vsomeip-prefix)
+      VSOMEIP_PREFIX="$2"
+      shift 2
+      ;;
+    --iceoryx-prefix)
+      ICEORYX_PREFIX="$2"
+      shift 2
+      ;;
+    --cyclonedds-prefix)
+      CYCLONEDDS_PREFIX="$2"
+      shift 2
+      ;;
     *)
       echo "[ERROR] Unknown argument: $1" >&2
       exit 1
@@ -60,6 +96,34 @@ echo "       source_dir=${REPO_ROOT}"
 echo "       install_prefix=${INSTALL_PREFIX}"
 echo "       build_dir=${BUILD_DIR}"
 echo "       backends: vsomeip=${USE_VSOMEIP} iceoryx=${USE_ICEORYX} cyclonedds=${USE_CYCLONEDDS}"
+echo "       middleware prefixes: vsomeip=${VSOMEIP_PREFIX} iceoryx=${ICEORYX_PREFIX} cyclonedds=${CYCLONEDDS_PREFIX}"
+
+if [[ "${INSTALL_MIDDLEWARE}" == "ON" ]]; then
+  middleware_args=(
+    --vsomeip-prefix "${VSOMEIP_PREFIX}"
+    --iceoryx-prefix "${ICEORYX_PREFIX}"
+    --cyclonedds-prefix "${CYCLONEDDS_PREFIX}"
+  )
+  if [[ "${USE_VSOMEIP}" == "OFF" ]]; then
+    middleware_args+=(--without-vsomeip)
+  fi
+  if [[ "${USE_ICEORYX}" == "OFF" ]]; then
+    middleware_args+=(--without-iceoryx)
+  fi
+  if [[ "${USE_CYCLONEDDS}" == "OFF" ]]; then
+    middleware_args+=(--without-cyclonedds)
+  fi
+  if [[ "${INSTALL_BASE_DEPS}" == "ON" ]]; then
+    middleware_args+=(--install-base-deps)
+  fi
+  if [[ "${SKIP_MIDDLEWARE_SYSTEM_DEPS}" == "ON" ]]; then
+    middleware_args+=(--skip-system-deps)
+  fi
+  if [[ "${FORCE_MIDDLEWARE_REINSTALL}" == "ON" ]]; then
+    middleware_args+=(--force)
+  fi
+  "${SCRIPT_DIR}/install_middleware_stack.sh" "${middleware_args[@]}"
+fi
 
 cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
@@ -70,7 +134,10 @@ cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DAUTOSAR_AP_BUILD_SAMPLES=OFF \
   -DARA_COM_USE_VSOMEIP="${USE_VSOMEIP}" \
   -DARA_COM_USE_ICEORYX="${USE_ICEORYX}" \
-  -DARA_COM_USE_CYCLONEDDS="${USE_CYCLONEDDS}"
+  -DARA_COM_USE_CYCLONEDDS="${USE_CYCLONEDDS}" \
+  -DVSOMEIP_PREFIX="${VSOMEIP_PREFIX}" \
+  -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
+  -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
 
 cmake --build "${REPO_ROOT}/${BUILD_DIR}" -j"$(nproc)"
 cmake --install "${REPO_ROOT}/${BUILD_DIR}"

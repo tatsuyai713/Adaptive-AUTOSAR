@@ -24,13 +24,20 @@ using this repository runtime and user apps.
   - `/opt/cyclonedds`
 - `systemd` available
 
+Install prerequisites and middleware (based on lwrcl install flow):
+
+```bash
+sudo ./scripts/install_middleware_stack.sh --install-base-deps
+```
+
 ## 1) Build and install runtime + user apps
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --install-middleware
 ```
 
 ## 2) Configure CAN interface
