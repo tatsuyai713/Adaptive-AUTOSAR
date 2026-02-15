@@ -12,7 +12,7 @@ namespace ara
     namespace diag
     {
         /// @brief Namespace of debouncing mechanism components
-        /// @note The namespace is not part of the ARA standard.
+        /// @note Repository-provided diagnostic debouncing helpers.
         namespace debouncing
         {
             /// @brief Monitored event status

@@ -124,9 +124,10 @@ namespace application
         {
             const std::string cStartUpState{"StartUp"};
 
-            std::string _currentState;
-            if (mStateServer->TryGetState(cMachineFunctionGroup, _currentState) &&
-                _currentState == cStartUpState)
+            const auto cStateResult{
+                mStateServer->GetState(cMachineFunctionGroup)};
+            if (cStateResult.HasValue() &&
+                cStateResult.Value() == cStartUpState)
             {
                 mPlatformHealthManager.Initialize(arguments);
                 mDiagnosticManager.Initialize(arguments);
@@ -159,14 +160,21 @@ namespace application
                 std::map<std::string, std::string> _initialState;
                 fillStates(cConfigFilepath, _functionGroupStates, _initialState);
                 mStateServer =
-                    new ara::exec::StateServer(&_rpcServer,
-                                               std::move(_functionGroupStates),
-                                               std::move(_initialState));
+                    new ara::exec::StateServer(
+                        &_rpcServer,
+                        std::move(_functionGroupStates),
+                        std::move(_initialState));
 
                 auto _onStateChangeCallback{
                     std::bind(&ExecutionManagement::onStateChange, this, arguments)};
-                mStateServer->SetNotifier(
-                    cMachineFunctionGroup, _onStateChangeCallback);
+                auto _setNotifierResult{
+                    mStateServer->SetNotifier(
+                        cMachineFunctionGroup, _onStateChangeCallback)};
+                if (!_setNotifierResult.HasValue())
+                {
+                    throw std::runtime_error(
+                        "Setting state notifier failed.");
+                }
 
                 _logStream << "Execution management has been initialized.";
                 Log(cLogLevel, _logStream);

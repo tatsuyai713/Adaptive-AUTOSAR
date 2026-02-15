@@ -23,6 +23,7 @@ namespace ara
 
         /// @brief An abstract class to wrap the action for recovering a supervised entity
         /// @note The class is not fully aligned with the ARA standard.
+        ///       Runtime-specific dispatching is provided under `ara::phm::extension`.
         /// @see SupervisedEntity
         class RecoveryAction
         {

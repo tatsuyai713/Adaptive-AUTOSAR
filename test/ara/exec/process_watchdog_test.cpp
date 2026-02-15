@@ -115,6 +115,107 @@ namespace ara
                 delete wd;
                 // If we get here without hanging, the test passes
             }
+
+            TEST(ProcessWatchdogTest, StartupGraceDelaysFirstExpiry)
+            {
+                ProcessWatchdog::WatchdogOptions options;
+                options.startupGrace = std::chrono::milliseconds(120);
+
+                ProcessWatchdog wd(
+                    "proc8",
+                    std::chrono::milliseconds(60),
+                    nullptr,
+                    options);
+                wd.Start();
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(90));
+                EXPECT_FALSE(wd.IsExpired());
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(140));
+                EXPECT_TRUE(wd.IsExpired());
+                EXPECT_GE(wd.GetExpiryCount(), 1U);
+                wd.Stop();
+            }
+
+            TEST(ProcessWatchdogTest, KeepRunningOnExpiryInvokesCallbackMultipleTimes)
+            {
+                std::atomic<uint32_t> callbackCount{0U};
+                ProcessWatchdog::WatchdogOptions options;
+                options.keepRunningOnExpiry = true;
+
+                ProcessWatchdog wd(
+                    "proc9",
+                    std::chrono::milliseconds(40),
+                    [&callbackCount](const std::string &)
+                    {
+                        callbackCount.fetch_add(1U);
+                    },
+                    options);
+
+                wd.Start();
+                std::this_thread::sleep_for(std::chrono::milliseconds(220));
+                wd.Stop();
+
+                EXPECT_GE(wd.GetExpiryCount(), 2U);
+                EXPECT_GE(callbackCount.load(), 2U);
+            }
+
+            TEST(ProcessWatchdogTest, CooldownSuppressesFrequentCallbacks)
+            {
+                std::atomic<uint32_t> callbackCount{0U};
+                ProcessWatchdog::WatchdogOptions options;
+                options.keepRunningOnExpiry = true;
+                options.expiryCallbackCooldown = std::chrono::milliseconds(130);
+
+                ProcessWatchdog wd(
+                    "proc10",
+                    std::chrono::milliseconds(35),
+                    [&callbackCount](const std::string &)
+                    {
+                        callbackCount.fetch_add(1U);
+                    },
+                    options);
+
+                wd.Start();
+                std::this_thread::sleep_for(std::chrono::milliseconds(280));
+                wd.Stop();
+
+                EXPECT_GE(wd.GetExpiryCount(), 2U);
+                EXPECT_LE(callbackCount.load(), wd.GetExpiryCount());
+                EXPECT_LE(callbackCount.load(), 3U);
+            }
+
+            TEST(ProcessWatchdogTest, ResetClearsExpiredAndAppliesGrace)
+            {
+                ProcessWatchdog::WatchdogOptions options;
+                options.startupGrace = std::chrono::milliseconds(80);
+
+                ProcessWatchdog wd(
+                    "proc11",
+                    std::chrono::milliseconds(50),
+                    nullptr,
+                    options);
+
+                wd.Start();
+                for (int retry = 0; retry < 15 && !wd.IsExpired(); ++retry)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+                EXPECT_TRUE(wd.IsExpired());
+
+                wd.Reset();
+                EXPECT_FALSE(wd.IsExpired());
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(90));
+                EXPECT_FALSE(wd.IsExpired());
+
+                for (int retry = 0; retry < 10 && !wd.IsExpired(); ++retry)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+                EXPECT_TRUE(wd.IsExpired());
+                wd.Stop();
+            }
         }
     }
 }

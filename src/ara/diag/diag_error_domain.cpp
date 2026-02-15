@@ -9,7 +9,6 @@ namespace ara
     namespace diag
     {
         const ara::core::ErrorDomain::IdType DiagErrorDomain::cId;
-        DiagErrorDomain *DiagErrorDomain::mInstnace = nullptr;
 
         const char *DiagErrorDomain::Name() const noexcept
         {
@@ -59,20 +58,28 @@ namespace ara
 
         ara::core::ErrorDomain *DiagErrorDomain::GetDiagDomain()
         {
-            if (mInstnace == nullptr)
-            {
-                mInstnace = new DiagErrorDomain();
-            }
-
-            return mInstnace;
+            static DiagErrorDomain cDomain;
+            return &cDomain;
         }
 
         ara::core::ErrorCode DiagErrorDomain::MakeErrorCode(DiagErrc code) noexcept
         {
             auto _codeType{static_cast<ara::core::ErrorDomain::CodeType>(code)};
-            ara::core::ErrorCode _result(_codeType, *mInstnace);
+            static DiagErrorDomain cDomain;
+            ara::core::ErrorCode _result(_codeType, cDomain);
 
             return _result;
+        }
+
+        const ara::core::ErrorDomain &GetDiagErrorDomain() noexcept
+        {
+            return *(DiagErrorDomain::GetDiagDomain());
+        }
+
+        ara::core::ErrorCode MakeErrorCode(DiagErrc code) noexcept
+        {
+            auto _codeType{static_cast<ara::core::ErrorDomain::CodeType>(code)};
+            return ara::core::ErrorCode(_codeType, GetDiagErrorDomain());
         }
     }
 }

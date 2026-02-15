@@ -74,8 +74,8 @@ namespace ara
             /// @param dtc DTC ID of interest
             /// @param mask DTC status byte mask
             /// @param status DTC status byte
-            /// @note The function is not ARA compatible.
-            void SetCurrentStatus(
+            /// @returns No error
+            core::Result<void> SetCurrentStatus(
                 uint32_t dtc, UdsDtcStatusBitType mask, UdsDtcStatusByteType status);
 
             /// @brief Set a notifer on any DTC status change

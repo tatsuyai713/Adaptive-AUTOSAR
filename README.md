@@ -154,6 +154,16 @@ Status meanings:
 - `Implemented (subset)`: Implemented in this repo, but not full AUTOSAR feature-complete.
 - `Not implemented`: Not provided in this repo currently.
 
+Conformance policy in this repository:
+- APIs corresponding to AUTOSAR AP standard interfaces are kept in AUTOSAR-style signatures.
+- Platform-side and user-app sample code are implemented to use standard namespaces first (`ara::<domain>::*`), and avoid extension aliases by default.
+- Non-standard additions are provided as extensions (primarily under `ara::<domain>::extension`) and are not used to replace standard API signatures.
+- Extension entry headers:
+  - `src/ara/com/extension/non_standard.h`
+  - `src/ara/diag/extension/non_standard.h`
+  - `src/ara/exec/extension/non_standard.h`
+  - `src/ara/phm/extension/non_standard.h`
+
 | AUTOSAR AP area | Status | Available in this repo | Missing / Notes |
 | --- | --- | --- | --- |
 | `ara::core` | Implemented (subset) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, runtime init/deinit, initialization-state query API | Full standard API surface is not complete |
@@ -162,8 +172,8 @@ Status meanings:
 | `ara::com` SOME/IP transport | Implemented (subset) | SOME/IP SD, pub/sub, RPC paths over vSomeIP backend | Not all SOME/IP/AP options and edge behavior are covered |
 | `ara::com` DDS transport | Implemented (subset) | DDS pub/sub via Cyclone DDS wrappers (`ara::com::dds`) | DDS QoS/profile coverage is partial |
 | `ara::com` zero-copy transport | Implemented (subset) | Zero-copy pub/sub via iceoryx wrappers (`ara::com::zerocopy`) | Zero-copy is backend-mapped implementation, not full AUTOSAR transport standardization scope |
-| `ara::com` E2E | Implemented (subset) | E2E Profile11 and event decorators | Other E2E profiles are not implemented |
-| `ara::exec` | Implemented (subset) | Execution/state client-server helpers, signal handler, worker thread utilities, execution-state change callback API | Full EM/Process orchestration behaviors are partial |
+| `ara::com` E2E | Implemented (subset) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) and event decorators | Other E2E profiles are not implemented |
+| `ara::exec` | Implemented (subset) | Execution/state client-server helpers, signal handler, worker thread utilities, execution-state change callback API, enhanced `ProcessWatchdog` options (startup grace / continuous expiry / callback cooldown / expiry count) | Full EM/Process orchestration behaviors are partial |
 | `ara::diag` | Implemented (subset) | UDS/DoIP-oriented components, routing and debouncing helpers, monitor FDC-threshold action support | Not full Diagnostic Manager feature set |
 | `ara::phm` | Implemented (subset) | Health channel, supervision primitives | Full PHM integration scope is partial |
 | `ara::per` | Implemented (subset) | Key-value/file storage abstractions and APIs | Production-grade persistence policies are partial |

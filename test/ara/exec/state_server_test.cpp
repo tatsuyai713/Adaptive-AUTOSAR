@@ -80,6 +80,15 @@ namespace ara
             EXPECT_FALSE(Server.TryGetState(cFunctionGroup, _state));
         }
 
+        TEST_F(StateServerTest, GetStateMethodRejectsUnknownFunctionGroup)
+        {
+            auto _result{Server.GetState("UnknownFG")};
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kInvalidTransition,
+                static_cast<ExecErrc>(_result.Error().Value()));
+        }
+
         TEST_F(StateServerTest, SetStateScenario)
         {
             const auto cExpectedReturnCode{com::someip::SomeIpReturnCode::eOK};
@@ -95,9 +104,9 @@ namespace ara
             com::someip::SomeIpReturnCode _acutalReturnCode{_response.ReturnCode()};
             EXPECT_EQ(cExpectedReturnCode, _acutalReturnCode);
 
-            std::string _actualState;
-            EXPECT_TRUE(Server.TryGetState(cFunctionGroup, _actualState));
-            EXPECT_EQ(cExpectedState, _actualState);
+            auto _stateResult{Server.GetState(cFunctionGroup)};
+            ASSERT_TRUE(_stateResult.HasValue());
+            EXPECT_EQ(cExpectedState, _stateResult.Value());
         }
 
         TEST_F(StateServerTest, EmptyRpcPayloadScenario)
@@ -216,7 +225,9 @@ namespace ara
             bool _notified{false};
             auto _callback{[&]()
                            { _notified = true; }};
-            Server.SetNotifier(cFunctionGroup, _callback);
+            auto _setNotifierResult{
+                Server.SetNotifier(cFunctionGroup, _callback)};
+            ASSERT_TRUE(_setNotifierResult.HasValue());
 
             std::vector<uint8_t>
                 _rpcPayload({0, 0, 0, 9,
@@ -246,11 +257,14 @@ namespace ara
                 static_cast<ExecErrc>(_result.Error().Value()));
         }
 
-        TEST_F(StateServerTest, SetNotifierThrowsOnUnknownFunctionGroup)
+        TEST_F(StateServerTest, SetNotifierRejectsUnknownFunctionGroup)
         {
-            EXPECT_THROW(
-                Server.SetNotifier("UnknownFG", []() {}),
-                std::out_of_range);
+            auto _result{
+                Server.SetNotifier("UnknownFG", []() {})};
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kInvalidTransition,
+                static_cast<ExecErrc>(_result.Error().Value()));
         }
     }
 }

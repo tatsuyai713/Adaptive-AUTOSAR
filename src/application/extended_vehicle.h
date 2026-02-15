@@ -6,8 +6,11 @@
 #define EXTENDED_VEHICLE_H
 
 #include "../ara/exec/helper/modelled_process.h"
-#include "../ara/phm/supervised_entity.h"
+#include "../ara/com/helper/network_layer.h"
+#include "../ara/com/someip/sd/sd_network_layer.h"
 #include "../ara/com/someip/sd/someip_sd_server.h"
+#include "../ara/phm/supervised_entity.h"
+#include "../ara/phm/checkpoint_communicator.h"
 #include "./helper/network_configuration.h"
 #include "./doip/doip_server.h"
 

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/phm/recovery_action_dispatcher.h"
 #include "../../../src/ara/phm/recovery_action.h"
+#include "../../../src/ara/phm/phm_error_domain.h"
 
 namespace ara
 {
@@ -30,13 +31,14 @@ namespace ara
             MockRecoveryAction _action;
             RecoveryActionDispatcher _dispatcher;
 
-            EXPECT_TRUE(_dispatcher.Register("action1", &_action));
+            EXPECT_TRUE(_dispatcher.Register("action1", &_action).HasValue());
             EXPECT_EQ(_dispatcher.GetActionCount(), 1U);
 
             exec::ExecutionErrorEvent _event;
             EXPECT_TRUE(
                 _dispatcher.Dispatch(
-                    "action1", _event, TypeOfSupervision::AliveSupervision));
+                    "action1", _event, TypeOfSupervision::AliveSupervision)
+                    .HasValue());
             EXPECT_EQ(_action.HandlerCallCount, 1);
         }
 
@@ -45,8 +47,13 @@ namespace ara
             MockRecoveryAction _action;
             RecoveryActionDispatcher _dispatcher;
 
-            EXPECT_TRUE(_dispatcher.Register("dup", &_action));
-            EXPECT_FALSE(_dispatcher.Register("dup", &_action));
+            EXPECT_TRUE(_dispatcher.Register("dup", &_action).HasValue());
+            auto _duplicateRegisterResult{
+                _dispatcher.Register("dup", &_action)};
+            EXPECT_FALSE(_duplicateRegisterResult.HasValue());
+            EXPECT_EQ(
+                PhmErrc::kAlreadyExists,
+                static_cast<PhmErrc>(_duplicateRegisterResult.Error().Value()));
             EXPECT_EQ(_dispatcher.GetActionCount(), 1U);
         }
 
@@ -55,10 +62,15 @@ namespace ara
             MockRecoveryAction _action;
             RecoveryActionDispatcher _dispatcher;
 
-            _dispatcher.Register("removable", &_action);
-            EXPECT_TRUE(_dispatcher.Unregister("removable"));
+            ASSERT_TRUE(_dispatcher.Register("removable", &_action).HasValue());
+            EXPECT_TRUE(_dispatcher.Unregister("removable").HasValue());
             EXPECT_EQ(_dispatcher.GetActionCount(), 0U);
-            EXPECT_FALSE(_dispatcher.Unregister("removable"));
+            auto _missingUnregisterResult{
+                _dispatcher.Unregister("removable")};
+            EXPECT_FALSE(_missingUnregisterResult.HasValue());
+            EXPECT_EQ(
+                PhmErrc::kNotFound,
+                static_cast<PhmErrc>(_missingUnregisterResult.Error().Value()));
         }
 
         TEST(RecoveryActionDispatcherTest, DispatchUnknownReturnsFalse)
@@ -66,22 +78,36 @@ namespace ara
             RecoveryActionDispatcher _dispatcher;
             exec::ExecutionErrorEvent _event;
 
-            EXPECT_FALSE(
+            auto _dispatchResult{
                 _dispatcher.Dispatch(
-                    "nonexistent", _event, TypeOfSupervision::DeadlineSupervision));
+                    "nonexistent", _event, TypeOfSupervision::DeadlineSupervision)};
+            EXPECT_FALSE(_dispatchResult.HasValue());
+            EXPECT_EQ(
+                PhmErrc::kNotFound,
+                static_cast<PhmErrc>(_dispatchResult.Error().Value()));
         }
 
         TEST(RecoveryActionDispatcherTest, RegisterNullptrFails)
         {
             RecoveryActionDispatcher _dispatcher;
-            EXPECT_FALSE(_dispatcher.Register("null", nullptr));
+            auto _registerResult{
+                _dispatcher.Register("null", nullptr)};
+            EXPECT_FALSE(_registerResult.HasValue());
+            EXPECT_EQ(
+                PhmErrc::kInvalidArgument,
+                static_cast<PhmErrc>(_registerResult.Error().Value()));
         }
 
         TEST(RecoveryActionDispatcherTest, RegisterEmptyNameFails)
         {
             MockRecoveryAction _action;
             RecoveryActionDispatcher _dispatcher;
-            EXPECT_FALSE(_dispatcher.Register("", &_action));
+            auto _registerResult{
+                _dispatcher.Register("", &_action)};
+            EXPECT_FALSE(_registerResult.HasValue());
+            EXPECT_EQ(
+                PhmErrc::kInvalidArgument,
+                static_cast<PhmErrc>(_registerResult.Error().Value()));
         }
     }
 }

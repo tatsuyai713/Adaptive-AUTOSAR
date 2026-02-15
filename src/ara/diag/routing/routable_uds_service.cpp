@@ -37,9 +37,8 @@ namespace ara
             {
                 if (mOffered)
                 {
-                    ara::core::ErrorDomain *_errorDomain{DiagErrorDomain::GetDiagDomain()};
-                    auto _diagErrorDomain{static_cast<DiagErrorDomain *>(_errorDomain)};
-                    ara::core::ErrorCode _errorCode{_diagErrorDomain->MakeErrorCode(DiagErrc::kAlreadyOffered)};
+                    ara::core::ErrorCode _errorCode{
+                        MakeErrorCode(DiagErrc::kAlreadyOffered)};
                     auto _result{ara::core::Result<void>::FromError(_errorCode)};
 
                     return _result;

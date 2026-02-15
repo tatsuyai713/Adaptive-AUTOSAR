@@ -4,37 +4,52 @@ namespace ara
 {
     namespace phm
     {
-        bool RecoveryActionDispatcher::Register(
+        core::Result<void> RecoveryActionDispatcher::Register(
             const std::string &name,
             RecoveryAction *action)
         {
             if (!action || name.empty())
             {
-                return false;
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kInvalidArgument));
             }
 
-            auto _result = mActions.emplace(name, action);
-            return _result.second;
+            auto _result{mActions.emplace(name, action)};
+            if (!_result.second)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kAlreadyExists));
+            }
+
+            return core::Result<void>{};
         }
 
-        bool RecoveryActionDispatcher::Unregister(const std::string &name)
+        core::Result<void> RecoveryActionDispatcher::Unregister(const std::string &name)
         {
-            return mActions.erase(name) > 0U;
+            const auto cRemoved{mActions.erase(name)};
+            if (cRemoved == 0U)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kNotFound));
+            }
+
+            return core::Result<void>{};
         }
 
-        bool RecoveryActionDispatcher::Dispatch(
+        core::Result<void> RecoveryActionDispatcher::Dispatch(
             const std::string &name,
             const exec::ExecutionErrorEvent &executionError,
             TypeOfSupervision supervision)
         {
-            auto _iterator = mActions.find(name);
+            auto _iterator{mActions.find(name)};
             if (_iterator == mActions.end())
             {
-                return false;
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kNotFound));
             }
 
             _iterator->second->RecoveryHandler(executionError, supervision);
-            return true;
+            return core::Result<void>{};
         }
 
         std::size_t RecoveryActionDispatcher::GetActionCount() const noexcept

@@ -50,7 +50,6 @@ namespace ara
             /// @brief Add a key-value pair to the metainfo
             /// @param key Key of the pair
             /// @param value Value of the pair
-            /// @note The method is not defined in the ARA standard.
             void SetValue(std::string key, std::string value);
 
             /// @brief Get metainfo context

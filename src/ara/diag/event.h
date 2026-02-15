@@ -77,9 +77,9 @@ namespace ara
 
             /// @brief Set the bits of the event status
             /// @param statusBits A dictionary of event status bits and their corresponding values
-            /// @throws std::out_of_range Throws if a bit is out of range
-            /// @note The function is not ARA compatible.
-            void SetEventStatusBits(std::map<EventStatusBit, bool> statusBits);
+            /// @returns Invalid argument if any requested bit is out of range
+            ara::core::Result<void> SetEventStatusBits(
+                std::map<EventStatusBit, bool> statusBits);
 
             /// @brief Set a notifier on the event status changed
             /// @param notifier Callback to be invoked when the event status is changed
@@ -104,8 +104,8 @@ namespace ara
 
             /// @brief Set the Diagnostic Trouble Code (DTC) number relates to the event
             /// @param dtcNumber DTC number in the UDS format
-            /// @note The function is not ARA compatible.
-            void SetDTCNumber(uint32_t dtcNumber) noexcept;
+            /// @returns No error
+            ara::core::Result<void> SetDTCNumber(uint32_t dtcNumber);
 
             /// @brief Get the event debounding state
             /// @returns Event current debouncing state
@@ -121,8 +121,8 @@ namespace ara
 
             /// @brief Set the event Fault Detection Counter (FDC) value
             /// @param fdc Current FDC value byte
-            /// @note The function is not ARA compatible.
-            void SetFaultDetectionCounter(int8_t fdc) noexcept;
+            /// @returns No error
+            ara::core::Result<void> SetFaultDetectionCounter(int8_t fdc);
         };
     }
 }

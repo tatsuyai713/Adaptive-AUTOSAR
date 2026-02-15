@@ -6,11 +6,20 @@
 #include <limits>
 #include <bitset>
 #include "./event.h"
+#include "./diag_error_domain.h"
 
 namespace ara
 {
     namespace diag
     {
+        namespace
+        {
+            core::ErrorCode makeDiagError(DiagErrc code)
+            {
+                return MakeErrorCode(code);
+            }
+        }
+
         Event::Event(const ara::core::InstanceSpecifier &specifier) : mSpecifier{specifier},
                                                                       mWirStatus{false},
                                                                       mDtcNumber{0},
@@ -25,13 +34,14 @@ namespace ara
             return _result;
         }
 
-        void Event::SetEventStatusBits(std::map<EventStatusBit, bool> statusBits)
+        ara::core::Result<void> Event::SetEventStatusBits(
+            std::map<EventStatusBit, bool> statusBits)
         {
             constexpr size_t cEventStatusByteSize{sizeof(uint8_t) * 8};
 
             if (statusBits.empty())
             {
-                return;
+                return ara::core::Result<void>{};
             }
 
             std::bitset<cEventStatusByteSize> _eventStatusBitSet(
@@ -54,7 +64,8 @@ namespace ara
                     break;
 
                 default:
-                    throw std::out_of_range("The requested bit is out of range.");
+                    return ara::core::Result<void>::FromError(
+                        makeDiagError(DiagErrc::kInvalidArgument));
                 }
 
                 _eventStatusBitSet.set(_position, statusBit.second);
@@ -74,6 +85,8 @@ namespace ara
                     mNotifier(mEventStatus);
                 }
             }
+
+            return ara::core::Result<void>{};
         }
 
         ara::core::Result<void> Event::SetEventStatusChangedNotifier(
@@ -111,9 +124,10 @@ namespace ara
             }
         }
 
-        void Event::SetDTCNumber(uint32_t dtcNumber) noexcept
+        ara::core::Result<void> Event::SetDTCNumber(uint32_t dtcNumber)
         {
             mDtcNumber = dtcNumber;
+            return ara::core::Result<void>{};
         }
 
         ara::core::Result<DebouncingState> Event::GetDebouncingStatus()
@@ -161,9 +175,10 @@ namespace ara
             return _result;
         }
 
-        void Event::SetFaultDetectionCounter(int8_t fdc) noexcept
+        ara::core::Result<void> Event::SetFaultDetectionCounter(int8_t fdc)
         {
             mFdc = fdc;
+            return ara::core::Result<void>{};
         }
     }
 }

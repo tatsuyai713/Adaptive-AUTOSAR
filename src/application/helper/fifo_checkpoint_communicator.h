@@ -8,9 +8,9 @@
 #include <asyncbsdsocket/poller.h>
 #include <asyncbsdsocket/fifo_sender.h>
 #include <asyncbsdsocket/fifo_receiver.h>
-#include "../../ara/phm/checkpoint_communicator.h"
 #include "../../ara/com/helper/concurrent_queue.h"
 #include "../../ara/com/e2e/profile11.h"
+#include "../../ara/phm/checkpoint_communicator.h"
 
 namespace application
 {

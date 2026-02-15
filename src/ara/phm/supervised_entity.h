@@ -5,17 +5,20 @@
 #ifndef SUPERVISED_ENTITY_H
 #define SUPERVISED_ENTITY_H
 
-#include <assert.h>
+#include <cstdint>
 #include <type_traits>
 #include "../core/instance_specifier.h"
+#include "../core/result.h"
 #include "./checkpoint_communicator.h"
+#include "./phm_error_domain.h"
 
 namespace ara
 {
     namespace phm
     {
         /// @brief A class that collects and reports supervision checkpoints
-        /// @note The class is not fully compatible with the ARA standard.
+        /// @note Checkpoint transport wiring is runtime specific and uses
+        ///       extension interfaces under `ara::phm::extension`.
         class SupervisedEntity
         {
         private:
@@ -39,14 +42,26 @@ namespace ara
             /// @tparam EnumT Type of the checkpoint
             /// @param checkpointId ID of the checkpoint to be reported
             template <typename EnumT>
-            void ReportCheckpoint(EnumT checkpointId)
+            core::Result<void> ReportCheckpoint(EnumT checkpointId)
             {
-                constexpr const bool cIsSame{
-                    std::is_same<std::underlying_type_t<EnumT>, uint32_t>::value};
-                assert(cIsSame);
+                static_assert(
+                    std::is_enum<EnumT>::value,
+                    "Checkpoint identifier must be an enum type.");
+                static_assert(
+                    std::is_same<
+                        std::underlying_type_t<EnumT>,
+                        std::uint32_t>::value,
+                    "Checkpoint enum underlying type must be uint32_t.");
 
-                auto _checkpoint{static_cast<uint32_t>(checkpointId)};
-                mCommunicator->TrySend(_checkpoint);
+                const auto checkpoint{static_cast<std::uint32_t>(checkpointId)};
+                const bool reported{mCommunicator->TrySend(checkpoint)};
+                if (!reported)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PhmErrc::kCheckpointCommunicationError));
+                }
+
+                return core::Result<void>{};
             }
         };
     }

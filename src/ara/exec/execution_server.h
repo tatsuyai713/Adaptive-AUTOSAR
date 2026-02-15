@@ -19,7 +19,8 @@ namespace ara
     {
         /// @brief A class to handle the execution client requests at the EM side
         /// @see ExecutionClient
-        /// @note The class is not part of the ARA standard.
+        /// @note EM server-side helper in this repository. Application-side standard
+        ///       interaction remains `ara::exec::ExecutionClient`.
         class ExecutionServer
         {
         public:
@@ -63,8 +64,14 @@ namespace ara
             /// @param[out] state Instance specifier execution state
             /// @return True if the execution state is reported; otherwise false
             /// @remark The function is thread-safe.
+            /// @note Compatibility helper. Prefer `GetExecutionState`.
             bool TryGetExecutionState(
                 std::string id, ExecutionState &state);
+
+            /// @brief Get the execution state of an instance specifier.
+            /// @param id Instance specifier meta-model ID.
+            /// @returns Reported execution state, or invalid arguments if not found.
+            core::Result<ExecutionState> GetExecutionState(std::string id);
 
             /// @brief Get a copy of all reported execution states.
             /// @returns Map of instance id to execution state.

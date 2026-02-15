@@ -153,6 +153,16 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 - `実装あり (一部)`: リポジトリ内に実装あり。ただし AUTOSAR 仕様全体としては部分対応。
 - `未実装`: 現在のリポジトリ対象外。
 
+本リポジトリの準拠ポリシー:
+- AUTOSAR AP 標準に対応するAPIは、標準形のシグネチャを維持します。
+- プラットフォーム側/ユーザーアプリ側のサンプル実装は、原則として標準名前空間 (`ara::<domain>::*`) を優先し、拡張 alias を既定では使用しません。
+- 非標準機能は拡張として分離し（主に `ara::<domain>::extension`）、標準APIの置換としては扱いません。
+- 拡張 API の入口ヘッダ:
+  - `src/ara/com/extension/non_standard.h`
+  - `src/ara/diag/extension/non_standard.h`
+  - `src/ara/exec/extension/non_standard.h`
+  - `src/ara/phm/extension/non_standard.h`
+
 | AUTOSAR AP 領域 | 状態 | このリポジトリで提供されるもの | 未対応/備考 |
 | --- | --- | --- | --- |
 | `ara::core` | 実装あり (一部) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, init/deinit, 初期化状態照会 API | 標準 API 全面対応ではない |
@@ -161,8 +171,8 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 | `ara::com` SOME/IP | 実装あり (一部) | vSomeIP backend による SD, pub/sub, RPC | すべての SOME/IP/AP オプションは未対応 |
 | `ara::com` DDS | 実装あり (一部) | Cyclone DDS wrapper (`ara::com::dds`) | QoS/運用プロファイルは部分対応 |
 | `ara::com` ZeroCopy | 実装あり (一部) | iceoryx wrapper (`ara::com::zerocopy`) | バックエンド隠蔽実装。AUTOSAR 全標準化範囲を完全網羅するものではない |
-| `ara::com` E2E | 実装あり (一部) | E2E Profile11 + event decorator | 他プロファイルは未実装 |
-| `ara::exec` | 実装あり (一部) | Execution/State client-server helper, signal handler, worker thread, 実行状態変更コールバック API | EM 全機能を網羅するものではない |
+| `ara::com` E2E | 実装あり (一部) | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) + event decorator | 他プロファイルは未実装 |
+| `ara::exec` | 実装あり (一部) | Execution/State client-server helper, signal handler, worker thread, 実行状態変更コールバック API, 拡張 `ProcessWatchdog`（起動猶予/連続期限切れ監視/コールバッククールダウン/期限切れ回数） | EM 全機能を網羅するものではない |
 | `ara::diag` | 実装あり (一部) | UDS/DoIP 系コンポーネント、routing/debouncing helper、Monitor の FDC しきい値到達アクション対応 | Diagnostic Manager 全仕様の網羅ではない |
 | `ara::phm` | 実装あり (一部) | Health channel, supervision primitives | PHM 全体統合仕様は部分対応 |
 | `ara::per` | 実装あり (一部) | Key-value/File storage API | 実運用向けポリシーは部分対応 |

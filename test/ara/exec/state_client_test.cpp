@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include "../../../src/ara/exec/state_client.h"
 #include "./helper/mock_rpc_client.h"
 
@@ -126,6 +127,14 @@ namespace ara
             auto _actualResult = static_cast<ExecErrc>(_errorCode.Value());
 
             EXPECT_EQ(cExpectedResult, _actualResult);
+        }
+
+        TEST(StateClientCtorTest, RejectsNullRpcClient)
+        {
+            std::function<void(const ExecutionErrorEvent &)> _emptyCallback;
+            EXPECT_THROW(
+                StateClient _client(_emptyCallback, nullptr),
+                std::invalid_argument);
         }
     }
 }

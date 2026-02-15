@@ -27,10 +27,17 @@ namespace ara
 
             if (mEvent)
             {
-                mEvent->SetFaultDetectionCounter(passed ? cPassedFdc : cFailedFdc);
-                mEvent->SetEventStatusBits(
-                    {{EventStatusBit::kTestFailed, !passed},
-                     {EventStatusBit::kTestNotCompletedThisOperationCycle, cTestNotCompleted}});
+                const auto cFdcResult{
+                    mEvent->SetFaultDetectionCounter(
+                        passed ? cPassedFdc : cFailedFdc)};
+                if (!cFdcResult.HasValue())
+                {
+                    return;
+                }
+
+                (void)mEvent->SetEventStatusBits({
+                    {EventStatusBit::kTestFailed, !passed},
+                    {EventStatusBit::kTestNotCompletedThisOperationCycle, cTestNotCompleted}});
             }
         }
 
@@ -93,7 +100,8 @@ namespace ara
                 case MonitorAction::kResetTestFailed:
                     if (mEvent)
                     {
-                        mEvent->SetEventStatusBits({{EventStatusBit::kTestFailed, false}});
+                        (void)mEvent->SetEventStatusBits({
+                            {EventStatusBit::kTestFailed, false}});
                     }
                     break;
 
@@ -101,10 +109,16 @@ namespace ara
                     if (mEvent)
                     {
                         const int8_t cFailedFdc{127};
-                        mEvent->SetFaultDetectionCounter(cFailedFdc);
-                        mEvent->SetEventStatusBits(
-                            {{EventStatusBit::kTestFailed, true},
-                             {EventStatusBit::kTestNotCompletedThisOperationCycle, false}});
+                        const auto cFdcResult{
+                            mEvent->SetFaultDetectionCounter(cFailedFdc)};
+                        if (!cFdcResult.HasValue())
+                        {
+                            break;
+                        }
+
+                        (void)mEvent->SetEventStatusBits({
+                            {EventStatusBit::kTestFailed, true},
+                            {EventStatusBit::kTestNotCompletedThisOperationCycle, false}});
                     }
                     break;
 
@@ -114,18 +128,24 @@ namespace ara
             }
         }
 
-        void Monitor::AttachEvent(Event *event)
+        core::Result<void> Monitor::AttachEvent(Event *event)
         {
+            if (event == nullptr)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(DiagErrc::kInvalidArgument));
+            }
+
             mEvent = event;
+            return core::Result<void>{};
         }
 
         core::Result<void> Monitor::Offer()
         {
             if (mOffered)
             {
-                core::ErrorDomain *_errorDomain{DiagErrorDomain::GetDiagDomain()};
-                auto _diagErrorDomain{static_cast<DiagErrorDomain *>(_errorDomain)};
-                core::ErrorCode _errorCode{_diagErrorDomain->MakeErrorCode(DiagErrc::kAlreadyOffered)};
+                core::ErrorCode _errorCode{
+                    MakeErrorCode(DiagErrc::kAlreadyOffered)};
                 auto _result{core::Result<void>::FromError(_errorCode)};
 
                 return _result;

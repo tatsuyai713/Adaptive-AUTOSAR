@@ -15,7 +15,7 @@ namespace ara
     namespace phm
     {
         /// @brief Namepsace that contains different supervision configurations and algorithms
-        /// @note The namespace is not part of the ARA standard.
+        /// @note Repository-provided PHM supervision algorithms.
         namespace supervisors
         {
             /// @brief Supervision method to check an entity aliveness periodically

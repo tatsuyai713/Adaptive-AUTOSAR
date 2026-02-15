@@ -4,7 +4,6 @@
 
 #include <exception>
 
-#include "../../ara/com/someip/sd/sd_network_layer.h"
 #include "../../application/helper/argument_configuration.h"
 #include "./diagnostic_manager.h"
 
@@ -229,7 +228,12 @@ namespace application
             mEvent = new ara::diag::Event(*mEventSpecifier);
 
             const auto cDtcNumber{cDtcNode.GetValue<uint32_t>()};
-            mEvent->SetDTCNumber(cDtcNumber);
+            const auto cSetDtcResult{
+                mEvent->SetDTCNumber(cDtcNumber)};
+            if (!cSetDtcResult.HasValue())
+            {
+                throw std::runtime_error("Setting diagnostic DTC failed.");
+            }
 
             auto _onEventStatusChanged{
                 std::bind(
@@ -305,8 +309,17 @@ namespace application
             mMonitor =
                 new ara::diag::Monitor(
                     *mMonitorSpecifier, _initMonitor, _timeBased);
-            mMonitor->AttachEvent(mEvent);
-            mMonitor->Offer();
+            const auto cAttachResult{mMonitor->AttachEvent(mEvent)};
+            if (!cAttachResult.HasValue())
+            {
+                throw std::runtime_error("Attaching event to monitor failed.");
+            }
+
+            const auto cOfferResult{mMonitor->Offer()};
+            if (!cOfferResult.HasValue())
+            {
+                throw std::runtime_error("Offering diagnostic monitor failed.");
+            }
         }
 
         void DiagnosticManager::checkServiceDiscovery()

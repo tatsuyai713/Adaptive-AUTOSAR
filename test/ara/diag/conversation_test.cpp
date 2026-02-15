@@ -79,7 +79,9 @@ namespace ara
                     this, std::placeholders::_1)};
 
             ConversationReference.get().SetDiagnosticSessionNotifier(_callback);
-            ConversationReference.get().SetDiagnosticSession(cNewSession);
+            auto _setSessionResult{
+                ConversationReference.get().SetDiagnosticSession(cNewSession)};
+            ASSERT_TRUE(_setSessionResult.HasValue());
             EXPECT_EQ(cNewSession, ActiveSession);
 
             ConversationReference.get().ResetToDefaultSession();

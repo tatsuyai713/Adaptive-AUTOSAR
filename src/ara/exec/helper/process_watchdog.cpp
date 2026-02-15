@@ -6,15 +6,60 @@ namespace ara
     {
         namespace helper
         {
+            namespace
+            {
+                ProcessWatchdog::WatchdogOptions SanitizeOptions(
+                    ProcessWatchdog::WatchdogOptions options) noexcept
+                {
+                    if (options.startupGrace.count() < 0)
+                    {
+                        options.startupGrace = std::chrono::milliseconds(0);
+                    }
+                    if (options.expiryCallbackCooldown.count() < 0)
+                    {
+                        options.expiryCallbackCooldown = std::chrono::milliseconds(0);
+                    }
+                    return options;
+                }
+            }
+
+            ProcessWatchdog::ProcessWatchdog(
+                const std::string &processName,
+                std::chrono::milliseconds timeout,
+                ExpiryCallback callback,
+                WatchdogOptions options)
+                : mProcessName{processName},
+                  mTimeout{timeout},
+                  mExpiryCallback{std::move(callback)},
+                  mOptions{SanitizeOptions(options)},
+                  mRunning{false},
+                  mExpired{false},
+                  mExpiryCount{0U},
+                  mWatchLoopActive{false},
+                  mHasExpiryCallbackTimestamp{false}
+            {
+            }
+
+            ProcessWatchdog::ProcessWatchdog(
+                const std::string &processName,
+                std::chrono::milliseconds timeout)
+                : ProcessWatchdog(
+                      processName,
+                      timeout,
+                      nullptr,
+                      WatchdogOptions{})
+            {
+            }
+
             ProcessWatchdog::ProcessWatchdog(
                 const std::string &processName,
                 std::chrono::milliseconds timeout,
                 ExpiryCallback callback)
-                : mProcessName{processName},
-                  mTimeout{timeout},
-                  mExpiryCallback{std::move(callback)},
-                  mRunning{false},
-                  mExpired{false}
+                : ProcessWatchdog(
+                      processName,
+                      timeout,
+                      std::move(callback),
+                      WatchdogOptions{})
             {
             }
 
@@ -32,11 +77,16 @@ namespace ara
                 }
 
                 mExpired.store(false);
+                mExpiryCount.store(0U);
                 {
                     std::lock_guard<std::mutex> lock{mMutex};
-                    mLastAlive = std::chrono::steady_clock::now();
+                    const auto now{std::chrono::steady_clock::now()};
+                    mLastAlive = now + mOptions.startupGrace;
+                    mLastExpiryCallback = now;
+                    mHasExpiryCallbackTimestamp = false;
                 }
 
+                mWatchLoopActive.store(true);
                 mWatchThread = std::thread(&ProcessWatchdog::WatchLoop, this);
             }
 
@@ -70,6 +120,31 @@ namespace ara
                 mCondition.notify_all();
             }
 
+            void ProcessWatchdog::Reset()
+            {
+                mExpired.store(false);
+
+                const auto now{std::chrono::steady_clock::now()};
+                {
+                    std::lock_guard<std::mutex> lock{mMutex};
+                    mLastAlive = now + mOptions.startupGrace;
+                    mLastExpiryCallback = now;
+                    mHasExpiryCallbackTimestamp = false;
+                }
+                mCondition.notify_all();
+
+                if (mRunning.load() && !mWatchLoopActive.load())
+                {
+                    if (mWatchThread.joinable())
+                    {
+                        mWatchThread.join();
+                    }
+
+                    mWatchLoopActive.store(true);
+                    mWatchThread = std::thread(&ProcessWatchdog::WatchLoop, this);
+                }
+            }
+
             bool ProcessWatchdog::IsRunning() const noexcept
             {
                 return mRunning.load();
@@ -80,6 +155,11 @@ namespace ara
                 return mExpired.load();
             }
 
+            std::uint64_t ProcessWatchdog::GetExpiryCount() const noexcept
+            {
+                return mExpiryCount.load();
+            }
+
             std::string ProcessWatchdog::GetProcessName() const
             {
                 return mProcessName;
@@ -88,6 +168,22 @@ namespace ara
             std::chrono::milliseconds ProcessWatchdog::GetTimeout() const noexcept
             {
                 return mTimeout;
+            }
+
+            ProcessWatchdog::WatchdogOptions ProcessWatchdog::GetOptions() const
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                return mOptions;
+            }
+
+            void ProcessWatchdog::SetOptions(WatchdogOptions options)
+            {
+                const WatchdogOptions sanitized{SanitizeOptions(options)};
+                {
+                    std::lock_guard<std::mutex> lock{mMutex};
+                    mOptions = sanitized;
+                }
+                mCondition.notify_all();
             }
 
             void ProcessWatchdog::WatchLoop()
@@ -109,19 +205,48 @@ namespace ara
                     if (now - mLastAlive >= mTimeout)
                     {
                         mExpired.store(true);
+                        mExpiryCount.fetch_add(1U);
 
                         ExpiryCallback callback = mExpiryCallback;
                         std::string name = mProcessName;
+                        WatchdogOptions options = mOptions;
+                        bool invokeCallback{true};
+
+                        if (options.expiryCallbackCooldown.count() > 0)
+                        {
+                            if (mHasExpiryCallbackTimestamp &&
+                                (now - mLastExpiryCallback) <
+                                    options.expiryCallbackCooldown)
+                            {
+                                invokeCallback = false;
+                            }
+                        }
+
+                        if (invokeCallback)
+                        {
+                            mLastExpiryCallback = now;
+                            mHasExpiryCallbackTimestamp = true;
+                        }
+
+                        if (options.keepRunningOnExpiry)
+                        {
+                            mLastAlive = now;
+                        }
                         lock.unlock();
 
-                        if (callback)
+                        if (invokeCallback && callback)
                         {
                             callback(name);
                         }
 
-                        break;
+                        if (!options.keepRunningOnExpiry)
+                        {
+                            break;
+                        }
                     }
                 }
+
+                mWatchLoopActive.store(false);
             }
         }
     }

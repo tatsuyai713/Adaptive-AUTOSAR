@@ -41,8 +41,6 @@ namespace ara
             static const ara::core::ErrorDomain::IdType cId{0x8000000000000401};
             const char *cName{"Diag"};
 
-            static DiagErrorDomain *mInstnace;
-
             constexpr DiagErrorDomain() noexcept : ara::core::ErrorDomain(cId)
             {
             }
@@ -56,7 +54,6 @@ namespace ara
 
             /// @brief Get the global diagnostic error domain
             /// @returns Pointer to the singleton diagnostic error domain
-            /// @note The signature does not match with ARA standard.
             static ara::core::ErrorDomain *GetDiagDomain();
 
             /// @brief Make an error code based on the given giagnostic error type
@@ -65,6 +62,15 @@ namespace ara
             /// @note Vendor specific data is not supported.
             ara::core::ErrorCode MakeErrorCode(DiagErrc code) noexcept;
         };
+
+        /// @brief Get diagnostic error domain singleton reference.
+        /// @returns Diagnostic error domain reference.
+        const ara::core::ErrorDomain &GetDiagErrorDomain() noexcept;
+
+        /// @brief Create a diagnostic error code in diagnostic domain.
+        /// @param code Diagnostic error enum value.
+        /// @returns Populated `ara::core::ErrorCode`.
+        ara::core::ErrorCode MakeErrorCode(DiagErrc code) noexcept;
     }
 }
 

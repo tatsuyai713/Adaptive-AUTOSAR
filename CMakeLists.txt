@@ -625,6 +625,8 @@ add_library(
 
 add_library(
   ara_phm
+  ${source_ara_phm_dir}/phm_error_domain.h
+  ${source_ara_phm_dir}/phm_error_domain.cpp
   ${source_ara_phm_dir}/checkpoint_communicator.h
   ${source_ara_phm_dir}/checkpoint_communicator.cpp
   ${source_ara_phm_dir}/supervised_entity.h
@@ -1507,8 +1509,13 @@ if(build_tests)
   endif()
 
   include(GoogleTest)
-  gtest_discover_tests(arxml_unit_test)
-  gtest_discover_tests(ara_unit_test)
+  gtest_discover_tests(arxml_unit_test TEST_LIST arxml_unit_test_cases)
+  gtest_discover_tests(
+    ara_unit_test
+    TEST_LIST ara_unit_test_cases
+    PROPERTIES
+    RESOURCE_LOCK ara_unit_runtime
+  )
  endif()
 
 ########################################################################

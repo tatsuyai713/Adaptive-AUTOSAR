@@ -18,7 +18,7 @@ namespace ara
         namespace someip
         {
             /// @brief SOME/IP service discovery namespace
-            /// @note The namespace is not part of the ARA standard.
+            /// @note Repository-provided SOME/IP SD transport implementation.
             namespace sd
             {
                 /// @brief SOME/IP service discovery multicast network layer

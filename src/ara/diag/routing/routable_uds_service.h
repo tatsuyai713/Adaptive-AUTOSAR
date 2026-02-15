@@ -24,7 +24,7 @@ namespace ara
         };
 
         /// @brief UDS services routing namespace
-        /// @note The namespace is not part of the ARA standard
+        /// @note Repository-provided diagnostic routing helpers.
         namespace routing
         {
             /// @brief An UDS service to handle a diagnostic request by offering itself to a router

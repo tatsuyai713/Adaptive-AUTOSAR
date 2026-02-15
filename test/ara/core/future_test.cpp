@@ -87,6 +87,16 @@ namespace ara
             EXPECT_EQ(future_status::ready, _status);
         }
 
+        TEST(FutureTest, IsReadyMethod)
+        {
+            Promise<int> _promise;
+            Future<int> _future = _promise.get_future();
+
+            EXPECT_FALSE(_future.is_ready());
+            _promise.set_value(10);
+            EXPECT_TRUE(_future.is_ready());
+        }
+
         TEST(FutureVoidTest, GetResultVoid)
         {
             Promise<void> _promise;
@@ -106,6 +116,16 @@ namespace ara
             Future<void> _movedFuture{std::move(_future)};
             EXPECT_TRUE(_movedFuture.valid());
             EXPECT_FALSE(_future.valid());
+        }
+
+        TEST(FutureVoidTest, IsReadyMethod)
+        {
+            Promise<void> _promise;
+            Future<void> _future = _promise.get_future();
+
+            EXPECT_FALSE(_future.is_ready());
+            _promise.set_value();
+            EXPECT_TRUE(_future.is_ready());
         }
 
         TEST(FutureTest, ThenWithValueContinuation)

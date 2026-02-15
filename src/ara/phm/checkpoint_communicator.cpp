@@ -8,9 +8,16 @@ namespace ara
 {
     namespace phm
     {
-        void CheckpointCommunicator::SetCallback(CheckpointReception &&callback)
+        core::Result<void> CheckpointCommunicator::SetCallback(CheckpointReception callback)
         {
+            if (!callback)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kInvalidArgument));
+            }
+
             Callback = std::move(callback);
+            return core::Result<void>{};
         }
 
         void CheckpointCommunicator::ResetCallback() noexcept

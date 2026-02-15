@@ -4,6 +4,7 @@
 
 #include "./supervised_entity.h"
 
+#include <stdexcept>
 #include <utility>
 
 namespace ara
@@ -15,6 +16,11 @@ namespace ara
             CheckpointCommunicator *communicator) : mInstance{instance},
                                                     mCommunicator{communicator}
         {
+            if (mCommunicator == nullptr)
+            {
+                throw std::invalid_argument(
+                    "Checkpoint communicator must not be null.");
+            }
         }
 
         SupervisedEntity::SupervisedEntity(

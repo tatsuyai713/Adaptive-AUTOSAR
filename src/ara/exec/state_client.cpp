@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./state_client.h"
+#include <stdexcept>
 
 namespace ara
 {
@@ -14,6 +15,11 @@ namespace ara
             std::function<void(const ExecutionErrorEvent &)> undefinedStateCallback,
             com::someip::rpc::RpcClient *rpcClient) : mRpcClient{rpcClient}
         {
+            if (mRpcClient == nullptr)
+            {
+                throw std::invalid_argument("RPC client cannot be null.");
+            }
+
             // Wrap the user callback to also track error events internally
             mUndefinedStateCallback = [this, undefinedStateCallback](const ExecutionErrorEvent &event)
             {

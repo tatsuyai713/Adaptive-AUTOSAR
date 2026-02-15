@@ -105,6 +105,19 @@ namespace ara
                 return mFuture.valid();
             }
 
+            /// @brief Check whether the shared state is already ready without blocking.
+            /// @returns True if result is ready; otherwise false.
+            bool is_ready() const
+            {
+                if (!mFuture.valid())
+                {
+                    return false;
+                }
+
+                const auto cStatus{mFuture.wait_for(std::chrono::milliseconds(0))};
+                return cStatus == std::future_status::ready;
+            }
+
             /// @brief Block until the shared state is ready
             void wait() const
             {
@@ -239,6 +252,19 @@ namespace ara
             bool valid() const noexcept
             {
                 return mFuture.valid();
+            }
+
+            /// @brief Check whether the shared state is already ready without blocking.
+            /// @returns True if result is ready; otherwise false.
+            bool is_ready() const
+            {
+                if (!mFuture.valid())
+                {
+                    return false;
+                }
+
+                const auto cStatus{mFuture.wait_for(std::chrono::milliseconds(0))};
+                return cStatus == std::future_status::ready;
             }
 
             /// @brief Block until the shared state is ready

@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <functional>
+#include "../core/result.h"
+#include "./phm_error_domain.h"
 
 namespace ara
 {
@@ -14,7 +16,7 @@ namespace ara
     namespace phm
     {
         /// @brief An abstract class to communicate a checkpoint between an application and the PHM cluster
-        /// @note The class is not part of the ARA standard.
+        /// @note Repository helper abstraction for checkpoint transport wiring.
         class CheckpointCommunicator
         {
         public:
@@ -35,7 +37,8 @@ namespace ara
 
             /// @brief Set a callback to be invoked at a checkpoint reception
             /// @param callback Callback to be invoked
-            void SetCallback(CheckpointReception &&callback);
+            /// @returns Invalid argument if callback is empty
+            core::Result<void> SetCallback(CheckpointReception callback);
 
             /// @brief Reset the callback to be invoked at a checkpoint reception
             void ResetCallback() noexcept;

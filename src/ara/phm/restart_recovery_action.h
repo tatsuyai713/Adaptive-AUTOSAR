@@ -10,7 +10,7 @@ namespace ara
     {
         /// @brief A concrete recovery action that requests a process restart
         ///        via a user-supplied callback.
-        /// @note The class is not part of the ARA standard.
+        /// @note Repository helper for restart recovery policy wiring.
         class RestartRecoveryAction : public RecoveryAction
         {
         public:

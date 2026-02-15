@@ -128,7 +128,8 @@ namespace ara
             return _result;
         }
 
-        void Conversation::SetDiagnosticSession(SessionControlType diagnosticSession)
+        ara::core::Result<void> Conversation::SetDiagnosticSession(
+            SessionControlType diagnosticSession)
         {
             if (mDiagnosticSession != diagnosticSession)
             {
@@ -138,6 +139,8 @@ namespace ara
                     mDiagnosticSessionNotifier(mDiagnosticSession);
                 }
             }
+
+            return ara::core::Result<void>{};
         }
 
         ara::core::Result<void> Conversation::SetDiagnosticSessionNotifier(
@@ -216,7 +219,12 @@ namespace ara
 
         ara::core::Result<void> Conversation::ResetToDefaultSession()
         {
-            SetDiagnosticSession(SessionControlType::kDefaultSession);
+            auto _sessionResult{
+                SetDiagnosticSession(SessionControlType::kDefaultSession)};
+            if (!_sessionResult.HasValue())
+            {
+                return _sessionResult;
+            }
 
             if (mDiagnosticSecurityLevel != SecurityLevelType::kLocked)
             {

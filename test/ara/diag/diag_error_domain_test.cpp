@@ -22,5 +22,16 @@ namespace ara
 
             EXPECT_EQ(cExpectedResult, _actualResult);
         }
+
+        TEST(DiagErrorDomainTest, FreeFunctionErrorDomainAndMakeErrorCode)
+        {
+            const auto &_domain{GetDiagErrorDomain()};
+            EXPECT_STRNE(_domain.Name(), "");
+
+            const auto _errorCode{MakeErrorCode(DiagErrc::kRejected)};
+            EXPECT_EQ(
+                DiagErrc::kRejected,
+                static_cast<DiagErrc>(_errorCode.Value()));
+        }
     }
 }

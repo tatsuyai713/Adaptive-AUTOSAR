@@ -195,12 +195,10 @@ namespace ara
         bool StateServer::TryGetState(
             std::string functionGroup, std::string &state)
         {
-            const std::lock_guard<std::mutex> _currentStatesLock{mMutex};
-
-            auto _itr{mCurrentStates.find(functionGroup)};
-            if (_itr != mCurrentStates.end())
+            auto _result{GetState(std::move(functionGroup))};
+            if (_result.HasValue())
             {
-                state = _itr->second;
+                state = _result.Value();
                 return true;
             }
             else
@@ -209,25 +207,20 @@ namespace ara
             }
         }
 
-        void StateServer::SetNotifier(
-            std::string functionGroup, std::function<void()> callback)
+        core::Result<std::string> StateServer::GetState(std::string functionGroup)
         {
-            std::string _functionGroup(functionGroup);
-            auto _result{TrySetNotifier(std::move(functionGroup), std::move(callback))};
-            if (!_result.HasValue())
+            const std::lock_guard<std::mutex> _currentStatesLock{mMutex};
+            auto _itr{mCurrentStates.find(functionGroup)};
+            if (_itr == mCurrentStates.end())
             {
-                auto _errorCode{static_cast<ExecErrc>(_result.Error().Value())};
-                if (_errorCode == ExecErrc::kInvalidTransition)
-                {
-                    throw std::out_of_range(
-                        "Function group: " + _functionGroup + " does not exist.");
-                }
-
-                throw std::invalid_argument("Notifier callback is empty.");
+                return core::Result<std::string>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidTransition));
             }
+
+            return core::Result<std::string>{_itr->second};
         }
 
-        core::Result<void> StateServer::TrySetNotifier(
+        core::Result<void> StateServer::SetNotifier(
             std::string functionGroup, std::function<void()> callback)
         {
             if (!callback)
@@ -246,6 +239,12 @@ namespace ara
 
             mNotifiers[std::move(functionGroup)] = std::move(callback);
             return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> StateServer::TrySetNotifier(
+            std::string functionGroup, std::function<void()> callback)
+        {
+            return SetNotifier(std::move(functionGroup), std::move(callback));
         }
 
         bool StateServer::Initialized() const noexcept

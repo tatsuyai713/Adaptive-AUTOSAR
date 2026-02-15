@@ -13,7 +13,7 @@ namespace ara
     namespace com
     {
         /// @brief End to End communication protection protocol namespace
-        /// @note The entities within the namespace are NOT fully compatible with the ARA standard.
+        /// @note This repository currently provides a subset of AUTOSAR E2E features.
         namespace e2e
         {
             /// @brief Result of E2E protection verification.

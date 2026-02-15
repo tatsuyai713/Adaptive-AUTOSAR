@@ -22,7 +22,8 @@ namespace ara
     {
         /// @brief A class to handle the state client requests at the EM side
         /// @see StateClient
-        /// @note The class is not part of the ARA standard.
+        /// @note EM server-side helper in this repository. Application-side standard
+        ///       interaction remains `ara::exec::StateClient`.
         class StateServer
         {
         private:
@@ -67,20 +68,27 @@ namespace ara
             /// @param[out] state Function group state
             /// @return True if the function group exits; otherwise false
             /// @remark The function is thread-safe.
+            /// @note Compatibility helper. Prefer `GetState`.
             bool TryGetState(
                 std::string functionGroup, std::string &state);
+
+            /// @brief Get the state of a function group.
+            /// @param functionGroup Function group name.
+            /// @returns Current state, or invalid transition if function group does not exist.
+            core::Result<std::string> GetState(std::string functionGroup);
 
             /// @brief Set a notifier at the state changed of a function group
             /// @param functionGroup Function group of interest
             /// @param callback Callback to be invoked at the state change
-            /// @throws std::out_of_range Throws when the function group does not exist
-            void SetNotifier(
+            /// @returns Invalid transition on unknown function group, invalid argument on empty callback.
+            core::Result<void> SetNotifier(
                 std::string functionGroup, std::function<void()> callback);
 
             /// @brief Set a notifier at the state changed of a function group.
             /// @param functionGroup Function group of interest
             /// @param callback Callback to be invoked at the state change
             /// @returns Invalid transition on unknown function group, invalid argument on empty callback.
+            /// @note Compatibility alias. Prefer `SetNotifier`.
             core::Result<void> TrySetNotifier(
                 std::string functionGroup, std::function<void()> callback);
 

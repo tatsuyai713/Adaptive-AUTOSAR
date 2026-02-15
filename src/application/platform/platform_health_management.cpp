@@ -2,6 +2,7 @@
 /// @brief Implementation for platform health management.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
+#include <stdexcept>
 #include "../helper/argument_configuration.h"
 #include "./platform_health_management.h"
 
@@ -25,7 +26,14 @@ namespace application
                 std::bind(
                     &PlatformHealthManagement::onReportCheckpoint,
                     this, std::placeholders::_1)};
-            mCheckpointCommunicator->SetCallback(std::move(_onReportCheckpoint));
+            const auto cSetCallbackResult{
+                mCheckpointCommunicator->SetCallback(
+                    std::move(_onReportCheckpoint))};
+            if (!cSetCallbackResult.HasValue())
+            {
+                throw std::invalid_argument(
+                    "Setting checkpoint callback failed.");
+            }
         }
 
         void PlatformHealthManagement::onReportCheckpoint(uint32_t checkpoint)
@@ -279,7 +287,8 @@ namespace application
         void PlatformHealthManagement::onGlobalStatusChanged(
             ara::phm::supervisors::SupervisionUpdate update)
         {
-            if (update.status == ara::phm::supervisors::SupervisionStatus::kExpired)
+            if (update.status ==
+                ara::phm::supervisors::SupervisionStatus::kExpired)
             {
                 const ara::exec::ExecutionError cSupervisionExpired{0};
 

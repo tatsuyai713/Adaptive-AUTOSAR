@@ -14,9 +14,7 @@ namespace ara
         {
             core::ErrorCode makeDiagError(DiagErrc code)
             {
-                auto *_errorDomain{
-                    static_cast<DiagErrorDomain *>(DiagErrorDomain::GetDiagDomain())};
-                return _errorDomain->MakeErrorCode(code);
+                return MakeErrorCode(code);
             }
         }
 
@@ -40,7 +38,7 @@ namespace ara
             return _result;
         }
 
-        void DTCInformation::SetCurrentStatus(
+        core::Result<void> DTCInformation::SetCurrentStatus(
             uint32_t dtc, UdsDtcStatusBitType mask, UdsDtcStatusByteType status)
         {
             std::function<void(uint32_t, UdsDtcStatusByteType, UdsDtcStatusByteType)> _dtcStatusNotifier;
@@ -101,6 +99,8 @@ namespace ara
             {
                 _dtcStatusNotifier(dtc, _oldStatus, _newStatus);
             }
+
+            return core::Result<void>{};
         }
 
         core::Result<void> DTCInformation::SetDTCStatusChangedNotifier(

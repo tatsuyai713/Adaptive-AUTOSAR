@@ -83,8 +83,8 @@ namespace ara
 
             /// @brief Attach an event to the monitor object
             /// @param event Event pointer to be attached
-            /// @note This function is not part of the ARA standard.
-            void AttachEvent(Event *event);
+            /// @returns Invalid argument if event pointer is null
+            core::Result<void> AttachEvent(Event *event);
 
             /// @brief Start offering monitoring requests handling
             /// @returns Error result if the handler has been already offered

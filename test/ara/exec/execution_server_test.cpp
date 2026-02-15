@@ -54,6 +54,15 @@ namespace ara
             EXPECT_FALSE(Server.TryGetExecutionState(cApplicationId, _executionState));
         }
 
+        TEST_F(ExecutionServerTest, GetExecutionStateMethod)
+        {
+            auto _result{Server.GetExecutionState("id")};
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kInvalidArguments,
+                static_cast<ExecErrc>(_result.Error().Value()));
+        }
+
         TEST_F(ExecutionServerTest, ReportExecutionStateScenario)
         {
             const auto cExpectedReturnCode{com::someip::SomeIpReturnCode::eOK};
@@ -69,6 +78,10 @@ namespace ara
             ExecutionState _actualState;
             EXPECT_TRUE(Server.TryGetExecutionState(cApplicationId, _actualState));
             EXPECT_EQ(cExpectedState, _actualState);
+
+            auto _stateResult{Server.GetExecutionState(cApplicationId)};
+            ASSERT_TRUE(_stateResult.HasValue());
+            EXPECT_EQ(cExpectedState, _stateResult.Value());
 
             _response = Send(std::vector<uint8_t>({0, 0, 0, 2, 105, 100, 0}));
             ExecErrc _actualErrorCode;

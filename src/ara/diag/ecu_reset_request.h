@@ -52,7 +52,6 @@ namespace ara
             /// @param metaInfo Request handling meta-info
             /// @param cancellationHandler Request cancellation token
             /// @returns Valid future without any exception
-            /// @note The method is not compatible with the ARA standard.
             std::future<void> RequestReset(
                 ResetRequestType resetType,
                 core::Optional<uint8_t> id,
@@ -61,7 +60,6 @@ namespace ara
 
             /// @brief Execute the ECU reset after the request handling
             /// @param metaInfo ECU reset execution meta-info
-            /// @note The method is not compatible with the ARA standard.
             /// @throws std::logic_error Throws when the reset has not been requested
             /// @remarks The method will be called via DM after RequestReset is being triggered.
             void ExecuteReset(const MetaInfo &metaInfo);
@@ -71,7 +69,6 @@ namespace ara
             /// @param metaInfo Request handling meta-info
             /// @param cancellationHandler Request cancellation token
             /// @returns Valid future without any exception
-            /// @note The method is not compatible with the ARA standard.
             std::future<void> EnableRapidShutdown(
                 bool enable,
                 const MetaInfo &metaInfo,

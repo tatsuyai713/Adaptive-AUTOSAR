@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/diag/monitor.h"
+#include "../../../src/ara/diag/diag_error_domain.h"
 
 namespace ara
 {
@@ -64,7 +65,9 @@ namespace ara
             EXPECT_FALSE(_monitor.IsOffered());
             EXPECT_FALSE(_monitor.HasAttachedEvent());
 
-            _monitor.AttachEvent(&_event);
+            auto _attachResult{
+                _monitor.AttachEvent(&_event)};
+            ASSERT_TRUE(_attachResult.HasValue());
             EXPECT_TRUE(_monitor.HasAttachedEvent());
 
             auto _offerResult = _monitor.Offer();
@@ -85,7 +88,7 @@ namespace ara
             Event _event(_specifier);
 
             Monitor _monitor(_specifier, _initMonitor, _defaultValues);
-            _monitor.AttachEvent(&_event);
+            ASSERT_TRUE(_monitor.AttachEvent(&_event).HasValue());
             ASSERT_TRUE(_monitor.Offer().HasValue());
 
             _monitor.ReportMonitorAction(MonitorAction::kFdcThresholdReached);
@@ -93,6 +96,22 @@ namespace ara
             const auto _fdcResult = _event.GetFaultDetectionCounter();
             ASSERT_TRUE(_fdcResult.HasValue());
             EXPECT_EQ(_fdcResult.Value(), 127);
+        }
+
+        TEST(MonitorTest, AttachEventRejectsNullPointer)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason)
+            {
+            };
+            CounterBased _defaultValues;
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            const auto _attachResult{_monitor.AttachEvent(nullptr)};
+            EXPECT_FALSE(_attachResult.HasValue());
+            EXPECT_EQ(
+                DiagErrc::kInvalidArgument,
+                static_cast<DiagErrc>(_attachResult.Error().Value()));
         }
     }
 }

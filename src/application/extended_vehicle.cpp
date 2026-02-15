@@ -2,7 +2,6 @@
 /// @brief Implementation for extended vehicle.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
-#include "../ara/com/someip/sd/sd_network_layer.h"
 #include "../ara/diag/conversation.h"
 #include "../application/helper/argument_configuration.h"
 #include "./extended_vehicle.h"
@@ -14,10 +13,11 @@ namespace application
 
     ExtendedVehicle::ExtendedVehicle(
         AsyncBsdSocketLib::Poller *poller,
-        ara::phm::CheckpointCommunicator *checkpointCommunicator) : ara::exec::helper::ModelledProcess(cAppId, poller),
-                                                                    mSupervisedEntity{cSeInstance, checkpointCommunicator},
-                                                                    mNetworkLayer{nullptr},
-                                                                    mSdServer{nullptr}
+        ara::phm::CheckpointCommunicator *checkpointCommunicator)
+        : ara::exec::helper::ModelledProcess(cAppId, poller),
+          mSupervisedEntity{cSeInstance, checkpointCommunicator},
+          mNetworkLayer{nullptr},
+          mSdServer{nullptr}
     {
     }
 
@@ -299,15 +299,40 @@ namespace application
 
             while (!cancellationToken->load() && _running)
             {
-                mSupervisedEntity.ReportCheckpoint(
-                    PhmCheckpointType::AliveCheckpoint);
-                mSupervisedEntity.ReportCheckpoint(
-                    PhmCheckpointType::DeadlineSourceCheckpoint);
+                const auto cAliveCheckpointResult{
+                    mSupervisedEntity.ReportCheckpoint(
+                        PhmCheckpointType::AliveCheckpoint)};
+                if (!cAliveCheckpointResult.HasValue())
+                {
+                    _logStream.Flush();
+                    _logStream << "Alive checkpoint reporting failed.";
+                    Log(cErrorLevel, _logStream);
+                    break;
+                }
+
+                const auto cSourceCheckpointResult{
+                    mSupervisedEntity.ReportCheckpoint(
+                        PhmCheckpointType::DeadlineSourceCheckpoint)};
+                if (!cSourceCheckpointResult.HasValue())
+                {
+                    _logStream.Flush();
+                    _logStream << "Deadline source checkpoint reporting failed.";
+                    Log(cErrorLevel, _logStream);
+                    break;
+                }
 
                 _running = WaitForActivation();
 
-                mSupervisedEntity.ReportCheckpoint(
-                    PhmCheckpointType::DeadlineTargetCheckpoint);
+                const auto cTargetCheckpointResult{
+                    mSupervisedEntity.ReportCheckpoint(
+                        PhmCheckpointType::DeadlineTargetCheckpoint)};
+                if (!cTargetCheckpointResult.HasValue())
+                {
+                    _logStream.Flush();
+                    _logStream << "Deadline target checkpoint reporting failed.";
+                    Log(cErrorLevel, _logStream);
+                    break;
+                }
             }
 
             _logStream.Flush();

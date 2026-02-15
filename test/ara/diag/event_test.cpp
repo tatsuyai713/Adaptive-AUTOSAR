@@ -44,7 +44,10 @@ namespace ara
                     &EventTest::OnEventStatusChanged, this, std::placeholders::_1)};
 
             _event.SetEventStatusChangedNotifier(_notifier);
-            _event.SetEventStatusBits({{EventStatusBit::kTestFailed, true}});
+            auto _setStatusResult{
+                _event.SetEventStatusBits(
+                    {{EventStatusBit::kTestFailed, true}})};
+            ASSERT_TRUE(_setStatusResult.HasValue());
             auto _eventStatus{_event.GetEventStatus()};
 
             EXPECT_EQ(cExpectedResult, NotifiedEventStatus);
@@ -67,7 +70,9 @@ namespace ara
             const uint32_t cExpectedResult{1};
 
             Event _event(Specifier);
-            _event.SetDTCNumber(cExpectedResult);
+            auto _setDtcResult{
+                _event.SetDTCNumber(cExpectedResult)};
+            ASSERT_TRUE(_setDtcResult.HasValue());
             auto _actualResult{_event.GetDTCNumber(DTCFormatType::kDTCFormatUDS)};
 
             EXPECT_EQ(cExpectedResult, _actualResult.Value());
@@ -78,7 +83,9 @@ namespace ara
             const uint32_t cExpectedResult{1};
 
             Event _event(Specifier);
-            _event.SetFaultDetectionCounter(cExpectedResult);
+            auto _setFdcResult{
+                _event.SetFaultDetectionCounter(cExpectedResult)};
+            ASSERT_TRUE(_setFdcResult.HasValue());
             auto _actualResult{_event.GetFaultDetectionCounter()};
 
             EXPECT_EQ(cExpectedResult, _actualResult.Value());
@@ -94,19 +101,19 @@ namespace ara
 
             Event _event(Specifier);
 
-            _event.SetFaultDetectionCounter(cFdcMin);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcMin).HasValue());
             EXPECT_EQ(DebouncingState::kFinallyHealed, _event.GetDebouncingStatus());
 
-            _event.SetFaultDetectionCounter(cFdcNeg);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcNeg).HasValue());
             EXPECT_EQ(DebouncingState::kTemporarilyHealed, _event.GetDebouncingStatus());
 
-            _event.SetFaultDetectionCounter(cFdcZero);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcZero).HasValue());
             EXPECT_EQ(DebouncingState::kNeutral, _event.GetDebouncingStatus());
 
-            _event.SetFaultDetectionCounter(cFdcPos);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcPos).HasValue());
             EXPECT_EQ(DebouncingState::kTemporarilyDefective, _event.GetDebouncingStatus());
 
-            _event.SetFaultDetectionCounter(cFdcMax);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcMax).HasValue());
             EXPECT_EQ(DebouncingState::kFinallyDefective, _event.GetDebouncingStatus());
         }
 
@@ -118,13 +125,13 @@ namespace ara
 
             Event _event(Specifier);
 
-            _event.SetFaultDetectionCounter(cFdcMin);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcMin).HasValue());
             EXPECT_TRUE(_event.GetTestComplete().Value());
 
-            _event.SetFaultDetectionCounter(cFdcZero);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcZero).HasValue());
             EXPECT_FALSE(_event.GetTestComplete().Value());
 
-            _event.SetFaultDetectionCounter(cFdcMax);
+            ASSERT_TRUE(_event.SetFaultDetectionCounter(cFdcMax).HasValue());
             EXPECT_TRUE(_event.GetTestComplete().Value());
         }
     }

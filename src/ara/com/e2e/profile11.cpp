@@ -2,8 +2,8 @@
 /// @brief Implementation for profile11.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
-#include <stdexcept>
 #include "./profile11.h"
+#include <cstddef>
 
 namespace ara
 {
@@ -45,11 +45,11 @@ namespace ara
             }
 
             uint8_t Profile11::calculateCrc(
-                const std::vector<uint8_t> &data, size_t offset)
+                const std::vector<uint8_t> &data, std::size_t offset)
             {
                 uint8_t _result{0xff};
 
-                for (size_t i = offset; i < data.size(); ++i)
+                for (std::size_t i = offset; i < data.size(); ++i)
                 {
                     const uint8_t cElement{data[i]};
                     const auto cIndex{static_cast<std::size_t>(_result ^ cElement)};
@@ -97,15 +97,34 @@ namespace ara
                 const std::vector<uint8_t> &unprotectedData,
                 std::vector<uint8_t> &protectedData)
             {
-                throw std::logic_error("The function is not implemented!");
+                const uint8_t cCounterMask{0xf0};
+
+                if (unprotectedData.empty())
+                {
+                    return false;
+                }
+
+                protectedData = unprotectedData;
+
+                // Replicate the last checked status (counter) for gateway-style forwarding.
+                const auto cCounter{
+                    static_cast<uint8_t>((mCheckingCounter & 0x0f) | cCounterMask)};
+                protectedData.insert(protectedData.begin(), cCounter);
+
+                const uint8_t cCrc{calculateCrc(protectedData)};
+                protectedData.insert(protectedData.begin(), cCrc);
+
+                // Keep protect/forward sequence aligned when both are used.
+                mProtectingCounter = static_cast<uint8_t>(mCheckingCounter & 0x0f);
+                return true;
             }
 
             CheckStatusType Profile11::Check(
                 const std::vector<uint8_t> &protectedData)
             {
-                const size_t cMinimumSize{3};
-                const size_t cCrcOffset{0};
-                const size_t cCounterOffset{1};
+                const std::size_t cMinimumSize{3};
+                const std::size_t cCrcOffset{0};
+                const std::size_t cCounterOffset{1};
                 const uint8_t cCounterMask{0x0f};
 
                 if (protectedData.size() < cMinimumSize)

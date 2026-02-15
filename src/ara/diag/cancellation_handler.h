@@ -27,7 +27,6 @@ namespace ara
 
             /// @brief Constructor
             /// @param isCanceled Initial cancellation status
-            /// @note The constructor is not ARA compatible.
             CancellationHandler(bool isCanceled) noexcept;
 
             /// @brief Get conversation cancellation status
@@ -36,7 +35,6 @@ namespace ara
 
             /// @brief Set conversation cancellation status
             /// @param isCanceled Current conversation cancellation status
-            /// @note The method is not ARA compatible.
             void SetIsCanceled(bool isCanceled);
 
             /// @brief Set a callback to be invoked when DM canceled the conversation

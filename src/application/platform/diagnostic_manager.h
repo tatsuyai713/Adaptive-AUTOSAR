@@ -8,7 +8,10 @@
 #include <obdemulator/serial_communication.h>
 #include <obdemulator/obd_emulator.h>
 #include "../../ara/exec/helper/modelled_process.h"
+#include "../../ara/com/helper/network_layer.h"
+#include "../../ara/com/someip/sd/sd_network_layer.h"
 #include "../../ara/com/someip/sd/someip_sd_client.h"
+#include "../../ara/diag/event.h"
 #include "../../ara/diag/monitor.h"
 #include "../helper/network_configuration.h"
 #include "../doip/obd_to_doip_converter.h"

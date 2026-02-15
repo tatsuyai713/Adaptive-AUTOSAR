@@ -71,7 +71,9 @@ namespace ara
             _expectedResult.encodedBits = cStatus;
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _expectedResult);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _expectedResult)
+                    .HasValue());
             auto _actualResult{_dtcInformation.GetCurrentStatus(cDtc)};
 
             EXPECT_TRUE(_actualResult.HasValue());
@@ -89,7 +91,9 @@ namespace ara
             _statusByte.encodedBits = cOldStatus;
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
             _dtcInformation.SetDTCStatusChangedNotifier(
                 std::bind(
                     &DtcInformationTest::OnDtcStatusChanged,
@@ -99,7 +103,9 @@ namespace ara
                     std::placeholders::_3));
 
             _statusByte.encodedBits = cNewStatus;
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
 
             EXPECT_EQ(cDtc, LastChangedDtc);
             EXPECT_EQ(cOldStatus, LastChangedDtcOldStatusByte.encodedBits);
@@ -117,7 +123,9 @@ namespace ara
             _statusByte.encodedBits = cStatus;
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
             auto _actualResult{_dtcInformation.GetNumberOfStoredEntries()};
 
             EXPECT_TRUE(_actualResult.HasValue());
@@ -140,7 +148,9 @@ namespace ara
                     &DtcInformationTest::OnNumberOfStoredEntriesChanged,
                     this, std::placeholders::_1));
 
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
 
             EXPECT_EQ(cExpectedResult, NotifiedNumberOfStoredEntries);
         };
@@ -153,8 +163,12 @@ namespace ara
             UdsDtcStatusByteType _statusByte{0x01};
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtcA, cMask, _statusByte);
-            _dtcInformation.SetCurrentStatus(cDtcB, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtcA, cMask, _statusByte)
+                    .HasValue());
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtcB, cMask, _statusByte)
+                    .HasValue());
 
             auto _ids = _dtcInformation.GetStoredDtcIds();
             ASSERT_TRUE(_ids.HasValue());
@@ -174,7 +188,9 @@ namespace ara
             _statusByte.encodedBits = cStatus;
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
             _dtcInformation.Clear(cDtc);
             auto _actualResult{_dtcInformation.GetNumberOfStoredEntries()};
 
@@ -199,7 +215,9 @@ namespace ara
             UdsDtcStatusByteType _statusByte{0x01};
 
             DTCInformation _dtcInformation(Specifier);
-            _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte);
+            ASSERT_TRUE(
+                _dtcInformation.SetCurrentStatus(cDtc, cMask, _statusByte)
+                    .HasValue());
 
             auto _clearResult = _dtcInformation.ClearAll();
             EXPECT_TRUE(_clearResult.HasValue());

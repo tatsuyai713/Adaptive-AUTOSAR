@@ -124,17 +124,29 @@ namespace ara
         bool ExecutionServer::TryGetExecutionState(
             std::string id, ExecutionState &state)
         {
-            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
-            auto _itr{mExecutionStates.find(id)};
-            if (_itr != mExecutionStates.end())
+            auto _result{GetExecutionState(std::move(id))};
+            if (_result.HasValue())
             {
-                state = _itr->second;
+                state = _result.Value();
                 return true;
             }
             else
             {
                 return false;
             }
+        }
+
+        core::Result<ExecutionState> ExecutionServer::GetExecutionState(std::string id)
+        {
+            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
+            auto _itr{mExecutionStates.find(id)};
+            if (_itr == mExecutionStates.end())
+            {
+                return core::Result<ExecutionState>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidArguments));
+            }
+
+            return core::Result<ExecutionState>{_itr->second};
         }
 
         std::map<std::string, ExecutionState>
