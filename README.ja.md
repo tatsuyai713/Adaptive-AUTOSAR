@@ -182,7 +182,6 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
   - `autosar_user_com_zerocopy_sub_template`
   - `autosar_user_com_dds_pub_template`
   - `autosar_user_com_dds_sub_template`
-  - `autosar_user_com_doip_diag_tester`
 - Feature:
   - `autosar_user_tpl_runtime_lifecycle`
   - `autosar_user_tpl_can_socketcan_receiver`
@@ -194,7 +193,19 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 - `user_apps/tutorials/README.ja.md`
 - `deployment/rpi_ecu/README.md`
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (Vector/ETAS/EB 向け資産の移植手順)
-- `user_apps/tutorials/11_doip_diag_tester.ja.md` (Ubuntu 側 DoIP/DIAG テスター手順)
+- `tools/host_tools/doip_diag_tester/README.ja.md` (Ubuntu 側 DoIP/DIAG host テスター手順)
+
+## Host 側診断ツール (ECU 実機内アプリではない)
+- バイナリ: `autosar_host_doip_diag_tester`
+- ソース: `tools/host_tools/doip_diag_tester/doip_diag_tester_app.cpp`
+- ドキュメント:
+  - `tools/host_tools/doip_diag_tester/README.md`
+  - `tools/host_tools/doip_diag_tester/README.ja.md`
+- ビルド:
+```bash
+cmake -S tools/host_tools/doip_diag_tester -B build-host-doip-tester
+cmake --build build-host-doip-tester -j"$(nproc)"
+```
 
 ## ARXML / コード生成
 ### YAML -> ARXML

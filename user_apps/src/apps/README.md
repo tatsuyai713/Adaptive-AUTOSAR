@@ -12,7 +12,6 @@ This directory contains executable application entry points grouped by function.
   - `someip/`
   - `zerocopy/`
   - `dds/`
-  - `diag/`
 - `feature/`
   - `runtime/`: lifecycle-focused feature app
   - `can/`: SocketCAN receive/decode feature app
@@ -22,3 +21,4 @@ This directory contains executable application entry points grouped by function.
 
 - Reusable support modules are under `user_apps/src/features/`.
 - All app entry files are fully commented for onboarding and reuse.
+- Host-side DoIP/DIAG tester is separated under `tools/host_tools/doip_diag_tester/`.

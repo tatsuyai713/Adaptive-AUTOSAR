@@ -1,19 +1,23 @@
-# 11. Ubuntu 側 DoIP/DIAG テスターで Raspberry Pi ECU を検証
+# Ubuntu 側 DoIP/DIAG テスターで Raspberry Pi ECU を検証
+
+このツールは実機 ECU 内で動かすアプリではなく、Ubuntu/Linux ホスト側で ECU を検証するためのツールです。  
+そのため `user_apps` から分離し、`tools/host_tools/doip_diag_tester/` に配置しています。
 
 このチュートリアルでは、Ubuntu マシンから Raspberry Pi ECU へ DoIP/DIAG 通信を行い、
 データ取得・送信試験・受信試験を実施する手順を示します。
 
 対象実行ファイル:
-- `autosar_user_com_doip_diag_tester`
+- `autosar_host_doip_diag_tester`
 
 ## 1) ビルド
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+cmake -S tools/host_tools/doip_diag_tester -B build-host-doip-tester
+cmake --build build-host-doip-tester -j"$(nproc)"
 ```
 
 実行ファイル例:
-- `build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester`
+- `build-host-doip-tester/autosar_host_doip_diag_tester`
 
 ## 2) 基本パラメータ
 
@@ -39,7 +43,7 @@
 ## 3) Vehicle-ID 応答確認
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=vehicle-id \
   --host=192.168.10.20 \
   --vehicle-id-transport=tcp \
@@ -49,7 +53,7 @@
 必要に応じて UDP broadcast 送信:
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=vehicle-id \
   --host=255.255.255.255 \
   --vehicle-id-transport=udp \
@@ -60,7 +64,7 @@
 ## 4) Routing Activation 確認
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=routing-activation \
   --host=192.168.10.20 \
   --tcp-port=8081
@@ -69,7 +73,7 @@
 ## 5) DIAG でデータ取得 (ReadDataByIdentifier)
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=diag-read-did \
   --host=192.168.10.20 \
   --did=0xF50D
@@ -78,7 +82,7 @@
 ## 6) カスタム UDS 送信
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=diag-custom \
   --host=192.168.10.20 \
   --uds=22F52F
@@ -87,7 +91,7 @@
 ## 7) 送信テスト (TX)
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=tx-test \
   --host=192.168.10.20 \
   --did=0xF505 \
@@ -98,7 +102,7 @@
 ## 8) 受信テスト (RX)
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=rx-test \
   --host=192.168.10.20 \
   --did=0xF5A6 \
@@ -110,7 +114,7 @@
 ## 9) 一括テスト
 
 ```bash
-./build-user-apps-opt/src/apps/communication/diag/autosar_user_com_doip_diag_tester \
+./build-host-doip-tester/autosar_host_doip_diag_tester \
   --mode=full-test \
   --host=192.168.10.20 \
   --did=0xF50D \

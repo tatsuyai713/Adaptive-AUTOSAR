@@ -183,7 +183,6 @@ Status meanings:
   - `autosar_user_com_zerocopy_sub_template`
   - `autosar_user_com_dds_pub_template`
   - `autosar_user_com_dds_sub_template`
-  - `autosar_user_com_doip_diag_tester`
 - Feature:
   - `autosar_user_tpl_runtime_lifecycle`
   - `autosar_user_tpl_can_socketcan_receiver`
@@ -195,7 +194,19 @@ See also:
 - `user_apps/tutorials/README.ja.md`
 - `deployment/rpi_ecu/README.md`
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (porting Vector/ETAS/EB-oriented app assets)
-- `user_apps/tutorials/11_doip_diag_tester.ja.md` (Ubuntu-side DoIP/DIAG tester for Raspberry Pi ECU)
+- `tools/host_tools/doip_diag_tester/README.ja.md` (Ubuntu-side DoIP/DIAG host tester for Raspberry Pi ECU)
+
+## Host-Side Diagnostic Tool (Not ECU On-Target)
+- Binary: `autosar_host_doip_diag_tester`
+- Source: `tools/host_tools/doip_diag_tester/doip_diag_tester_app.cpp`
+- Docs:
+  - `tools/host_tools/doip_diag_tester/README.md`
+  - `tools/host_tools/doip_diag_tester/README.ja.md`
+- Build:
+```bash
+cmake -S tools/host_tools/doip_diag_tester -B build-host-doip-tester
+cmake --build build-host-doip-tester -j"$(nproc)"
+```
 
 ## ARXML and Code Generation
 ### YAML -> ARXML
