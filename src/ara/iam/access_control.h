@@ -1,3 +1,7 @@
+/// @file src/ara/iam/access_control.h
+/// @brief Declarations for access control.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ACCESS_CONTROL_H
 #define ACCESS_CONTROL_H
 
@@ -30,6 +34,7 @@ namespace ara
         class AccessControl
         {
         private:
+            /// @brief Composite key used to index IAM policy rules.
             struct PolicyKey
             {
                 std::string Subject;
@@ -44,6 +49,7 @@ namespace ara
                 }
             };
 
+            /// @brief Hash function for `PolicyKey`.
             struct PolicyKeyHash
             {
                 std::size_t operator()(const PolicyKey &key) const noexcept;

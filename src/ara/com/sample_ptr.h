@@ -1,3 +1,7 @@
+/// @file src/ara/com/sample_ptr.h
+/// @brief Declarations for sample ptr.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_SAMPLE_PTR_H
 #define ARA_COM_SAMPLE_PTR_H
 
@@ -26,8 +30,11 @@ namespace ara
             std::unique_ptr<T, std::function<void(T *)>> mPtr;
 
         public:
+            /// @brief Creates an empty allocatee pointer.
             SampleAllocateePtr() noexcept : mPtr{nullptr} {}
 
+            /// @brief Takes ownership of an allocated sample and deleter.
+            /// @param ptr Sample unique pointer prepared by binding/runtime.
             explicit SampleAllocateePtr(
                 std::unique_ptr<T, std::function<void(T *)>> ptr) noexcept
                 : mPtr{std::move(ptr)}
@@ -42,14 +49,21 @@ namespace ara
 
             ~SampleAllocateePtr() noexcept = default;
 
+            /// @brief Pointer-style access to the managed sample.
             T *operator->() noexcept { return mPtr.get(); }
+            /// @brief Const pointer-style access to the managed sample.
             const T *operator->() const noexcept { return mPtr.get(); }
+            /// @brief Dereferences the managed sample.
             T &operator*() noexcept { return *mPtr; }
+            /// @brief Const dereference of the managed sample.
             const T &operator*() const noexcept { return *mPtr; }
 
+            /// @brief Returns the raw sample pointer.
             T *Get() noexcept { return mPtr.get(); }
+            /// @brief Returns the raw const sample pointer.
             const T *Get() const noexcept { return mPtr.get(); }
 
+            /// @brief Checks whether a sample is currently owned.
             explicit operator bool() const noexcept
             {
                 return mPtr != nullptr;
@@ -62,7 +76,8 @@ namespace ara
                 return mPtr.release();
             }
 
-            /// @brief Swap with another SampleAllocateePtr
+            /// @brief Swaps ownership with another allocatee pointer.
+            /// @param other Other object to swap with.
             void Swap(SampleAllocateePtr &other) noexcept
             {
                 mPtr.swap(other.mPtr);

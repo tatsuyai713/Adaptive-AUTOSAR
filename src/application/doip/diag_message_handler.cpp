@@ -1,3 +1,7 @@
+/// @file src/application/doip/diag_message_handler.cpp
+/// @brief Implementation for diag message handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <doiplib/diag_message_ack.h>
 #include "./diag_message_handler.h"
 

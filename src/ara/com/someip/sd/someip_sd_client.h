@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_client.h
+/// @brief Declarations for someip sd client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_SD_CLIENT
 #define SOMEIP_SD_CLIENT
 

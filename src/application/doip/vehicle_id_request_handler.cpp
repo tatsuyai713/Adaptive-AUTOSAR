@@ -1,3 +1,7 @@
+/// @file src/application/doip/vehicle_id_request_handler.cpp
+/// @brief Implementation for vehicle id request handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./vehicle_id_request_handler.h"
 
 namespace application

@@ -1,3 +1,7 @@
+/// @file src/ara/log/logging_framework.h
+/// @brief Declarations for logging framework.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOGGING_FRAMEWORK_H
 #define LOGGING_FRAMEWORK_H
 

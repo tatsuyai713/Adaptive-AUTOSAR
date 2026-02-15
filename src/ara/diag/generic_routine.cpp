@@ -1,3 +1,7 @@
+/// @file src/ara/diag/generic_routine.cpp
+/// @brief Implementation for generic routine.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "generic_routine.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/subscribed_state.cpp
+/// @brief Implementation for subscribed state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./subscribed_state.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/notsubscribed_state.h
+/// @brief Declarations for notsubscribed state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NOTSUBSCRIBED_STATE_H
 #define NOTSUBSCRIBED_STATE_H
 

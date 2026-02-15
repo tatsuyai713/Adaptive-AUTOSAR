@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/service_down_state.h
+/// @brief Declarations for service down state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SERVICE_DOWN_STATE_H
 #define SERVICE_DOWN_STATE_H
 

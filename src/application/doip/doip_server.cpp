@@ -1,3 +1,7 @@
+/// @file src/application/doip/doip_server.cpp
+/// @brief Implementation for doip server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <stdexcept>
 #include "./doip_server.h"

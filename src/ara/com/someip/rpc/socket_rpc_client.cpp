@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/socket_rpc_client.cpp
+/// @brief Implementation for socket rpc client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./socket_rpc_client.h"
 #include <functional>
 #include <stdexcept>

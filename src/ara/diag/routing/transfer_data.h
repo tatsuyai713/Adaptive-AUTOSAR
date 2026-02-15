@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/transfer_data.h
+/// @brief Declarations for transfer data.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TRANSFER_DATA_H
 #define TRANSFER_DATA_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/client_repetition_state.h
+/// @brief Declarations for client repetition state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CLIENT_REPETITION_STATE_H
 #define CLIENT_REPETITION_STATE_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/per/key_value_storage.h
+/// @brief Declarations for key value storage.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef KEY_VALUE_STORAGE_H
 #define KEY_VALUE_STORAGE_H
 

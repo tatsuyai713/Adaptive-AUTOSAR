@@ -1,3 +1,7 @@
+/// @file src/ara/diag/security_access.h
+/// @brief Declarations for security access.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SECURITY_ACCESS_H
 #define SECURITY_ACCESS_H
 

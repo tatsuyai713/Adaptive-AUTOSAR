@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/delay_timer.h
+/// @brief Declarations for delay timer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DELAY_TIMER_H
 #define DELAY_TIMER_H
 

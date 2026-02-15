@@ -1,3 +1,7 @@
+/// @file src/application/helper/argument_configuration.h
+/// @brief Declarations for argument configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARGUMENT_CONFIGURATION_H
 #define ARGUMENT_CONFIGURATION_H
 

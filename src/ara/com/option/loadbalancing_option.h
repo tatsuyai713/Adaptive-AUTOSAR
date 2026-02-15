@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/loadbalancing_option.h
+/// @brief Declarations for loadbalancing option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOADBALANCING_OPTION_H
 #define LOADBALANCING_OPTION_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/notready_state.h
+/// @brief Declarations for notready state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NOTREADY_STATE_H
 #define NOTREADY_STATE_H
 

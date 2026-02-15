@@ -1,3 +1,7 @@
+/// @file src/ara/tsync/time_sync_client.cpp
+/// @brief Implementation for time sync client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./time_sync_client.h"
 
 namespace ara

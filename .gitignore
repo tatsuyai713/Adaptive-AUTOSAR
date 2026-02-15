@@ -11,4 +11,8 @@ docs/api/
 docs/doxygen-warnings.log
 docs/index.html
 
+# Python cache
+__pycache__/
+*.pyc
+
 .claude

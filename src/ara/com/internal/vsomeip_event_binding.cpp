@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/vsomeip_event_binding.cpp
+/// @brief Implementation for vsomeip event binding.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <set>
 #include <utility>

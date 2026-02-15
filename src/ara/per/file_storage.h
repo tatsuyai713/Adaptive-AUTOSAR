@@ -1,3 +1,7 @@
+/// @file src/ara/per/file_storage.h
+/// @brief Declarations for file storage.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef FILE_STORAGE_H
 #define FILE_STORAGE_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/vsomeip_method_binding.cpp
+/// @brief Implementation for vsomeip method binding.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./vsomeip_method_binding.h"
 
 namespace ara

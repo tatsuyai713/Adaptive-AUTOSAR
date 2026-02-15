@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/routable_uds_service.cpp
+/// @brief Implementation for routable uds service.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../diag_error_domain.h"
 #include "./routable_uds_service.h"
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/event_binding.h
+/// @brief Declarations for event binding.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_INTERNAL_EVENT_BINDING_H
 #define ARA_COM_INTERNAL_EVENT_BINDING_H
 

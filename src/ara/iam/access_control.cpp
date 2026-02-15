@@ -1,3 +1,7 @@
+/// @file src/ara/iam/access_control.cpp
+/// @brief Implementation for access control.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./access_control.h"
 
 #include <array>

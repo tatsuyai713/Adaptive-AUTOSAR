@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/ipv4_endpoint_option.h
+/// @brief Declarations for ipv4 endpoint option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef IPV4_ENDPOINT_OPTION_H
 #define IPV4_ENDPOINT_OPTION_H
 

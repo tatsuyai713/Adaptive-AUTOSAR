@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_message.cpp
+/// @brief Implementation for someip sd message.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./someip_sd_message.h"
 #include "../../entry/entry_deserializer.h"
 #include "../../option/option_deserializer.h"

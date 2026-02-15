@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/service_notseen_state.cpp
+/// @brief Implementation for service notseen state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./service_notseen_state.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/per/per_error_domain.cpp
+/// @brief Implementation for per error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./per_error_domain.h"
 
 namespace ara

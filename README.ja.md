@@ -215,6 +215,7 @@ python3 tools/arxml_generator/generate_ara_com_binding.py \
 5. 分離インストールフロー (`build_and_install_autosar_ap.sh`)
 6. インストール済みパッケージに対する外部 user_apps ビルド/実行 (`build_user_apps_from_opt.sh --run`)
 7. Doxygen API ドキュメント生成 (`./scripts/generate_doxygen_docs.sh`) と artifact (`doxygen-html`) 保存
+8. `main`/`master` への push 時に生成ドキュメントを GitHub Pages へ公開
 
 ## ドキュメント
 - GitHub Pages API ドキュメント: `https://tatsuyai713.github.io/Adaptive-AUTOSAR/`

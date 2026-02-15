@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/payload_helper.cpp
+/// @brief Implementation for payload helper.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./payload_helper.h"
 
 namespace ara

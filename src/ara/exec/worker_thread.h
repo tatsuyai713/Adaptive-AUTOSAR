@@ -1,3 +1,7 @@
+/// @file src/ara/exec/worker_thread.h
+/// @brief Declarations for worker thread.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef WORKER_THREAD_H
 #define WORKER_THREAD_H
 

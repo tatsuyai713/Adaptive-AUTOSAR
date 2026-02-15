@@ -1,3 +1,7 @@
+/// @file src/ara/log/logging_framework.cpp
+/// @brief Implementation for logging framework.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./logging_framework.h"
 
 namespace ara

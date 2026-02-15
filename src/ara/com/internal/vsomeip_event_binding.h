@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/vsomeip_event_binding.h
+/// @brief Declarations for vsomeip event binding.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_INTERNAL_VSOMEIP_EVENT_BINDING_H
 #define ARA_COM_INTERNAL_VSOMEIP_EVENT_BINDING_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/cg/communication_group_client.h
+/// @brief Declarations for communication group client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef COMMUNICATION_GROUP_CLIENT_H
 #define COMMUNICATION_GROUP_CLIENT_H
 

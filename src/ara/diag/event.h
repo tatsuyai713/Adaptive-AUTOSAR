@@ -1,3 +1,7 @@
+/// @file src/ara/diag/event.h
+/// @brief Declarations for event.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EVENT_H
 #define EVENT_H
 

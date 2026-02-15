@@ -1,3 +1,7 @@
+/// @file src/ara/ucm/update_manager.cpp
+/// @brief Implementation for update manager.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./update_manager.h"
 
 #include <algorithm>

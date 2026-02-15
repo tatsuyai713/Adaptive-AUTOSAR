@@ -1,3 +1,7 @@
+/// @file src/ara/log/sink/log_sink.h
+/// @brief Declarations for log sink.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOG_SINK_H
 #define LOG_SINK_H
 
@@ -31,7 +35,7 @@ namespace ara
                 LogStream GetAppstamp() const;
 
                 /// @brief Get the current timestamp at the function call
-                /// @brief A log stream with the current long format date-time
+                /// @returns A log stream with the current long format date-time
                 LogStream GetTimestamp() const;
 
             public:

@@ -1,3 +1,7 @@
+/// @file src/ara/diag/conversation.h
+/// @brief Declarations for conversation.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CONVERSATION_H
 #define CONVERSATION_H
 

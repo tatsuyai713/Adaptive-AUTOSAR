@@ -1,3 +1,7 @@
+/// @file src/ara/exec/state_client.h
+/// @brief Declarations for state client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef STATE_CLIENT_H
 #define STATE_CLIENT_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/core/initialization.cpp
+/// @brief Implementation for initialization.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <cstdlib>
 #include <iostream>
 #include <atomic>

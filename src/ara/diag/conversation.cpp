@@ -1,3 +1,7 @@
+/// @file src/ara/diag/conversation.cpp
+/// @brief Implementation for conversation.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include "./conversation.h"
 

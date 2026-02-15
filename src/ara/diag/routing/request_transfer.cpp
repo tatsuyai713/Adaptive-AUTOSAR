@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/request_transfer.cpp
+/// @brief Implementation for request transfer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./request_transfer.h"
 #include "./nrc_exception.h"
 

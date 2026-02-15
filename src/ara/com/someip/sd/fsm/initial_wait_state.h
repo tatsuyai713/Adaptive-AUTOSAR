@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/initial_wait_state.h
+/// @brief Declarations for initial wait state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef INITIAL_WAIT_STATE_H
 #define INITIAL_WAIT_STATE_H
 

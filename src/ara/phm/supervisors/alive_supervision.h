@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/alive_supervision.h
+/// @brief Declarations for alive supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ALIVE_SUPERVISION_H
 #define ALIVE_SUPERVISION_H
 

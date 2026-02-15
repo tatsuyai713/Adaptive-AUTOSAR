@@ -1,3 +1,7 @@
+/// @file src/ara/per/read_accessor.h
+/// @brief Declarations for read accessor.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef READ_ACCESSOR_H
 #define READ_ACCESSOR_H
 

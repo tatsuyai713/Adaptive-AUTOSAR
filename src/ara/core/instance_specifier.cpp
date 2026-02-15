@@ -1,3 +1,7 @@
+/// @file src/ara/core/instance_specifier.cpp
+/// @brief Implementation for instance specifier.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./instance_specifier.h"
 
 namespace ara

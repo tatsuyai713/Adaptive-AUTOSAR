@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_server.h
+/// @brief Declarations for someip sd server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_SD_SERVER
 #define SOMEIP_SD_SERVER
 

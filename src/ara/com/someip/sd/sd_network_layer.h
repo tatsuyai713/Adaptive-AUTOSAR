@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/sd_network_layer.h
+/// @brief Declarations for sd network layer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SD_NETWORK_LAYER_H
 #define SD_NETWORK_LAYER_H
 

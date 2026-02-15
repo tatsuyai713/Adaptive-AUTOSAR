@@ -1,3 +1,7 @@
+/// @file src/ara/exec/helper/atomic_optional.h
+/// @brief Declarations for atomic optional.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ATOMIC_OPTIONAL_H
 #define ATOMIC_OPTIONAL_H
 

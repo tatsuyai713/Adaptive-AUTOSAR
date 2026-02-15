@@ -1,3 +1,7 @@
+/// @file src/ara/com/zerocopy/zero_copy.h
+/// @brief Declarations for zero copy.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_ZEROCOPY_ZERO_COPY_H
 #define ARA_COM_ZEROCOPY_ZERO_COPY_H
 
@@ -26,6 +30,7 @@ namespace ara
             class LoanedSample final
             {
             private:
+                /// @brief Opaque implementation holder for transport-specific resources.
                 class Impl;
                 std::unique_ptr<Impl> mImpl;
 
@@ -52,6 +57,7 @@ namespace ara
             class ReceivedSample final
             {
             private:
+                /// @brief Opaque implementation holder for transport-specific resources.
                 class Impl;
                 std::unique_ptr<Impl> mImpl;
 
@@ -78,6 +84,7 @@ namespace ara
             class ZeroCopyPublisher final
             {
             private:
+                /// @brief Opaque implementation holder for transport-specific resources.
                 class Impl;
                 std::unique_ptr<Impl> mImpl;
 
@@ -114,6 +121,7 @@ namespace ara
             class ZeroCopySubscriber final
             {
             private:
+                /// @brief Opaque implementation holder for transport-specific resources.
                 class Impl;
                 std::unique_ptr<Impl> mImpl;
 

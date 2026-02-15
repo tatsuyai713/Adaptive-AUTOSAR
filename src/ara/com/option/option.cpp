@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/option.cpp
+/// @brief Implementation for option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./option.h"
 
 namespace ara

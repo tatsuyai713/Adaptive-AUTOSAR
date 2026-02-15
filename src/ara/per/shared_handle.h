@@ -1,3 +1,7 @@
+/// @file src/ara/per/shared_handle.h
+/// @brief Declarations for shared handle.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SHARED_HANDLE_H
 #define SHARED_HANDLE_H
 

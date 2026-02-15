@@ -1,3 +1,7 @@
+/// @file src/ara/exec/function_group_state.cpp
+/// @brief Implementation for function group state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include "../com/helper/payload_helper.h"
 #include "./function_group_state.h"

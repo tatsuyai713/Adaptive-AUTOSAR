@@ -1,3 +1,7 @@
+/// @file src/application/helper/log_recovery_action.h
+/// @brief Declarations for log recovery action.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOG_RECOVERY_ACTION_H
 #define LOG_RECOVERY_ACTION_H
 

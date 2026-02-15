@@ -148,7 +148,6 @@ jobs:
     - name: Generate API documentation
       run: |
         set -euxo pipefail
-        python3 ./scripts/generate_simulation_flow_png.py
         ./scripts/generate_doxygen_docs.sh
         test -s docs/api/index.html
         test -s docs/index.html
@@ -178,6 +177,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
+
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4

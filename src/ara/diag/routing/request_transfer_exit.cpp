@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/request_transfer_exit.cpp
+/// @brief Implementation for request transfer exit.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./request_transfer_exit.h"
 
 namespace ara

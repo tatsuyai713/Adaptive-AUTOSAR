@@ -1,3 +1,7 @@
+/// @file src/application/doip/obd_to_doip_converter.cpp
+/// @brief Implementation for obd to doip converter.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./obd_to_doip_converter.h"
 #include "../../ara/diag/routing/routable_uds_service.h"
 

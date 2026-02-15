@@ -1,3 +1,7 @@
+/// @file src/ara/diag/security_access.cpp
+/// @brief Implementation for security access.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./security_access.h"
 
 namespace ara

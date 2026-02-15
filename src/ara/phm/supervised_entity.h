@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervised_entity.h
+/// @brief Declarations for supervised entity.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SUPERVISED_ENTITY_H
 #define SUPERVISED_ENTITY_H
 

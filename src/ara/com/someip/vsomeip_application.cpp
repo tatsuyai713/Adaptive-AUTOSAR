@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/vsomeip_application.cpp
+/// @brief Implementation for vsomeip application.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>

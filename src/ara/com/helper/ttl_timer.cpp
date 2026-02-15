@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/ttl_timer.cpp
+/// @brief Implementation for ttl timer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <chrono>
 #include "./ttl_timer.h"
 

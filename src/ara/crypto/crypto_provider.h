@@ -1,3 +1,7 @@
+/// @file src/ara/crypto/crypto_provider.h
+/// @brief Declarations for crypto provider.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CRYPTO_PROVIDER_H
 #define CRYPTO_PROVIDER_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/diag/ecu_reset_request.cpp
+/// @brief Implementation for ecu reset request.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./ecu_reset_request.h"
 

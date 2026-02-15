@@ -1,3 +1,7 @@
+/// @file src/ara/log/argument.h
+/// @brief Declarations for argument.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARGUMENT_H
 #define ARGUMENT_H
 

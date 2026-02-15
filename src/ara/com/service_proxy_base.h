@@ -1,3 +1,7 @@
+/// @file src/ara/com/service_proxy_base.h
+/// @brief Declarations for service proxy base.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_SERVICE_PROXY_BASE_H
 #define ARA_COM_SERVICE_PROXY_BASE_H
 
@@ -31,12 +35,19 @@ namespace ara
             ServiceProxyBase(const ServiceProxyBase &) = delete;
             ServiceProxyBase &operator=(const ServiceProxyBase &) = delete;
 
+            /// @brief Move constructor.
+            /// @param other Source object to move from.
             ServiceProxyBase(ServiceProxyBase &&other) noexcept;
+            /// @brief Move assignment.
+            /// @param other Source object to move from.
+            /// @returns Reference to `*this`.
             ServiceProxyBase &operator=(ServiceProxyBase &&other) noexcept;
 
+            /// @brief Virtual destructor.
             virtual ~ServiceProxyBase() noexcept;
 
             /// @brief Get the handle for this proxy
+            /// @returns Bound service handle.
             const ServiceHandleType &GetHandle() const noexcept;
 
             /// @brief One-shot service discovery
@@ -64,7 +75,7 @@ namespace ara
             static core::Result<void> StopFindService(FindServiceHandle handle);
 
             /// @brief Stop continuous service discovery
-            /// @note Legacy helper that stops currently active search, if any.
+            /// @note Legacy helper that stops the currently active search, if any.
             static void StopFindService();
         };
     }

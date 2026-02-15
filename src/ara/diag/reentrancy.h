@@ -1,3 +1,7 @@
+/// @file src/ara/diag/reentrancy.h
+/// @brief Declarations for reentrancy.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef REENTRANCY_H
 #define REENTRANCY_H
 

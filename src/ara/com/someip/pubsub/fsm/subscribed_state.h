@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/subscribed_state.h
+/// @brief Declarations for subscribed state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SUBSCRIBED_STATE_H
 #define SUBSCRIBED_STATE_H
 

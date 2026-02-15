@@ -1,3 +1,7 @@
+/// @file src/ara/exec/function_group.cpp
+/// @brief Implementation for function group.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./function_group.h"
 
 namespace ara

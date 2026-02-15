@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/stopped_state.cpp
+/// @brief Implementation for stopped state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./stopped_state.h"
 
 namespace ara

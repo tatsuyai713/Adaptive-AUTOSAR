@@ -1,3 +1,7 @@
+/// @file src/application/doip/obd_to_doip_converter.h
+/// @brief Declarations for obd to doip converter.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef OBD_TO_DOIP_CONVERTER_H
 #define OBD_TO_DOIP_CONVERTER_H
 

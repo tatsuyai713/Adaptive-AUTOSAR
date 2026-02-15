@@ -1,3 +1,7 @@
+/// @file src/ara/diag/generic_routine.h
+/// @brief Declarations for generic routine.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef GENERIC_ROUTINE_H
 #define GENERIC_ROUTINE_H
 

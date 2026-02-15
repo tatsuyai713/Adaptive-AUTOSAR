@@ -1,3 +1,7 @@
+/// @file src/ara/diag/ecu_reset_request.h
+/// @brief Declarations for ecu reset request.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ECU_RESET_REQUEST_H
 #define ECU_RESET_REQUEST_H
 

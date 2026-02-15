@@ -1,3 +1,7 @@
+/// @file src/application/helper/network_configuration.h
+/// @brief Declarations for network configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NETWORK_CONFIGURATION_H
 #define NETWORK_CONFIGURATION_H
 

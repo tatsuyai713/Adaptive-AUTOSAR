@@ -1,3 +1,7 @@
+/// @file src/application/helper/memory_cache.h
+/// @brief Declarations for memory cache.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef MEMORY_CACHE_H
 #define MEMORY_CACHE_H
 

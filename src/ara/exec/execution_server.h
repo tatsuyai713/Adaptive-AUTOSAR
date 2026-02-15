@@ -1,3 +1,7 @@
+/// @file src/ara/exec/execution_server.h
+/// @brief Declarations for execution server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EXECUTION_SERVER_H
 #define EXECUTION_SERVER_H
 
@@ -19,6 +23,7 @@ namespace ara
         class ExecutionServer
         {
         public:
+            /// @brief Callback type notified when a client's execution state changes.
             using ExecutionStateChangeHandler =
                 std::function<void(const std::string &, ExecutionState)>;
 

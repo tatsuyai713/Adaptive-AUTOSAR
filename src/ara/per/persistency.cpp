@@ -1,3 +1,7 @@
+/// @file src/ara/per/persistency.cpp
+/// @brief Implementation for persistency.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./persistency.h"
 #include <algorithm>
 #include <cstdio>

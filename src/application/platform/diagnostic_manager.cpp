@@ -1,3 +1,7 @@
+/// @file src/application/platform/diagnostic_manager.cpp
+/// @brief Implementation for diagnostic manager.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../../ara/com/someip/sd/sd_network_layer.h"
 #include "../../application/helper/argument_configuration.h"
 #include "./diagnostic_manager.h"

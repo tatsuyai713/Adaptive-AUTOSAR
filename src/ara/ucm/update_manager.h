@@ -1,3 +1,7 @@
+/// @file src/ara/ucm/update_manager.h
+/// @brief Declarations for update manager.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef UPDATE_MANAGER_H
 #define UPDATE_MANAGER_H
 
@@ -42,8 +46,10 @@ namespace ara
         class UpdateManager
         {
         public:
+            /// @brief Callback type for update-session state transitions.
             using StateChangeHandler =
                 std::function<void(UpdateSessionState)>;
+            /// @brief Callback type for update progress notifications.
             using ProgressHandler =
                 std::function<void(std::uint8_t)>;
 

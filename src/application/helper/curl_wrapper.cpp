@@ -1,3 +1,7 @@
+/// @file src/application/helper/curl_wrapper.cpp
+/// @brief Implementation for curl wrapper.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./curl_wrapper.h"
 

@@ -1,3 +1,7 @@
+/// @file src/application/helper/curl_wrapper.h
+/// @brief Declarations for curl wrapper.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CURL_WRAPPER_H
 #define CURL_WRAPPER_H
 
@@ -15,6 +19,7 @@ namespace application
             static size_t callback(void *buffer, size_t sz, size_t n, void *f);
 
             CURL *mCurlHandler;
+            /// @brief HTTP header list managed by libcurl.
             struct curl_slist *mHeaders;
             std::string *mReceivedBuffer;
 

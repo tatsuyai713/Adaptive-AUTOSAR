@@ -1,3 +1,7 @@
+/// @file src/ara/diag/download.cpp
+/// @brief Implementation for download.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./download.h"
 
 namespace ara

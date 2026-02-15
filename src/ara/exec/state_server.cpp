@@ -1,3 +1,7 @@
+/// @file src/ara/exec/state_server.cpp
+/// @brief Implementation for state server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./state_server.h"
 #include <stdexcept>
 

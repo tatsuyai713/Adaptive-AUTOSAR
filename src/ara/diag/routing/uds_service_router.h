@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/uds_service_router.h
+/// @brief Declarations for uds service router.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef UDS_SERVICE_ROUTER_H
 #define UDS_SERVICE_ROUTER_H
 

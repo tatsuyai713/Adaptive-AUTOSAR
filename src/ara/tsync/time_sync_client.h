@@ -1,3 +1,7 @@
+/// @file src/ara/tsync/time_sync_client.h
+/// @brief Declarations for time sync client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TIME_SYNC_CLIENT_H
 #define TIME_SYNC_CLIENT_H
 

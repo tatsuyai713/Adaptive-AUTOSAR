@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/network_layer.h
+/// @brief Declarations for network layer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NETWORK_LAYER_H
 #define NETWORK_LAYER_H
 

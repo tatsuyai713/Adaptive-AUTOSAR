@@ -1,3 +1,7 @@
+/// @file src/ara/crypto/crypto_error_domain.h
+/// @brief Declarations for crypto error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CRYPTO_ERROR_DOMAIN_H
 #define CRYPTO_ERROR_DOMAIN_H
 

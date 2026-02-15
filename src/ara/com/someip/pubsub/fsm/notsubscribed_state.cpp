@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/notsubscribed_state.cpp
+/// @brief Implementation for notsubscribed state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./notsubscribed_state.h"
 
 namespace ara

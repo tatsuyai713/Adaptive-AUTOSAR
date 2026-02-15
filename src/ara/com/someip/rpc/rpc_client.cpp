@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/rpc_client.cpp
+/// @brief Implementation for rpc client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./rpc_client.h"
 
 namespace ara

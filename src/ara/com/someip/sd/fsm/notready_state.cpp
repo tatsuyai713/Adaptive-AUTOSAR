@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/notready_state.cpp
+/// @brief Implementation for notready state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./notready_state.h"
 
 namespace ara

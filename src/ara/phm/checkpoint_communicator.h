@@ -1,3 +1,7 @@
+/// @file src/ara/phm/checkpoint_communicator.h
+/// @brief Declarations for checkpoint communicator.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CHECKPOINT_COMMUNICATOR_H
 #define CHECKPOINT_COMMUNICATOR_H
 

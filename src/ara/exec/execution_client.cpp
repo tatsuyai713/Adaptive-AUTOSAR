@@ -1,3 +1,7 @@
+/// @file src/ara/exec/execution_client.cpp
+/// @brief Implementation for execution client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <utility>
 #include <limits>
 #include <stdexcept>

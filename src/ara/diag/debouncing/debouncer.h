@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/debouncer.h
+/// @brief Declarations for debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DEBOUNCER_H
 #define DEBOUNCER_H
 

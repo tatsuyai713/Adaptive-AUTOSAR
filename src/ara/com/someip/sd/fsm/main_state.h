@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/main_state.h
+/// @brief Declarations for main state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef MAIN_STATE_H
 #define MAIN_STATE_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/tsync/tsync_error_domain.h
+/// @brief Declarations for tsync error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TSYNC_ERROR_DOMAIN_H
 #define TSYNC_ERROR_DOMAIN_H
 

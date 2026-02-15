@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/stopped_state.h
+/// @brief Declarations for stopped state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef STOPPED_STATE_H
 #define STOPPED_STATE_H
 

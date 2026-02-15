@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/global_supervision.h
+/// @brief Declarations for global supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef GLOBAL_SUPERVISION_H
 #define GLOBAL_SUPERVISION_H
 

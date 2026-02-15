@@ -1,3 +1,7 @@
+/// @file src/ara/sm/notifier.h
+/// @brief Declarations for notifier.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NOTIFIER_H
 #define NOTIFIER_H
 

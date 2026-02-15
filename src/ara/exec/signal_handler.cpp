@@ -1,3 +1,7 @@
+/// @file src/ara/exec/signal_handler.cpp
+/// @brief Implementation for signal handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./signal_handler.h"
 #include <csignal>
 

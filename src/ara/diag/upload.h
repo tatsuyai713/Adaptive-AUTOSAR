@@ -1,3 +1,7 @@
+/// @file src/ara/diag/upload.h
+/// @brief Declarations for upload.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef UPLOAD_H
 #define UPLOAD_H
 

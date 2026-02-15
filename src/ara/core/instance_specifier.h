@@ -1,3 +1,7 @@
+/// @file src/ara/core/instance_specifier.h
+/// @brief Declarations for instance specifier.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef INSTANCE_SPECIFIER_H
 #define INSTANCE_SPECIFIER_H
 
@@ -20,10 +24,20 @@ namespace ara
             /// @param metaModelIdentifier Shortname-path
             explicit InstanceSpecifier(std::string metaModelIdentifier);
 
+            /// @brief Copy constructor.
+            /// @param other Source instance.
             InstanceSpecifier(const InstanceSpecifier &other);
+            /// @brief Move constructor.
+            /// @param other Source instance.
             InstanceSpecifier(InstanceSpecifier &&other) noexcept;
 
+            /// @brief Copy assignment.
+            /// @param other Source instance.
+            /// @returns Reference to `*this`.
             InstanceSpecifier &operator=(const InstanceSpecifier &other);
+            /// @brief Move assignment.
+            /// @param other Source instance.
+            /// @returns Reference to `*this`.
             InstanceSpecifier &operator=(InstanceSpecifier &&other);
 
             InstanceSpecifier() = delete;
@@ -34,31 +48,37 @@ namespace ara
             /// @returns Result containing the created InstanceSpecifier
             static Result<InstanceSpecifier> Create(std::string metaModelIdentifier);
 
+            /// @brief Equality comparison with another instance specifier.
             inline bool operator==(const InstanceSpecifier &other) const noexcept
             {
                 return mMetaModelIdentifier == other.mMetaModelIdentifier;
             }
 
+            /// @brief Equality comparison with a string path.
             inline bool operator==(std::string other) const noexcept
             {
                 return mMetaModelIdentifier == other;
             }
 
+            /// @brief Inequality comparison with another instance specifier.
             inline bool operator!=(const InstanceSpecifier &other) const noexcept
             {
                 return mMetaModelIdentifier != other.mMetaModelIdentifier;
             }
 
+            /// @brief Inequality comparison with a string path.
             inline bool operator!=(std::string other) const noexcept
             {
                 return mMetaModelIdentifier != other;
             }
 
+            /// @brief Lexicographical order comparison.
             inline bool operator<(const InstanceSpecifier &other) const noexcept
             {
                 return mMetaModelIdentifier < other.mMetaModelIdentifier;
             }
 
+            /// @brief Reverse lexicographical order comparison.
             inline bool operator>(const InstanceSpecifier &other) const noexcept
             {
                 return mMetaModelIdentifier > other.mMetaModelIdentifier;
@@ -79,6 +99,7 @@ namespace ara
             return lhs == rhs.ToString();
         }
 
+        /// @brief Non-member inequality comparison with string on left side.
         inline bool operator!=(std::string lhs, const InstanceSpecifier &rhs) noexcept
         {
             return lhs != rhs.ToString();

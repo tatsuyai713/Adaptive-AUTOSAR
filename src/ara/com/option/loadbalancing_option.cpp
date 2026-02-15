@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/loadbalancing_option.cpp
+/// @brief Implementation for loadbalancing option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./loadbalancing_option.h"
 
 namespace ara

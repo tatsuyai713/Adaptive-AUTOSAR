@@ -1,3 +1,7 @@
+/// @file src/application/helper/argument_configuration.cpp
+/// @brief Implementation for argument configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <iostream>
 #include "./argument_configuration.h"
 

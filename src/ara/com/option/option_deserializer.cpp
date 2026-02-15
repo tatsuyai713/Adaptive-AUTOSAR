@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/option_deserializer.cpp
+/// @brief Implementation for option deserializer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./option_deserializer.h"
 
 namespace ara

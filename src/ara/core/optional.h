@@ -1,3 +1,7 @@
+/// @file src/ara/core/optional.h
+/// @brief Declarations for optional.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef OPTIONAL_H
 #define OPTIONAL_H
 

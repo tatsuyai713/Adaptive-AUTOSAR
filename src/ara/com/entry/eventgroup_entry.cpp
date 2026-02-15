@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/eventgroup_entry.cpp
+/// @brief Implementation for eventgroup entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./eventgroup_entry.h"
 
 namespace ara

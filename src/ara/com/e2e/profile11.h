@@ -1,3 +1,7 @@
+/// @file src/ara/com/e2e/profile11.h
+/// @brief Declarations for profile11.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PROFILE11_H
 #define PROFILE11_H
 

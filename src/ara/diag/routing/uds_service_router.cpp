@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/uds_service_router.cpp
+/// @brief Implementation for uds service router.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./uds_service_router.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/application/platform/platform_health_management.cpp
+/// @brief Implementation for platform health management.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../helper/argument_configuration.h"
 #include "./platform_health_management.h"
 

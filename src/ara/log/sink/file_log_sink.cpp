@@ -1,3 +1,7 @@
+/// @file src/ara/log/sink/file_log_sink.cpp
+/// @brief Implementation for file log sink.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./file_log_sink.h"
 
 namespace ara

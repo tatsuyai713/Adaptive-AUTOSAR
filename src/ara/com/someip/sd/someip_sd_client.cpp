@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_client.cpp
+/// @brief Implementation for someip sd client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <chrono>
 #include <cstdlib>
 #include <stdexcept>

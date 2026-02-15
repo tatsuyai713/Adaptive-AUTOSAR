@@ -1,3 +1,7 @@
+/// @file src/ara/com/e2e/e2e_event.h
+/// @brief Declarations for e2e event.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_E2E_EVENT_H
 #define ARA_COM_E2E_EVENT_H
 

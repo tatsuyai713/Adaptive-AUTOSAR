@@ -1,3 +1,7 @@
+/// @file src/ara/com/dds/cyclonedds_pubsub.h
+/// @brief Declarations for cyclonedds pubsub.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_DDS_CYCLONEDDS_PUBSUB_H
 #define ARA_COM_DDS_CYCLONEDDS_PUBSUB_H
 
@@ -20,6 +24,7 @@ namespace ara
     {
         namespace dds
         {
+            /// @brief DDS publisher wrapper backed by Cyclone DDS C++ API.
             template <typename SampleType>
             class CyclonePublisher final
             {
@@ -27,6 +32,7 @@ namespace ara
                 std::string mTopicName;
 
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                /// @brief Runtime DDS entities required for publication.
                 struct Binding final
                 {
                     ::dds::domain::DomainParticipant Participant;
@@ -151,6 +157,7 @@ namespace ara
                 }
             };
 
+            /// @brief DDS subscriber wrapper backed by Cyclone DDS C++ API.
             template <typename SampleType>
             class CycloneSubscriber final
             {
@@ -158,6 +165,7 @@ namespace ara
                 std::string mTopicName;
 
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                /// @brief Runtime DDS entities required for subscription.
                 struct Binding final
                 {
                     ::dds::domain::DomainParticipant Participant;

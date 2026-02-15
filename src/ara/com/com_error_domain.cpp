@@ -1,3 +1,7 @@
+/// @file src/ara/com/com_error_domain.cpp
+/// @brief Implementation for com error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./com_error_domain.h"
 
 namespace ara

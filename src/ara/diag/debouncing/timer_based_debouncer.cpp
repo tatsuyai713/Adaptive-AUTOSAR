@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/timer_based_debouncer.cpp
+/// @brief Implementation for timer based debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <chrono>
 #include "./timer_based_debouncer.h"
 

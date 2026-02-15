@@ -1,3 +1,7 @@
+/// @file src/application/platform/state_management.cpp
+/// @brief Implementation for state management.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <utility>
 #include "../../ara/exec/execution_client.h"
 #include "../helper/argument_configuration.h"

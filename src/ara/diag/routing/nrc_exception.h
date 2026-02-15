@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/nrc_exception.h
+/// @brief Declarations for nrc exception.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef NRC_EXCEPTION_H
 #define NRC_EXCEPTION_H
 

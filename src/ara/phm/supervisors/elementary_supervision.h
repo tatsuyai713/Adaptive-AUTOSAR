@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/elementary_supervision.h
+/// @brief Declarations for elementary supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ELEMENTARY_SUPERVISION_H
 #define ELEMENTARY_SUPERVISION_H
 

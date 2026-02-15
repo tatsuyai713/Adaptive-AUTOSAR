@@ -1,3 +1,7 @@
+/// @file src/ara/com/e2e/profile.h
+/// @brief Declarations for profile.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PROFILE_H
 #define PROFILE_H
 
@@ -12,6 +16,7 @@ namespace ara
         /// @note The entities within the namespace are NOT fully compatible with the ARA standard.
         namespace e2e
         {
+            /// @brief Result of E2E protection verification.
             enum class CheckStatusType
             {
                 kOk,           ///!< CRC check is OK

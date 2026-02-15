@@ -1,3 +1,7 @@
+/// @file src/ara/log/logger.h
+/// @brief Declarations for logger.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOGGER_H
 #define LOGGER_H
 

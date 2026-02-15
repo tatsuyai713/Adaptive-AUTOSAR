@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/counter_based_debouncer.h
+/// @brief Declarations for counter based debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef COUNTER_BASED_DEBOUNCER_H
 #define COUNTER_BASED_DEBOUNCER_H
 
@@ -31,6 +35,7 @@ namespace ara
 
         namespace debouncing
         {
+            /// @brief Counter-based implementation of diagnostic event debouncing.
             class CounterBasedDebouncer : public Debouncer
             {
             private:

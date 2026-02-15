@@ -1,3 +1,7 @@
+/// @file src/ara/exec/exec_error_domain.cpp
+/// @brief Implementation for exec error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./exec_error_domain.h"
 
 namespace ara

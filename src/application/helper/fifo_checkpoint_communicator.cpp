@@ -1,3 +1,7 @@
+/// @file src/application/helper/fifo_checkpoint_communicator.cpp
+/// @brief Implementation for fifo checkpoint communicator.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <thread>
 #include "../../ara/com/helper/payload_helper.h"

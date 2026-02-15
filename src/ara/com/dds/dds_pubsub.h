@@ -1,3 +1,7 @@
+/// @file src/ara/com/dds/dds_pubsub.h
+/// @brief Declarations for dds pubsub.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_DDS_DDS_PUBSUB_H
 #define ARA_COM_DDS_DDS_PUBSUB_H
 

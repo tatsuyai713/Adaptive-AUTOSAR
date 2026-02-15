@@ -1,3 +1,7 @@
+/// @file src/application/doip/vehicle_id_request_handler.h
+/// @brief Declarations for vehicle id request handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef VEHICLE_ID_REQUEST_HANDLER_H
 #define VEHICLE_ID_REQUEST_HANDLER_H
 

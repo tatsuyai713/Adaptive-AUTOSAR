@@ -1,3 +1,7 @@
+/// @file src/ara/exec/signal_handler.h
+/// @brief Declarations for signal handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SIGNAL_HANDLER_H
 #define SIGNAL_HANDLER_H
 

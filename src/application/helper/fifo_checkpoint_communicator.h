@@ -1,3 +1,7 @@
+/// @file src/application/helper/fifo_checkpoint_communicator.h
+/// @brief Declarations for fifo checkpoint communicator.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef FIFO_CHECKPOINT_COMMUNICATOR
 #define FIFO_CHECKPOINT_COMMUNICATOR
 

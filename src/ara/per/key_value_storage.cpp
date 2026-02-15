@@ -1,3 +1,7 @@
+/// @file src/ara/per/key_value_storage.cpp
+/// @brief Implementation for key value storage.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./key_value_storage.h"
 #include <algorithm>
 #include <cstdio>

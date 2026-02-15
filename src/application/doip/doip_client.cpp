@@ -1,3 +1,7 @@
+/// @file src/application/doip/doip_client.cpp
+/// @brief Implementation for doip client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <thread>
 #include <doiplib/diag_message.h>

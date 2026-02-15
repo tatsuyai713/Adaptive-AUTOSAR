@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/deadline_supervision.cpp
+/// @brief Implementation for deadline supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./deadline_supervision.h"
 
 namespace ara

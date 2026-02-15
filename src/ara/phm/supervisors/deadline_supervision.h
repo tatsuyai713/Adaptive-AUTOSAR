@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/deadline_supervision.h
+/// @brief Declarations for deadline supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DEADLINE_SUPERVISION_H
 #define DEADLINE_SUPERVISION_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/sd_network_layer.cpp
+/// @brief Implementation for sd network layer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include "./sd_network_layer.h"
 

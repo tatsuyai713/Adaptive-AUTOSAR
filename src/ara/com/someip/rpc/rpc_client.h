@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/rpc_client.h
+/// @brief Declarations for rpc client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef RPC_CLIENT_H
 #define RPC_CLIENT_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/entry.h
+/// @brief Declarations for entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ENTRY_H
 #define ENTRY_H
 

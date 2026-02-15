@@ -1,3 +1,7 @@
+/// @file src/ara/com/service_proxy_base.cpp
+/// @brief Implementation for service proxy base.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <chrono>
 #include <cstdint>

@@ -1,3 +1,7 @@
+/// @file src/application/helper/read_data_by_identifier.h
+/// @brief Declarations for read data by identifier.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef READ_DATA_BY_IDENTIFIER_H
 #define READ_DATA_BY_IDENTIFIER_H
 

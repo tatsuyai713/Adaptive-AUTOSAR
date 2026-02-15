@@ -1,3 +1,7 @@
+/// @file src/application/helper/network_configuration.cpp
+/// @brief Implementation for network configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./network_configuration.h"
 
 namespace application

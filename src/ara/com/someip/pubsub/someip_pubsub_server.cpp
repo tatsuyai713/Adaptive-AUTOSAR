@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/someip_pubsub_server.cpp
+/// @brief Implementation for someip pubsub server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../../entry/eventgroup_entry.h"
 #include "./someip_pubsub_server.h"
 

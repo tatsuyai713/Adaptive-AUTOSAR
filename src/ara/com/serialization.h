@@ -1,3 +1,7 @@
+/// @file src/ara/com/serialization.h
+/// @brief Declarations for serialization.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_SERIALIZATION_H
 #define ARA_COM_SERIALIZATION_H
 
@@ -24,6 +28,9 @@ namespace ara
                 "Default Serializer requires trivially copyable types. "
                 "Provide a Serializer<T> specialization for complex types.");
 
+            /// @brief Serializes a trivially-copyable value into raw bytes.
+            /// @param value Value to serialize.
+            /// @returns Byte vector containing a binary copy of `value`.
             static std::vector<std::uint8_t> Serialize(const T &value)
             {
                 std::vector<std::uint8_t> buffer(sizeof(T));
@@ -31,6 +38,10 @@ namespace ara
                 return buffer;
             }
 
+            /// @brief Deserializes a trivially-copyable value from raw bytes.
+            /// @param data Pointer to input payload buffer.
+            /// @param size Payload size in bytes.
+            /// @returns `Result<T>` with value on success or `kFieldValueIsNotValid`.
             static core::Result<T> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)
@@ -51,6 +62,9 @@ namespace ara
         template <>
         struct Serializer<std::string, void>
         {
+            /// @brief Serializes a string as `<uint32 length><bytes>`.
+            /// @param value String value to serialize.
+            /// @returns Encoded byte vector.
             static std::vector<std::uint8_t> Serialize(const std::string &value)
             {
                 std::vector<std::uint8_t> buffer;
@@ -61,6 +75,10 @@ namespace ara
                 return buffer;
             }
 
+            /// @brief Deserializes a string from `<uint32 length><bytes>`.
+            /// @param data Pointer to encoded payload.
+            /// @param size Payload size in bytes.
+            /// @returns `Result<std::string>` on success or validation error.
             static core::Result<std::string> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)
@@ -91,12 +109,19 @@ namespace ara
         template <>
         struct Serializer<std::vector<std::uint8_t>, void>
         {
+            /// @brief Returns the input bytes without transformation.
+            /// @param value Byte vector to forward.
+            /// @returns Same content as `value`.
             static std::vector<std::uint8_t> Serialize(
                 const std::vector<std::uint8_t> &value)
             {
                 return value;
             }
 
+            /// @brief Copies raw payload bytes into a vector.
+            /// @param data Payload start pointer.
+            /// @param size Payload size in bytes.
+            /// @returns Byte vector containing copied payload.
             static core::Result<std::vector<std::uint8_t>> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)

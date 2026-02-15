@@ -1,3 +1,7 @@
+/// @file src/ara/diag/diag_error_domain.cpp
+/// @brief Implementation for diag error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./diag_error_domain.h"
 
 namespace ara

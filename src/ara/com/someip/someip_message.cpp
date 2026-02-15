@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/someip_message.cpp
+/// @brief Implementation for someip message.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./someip_message.h"
 
 namespace ara

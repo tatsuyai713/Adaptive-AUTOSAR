@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/routable_uds_service.h
+/// @brief Declarations for routable uds service.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ROUTABLE_USD_SERVICE_H
 #define ROUTABLE_USD_SERVICE_H
 

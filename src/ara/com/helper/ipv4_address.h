@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/ipv4_address.h
+/// @brief Declarations for ipv4 address.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef IPV4_ADDRESS_H
 #define IPV4_ADDRESS_H
 

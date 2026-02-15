@@ -1,3 +1,7 @@
+/// @file src/ara/per/read_write_accessor.cpp
+/// @brief Implementation for read write accessor.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./read_write_accessor.h"
 #include <sys/stat.h>
 #include <unistd.h>

@@ -1,3 +1,7 @@
+/// @file src/application/helper/log_recovery_action.cpp
+/// @brief Implementation for log recovery action.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./log_recovery_action.h"
 
 namespace application

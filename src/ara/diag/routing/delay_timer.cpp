@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/delay_timer.cpp
+/// @brief Implementation for delay timer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./delay_timer.h"
 
 namespace ara

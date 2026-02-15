@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/timer_based_debouncer.h
+/// @brief Declarations for timer based debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TIMER_BASED_DEBOUNCER_H
 #define TIMER_BASED_DEBOUNCER_H
 
@@ -22,6 +26,7 @@ namespace ara
 
         namespace debouncing
         {
+            /// @brief Time-based implementation of diagnostic event debouncing.
             class TimerBasedDebouncer : public Debouncer
             {
             private:

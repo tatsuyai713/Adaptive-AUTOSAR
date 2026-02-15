@@ -1,3 +1,7 @@
+/// @file src/ara/ucm/ucm_error_domain.h
+/// @brief Declarations for ucm error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef UCM_ERROR_DOMAIN_H
 #define UCM_ERROR_DOMAIN_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/request_transfer.h
+/// @brief Declarations for request transfer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef REQUEST_TRANSFER_H
 #define REQUEST_TRANSFER_H
 

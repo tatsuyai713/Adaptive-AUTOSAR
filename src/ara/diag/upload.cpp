@@ -1,3 +1,7 @@
+/// @file src/ara/diag/upload.cpp
+/// @brief Implementation for upload.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./upload.h"
 
 namespace ara

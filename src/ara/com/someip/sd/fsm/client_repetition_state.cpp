@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/client_repetition_state.cpp
+/// @brief Implementation for client repetition state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "client_repetition_state.h"
 
 namespace ara

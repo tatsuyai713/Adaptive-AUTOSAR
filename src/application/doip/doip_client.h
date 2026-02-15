@@ -1,3 +1,7 @@
+/// @file src/application/doip/doip_client.h
+/// @brief Declarations for doip client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DOIP_CLIENT_H
 #define DOIP_CLIENT_H
 

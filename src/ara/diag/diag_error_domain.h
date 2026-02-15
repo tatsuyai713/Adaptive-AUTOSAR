@@ -1,3 +1,7 @@
+/// @file src/ara/diag/diag_error_domain.h
+/// @brief Declarations for diag error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DIAG_ERROR_DOMAIN_H
 #define DIAG_ERROR_DOMAIN_H
 

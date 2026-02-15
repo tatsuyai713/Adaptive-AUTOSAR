@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/finite_state_machine.h
+/// @brief Declarations for finite state machine.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef FINITE_MACHINE_STATE_H
 #define FINITE_MACHINE_STATE_H
 

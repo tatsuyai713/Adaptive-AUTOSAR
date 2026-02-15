@@ -1,3 +1,7 @@
+/// @file src/ara/com/service_skeleton_base.cpp
+/// @brief Implementation for service skeleton base.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <algorithm>
 #include <utility>
 

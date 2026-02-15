@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/someip_pubsub_client.cpp
+/// @brief Implementation for someip pubsub client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./someip_pubsub_client.h"
 
 namespace ara

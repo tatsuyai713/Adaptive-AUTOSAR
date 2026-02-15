@@ -1,3 +1,7 @@
+/// @file src/ara/com/field.h
+/// @brief Declarations for field.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_FIELD_H
 #define ARA_COM_FIELD_H
 
@@ -32,6 +36,13 @@ namespace ara
             bool mHasNotifier;
 
         public:
+            /// @brief Constructs a proxy field wrapper from notifier/getter/setter bindings.
+            /// @param notifierBinding Binding for field notifier event.
+            /// @param getBinding Binding for getter method.
+            /// @param setBinding Binding for setter method.
+            /// @param hasGetter Capability flag indicating getter support.
+            /// @param hasSetter Capability flag indicating setter support.
+            /// @param hasNotifier Capability flag indicating notifier support.
             ProxyField(
                 std::unique_ptr<internal::ProxyEventBinding> notifierBinding,
                 std::unique_ptr<internal::ProxyMethodBinding> getBinding,
@@ -50,10 +61,14 @@ namespace ara
 
             ProxyField(const ProxyField &) = delete;
             ProxyField &operator=(const ProxyField &) = delete;
+            /// @brief Move constructor.
             ProxyField(ProxyField &&) noexcept = default;
+            /// @brief Move assignment.
+            /// @returns Reference to `*this`.
             ProxyField &operator=(ProxyField &&) noexcept = default;
 
             /// @brief Get field value from server
+            /// @returns Future resolved with field value or communication error.
             core::Future<T> Get()
             {
                 core::Promise<T> promise;
@@ -101,6 +116,8 @@ namespace ara
             }
 
             /// @brief Set field value on server
+            /// @param value New field value.
+            /// @returns Future resolved when setter call completes.
             core::Future<void> Set(const T &value)
             {
                 core::Promise<void> promise;
@@ -134,6 +151,8 @@ namespace ara
 
             // ── Notification (Event) capabilities ──
 
+            /// @brief Subscribes to field notifier updates.
+            /// @param maxSampleCount Maximum buffered notifier samples.
             void Subscribe(std::size_t maxSampleCount)
             {
                 if (mHasNotifier)
@@ -142,6 +161,7 @@ namespace ara
                 }
             }
 
+            /// @brief Cancels field notifier subscription.
             void Unsubscribe()
             {
                 if (mHasNotifier)
@@ -150,6 +170,11 @@ namespace ara
                 }
             }
 
+            /// @brief Fetches and dispatches pending notifier samples.
+            /// @tparam F Callable receiving `SamplePtr<T>`.
+            /// @param f Sample callback.
+            /// @param maxNumberOfSamples Maximum samples to process.
+            /// @returns Number of processed samples or an error.
             template <typename F>
             core::Result<std::size_t> GetNewSamples(
                 F &&f,
@@ -166,6 +191,8 @@ namespace ara
                     std::forward<F>(f), maxNumberOfSamples);
             }
 
+            /// @brief Sets notifier receive callback.
+            /// @param handler Callback for incoming notifier data.
             void SetReceiveHandler(EventReceiveHandler handler)
             {
                 if (mHasNotifier)
@@ -174,6 +201,7 @@ namespace ara
                 }
             }
 
+            /// @brief Clears notifier receive callback.
             void UnsetReceiveHandler()
             {
                 if (mHasNotifier)
@@ -182,6 +210,8 @@ namespace ara
                 }
             }
 
+            /// @brief Sets subscription state change callback.
+            /// @param handler Callback for subscription state changes.
             void SetSubscriptionStateChangeHandler(
                 SubscriptionStateChangeHandler handler)
             {
@@ -192,6 +222,7 @@ namespace ara
                 }
             }
 
+            /// @brief Clears subscription state callback.
             void UnsetSubscriptionStateChangeHandler()
             {
                 if (mHasNotifier)
@@ -200,6 +231,7 @@ namespace ara
                 }
             }
 
+            /// @brief Returns current notifier subscription state.
             SubscriptionState GetSubscriptionState() const noexcept
             {
                 if (!mHasNotifier)
@@ -210,6 +242,7 @@ namespace ara
                 return mNotifier.GetSubscriptionState();
             }
 
+            /// @brief Returns available receive queue capacity.
             std::size_t GetFreeSampleCount() const noexcept
             {
                 if (!mHasNotifier)
@@ -220,8 +253,11 @@ namespace ara
                 return mNotifier.GetFreeSampleCount();
             }
 
+            /// @brief Indicates whether getter is available.
             bool HasGetter() const noexcept { return mHasGetter; }
+            /// @brief Indicates whether setter is available.
             bool HasSetter() const noexcept { return mHasSetter; }
+            /// @brief Indicates whether notifier is available.
             bool HasNotifier() const noexcept { return mHasNotifier; }
         };
 
@@ -236,6 +272,8 @@ namespace ara
             T mValue{};
 
         public:
+            /// @brief Constructs a skeleton field wrapper.
+            /// @param notifierBinding Binding for field notifier event.
             explicit SkeletonField(
                 std::unique_ptr<internal::SkeletonEventBinding> notifierBinding)
                 : mNotifier{std::move(notifierBinding)}
@@ -244,10 +282,14 @@ namespace ara
 
             SkeletonField(const SkeletonField &) = delete;
             SkeletonField &operator=(const SkeletonField &) = delete;
+            /// @brief Move constructor.
             SkeletonField(SkeletonField &&) noexcept = default;
+            /// @brief Move assignment.
+            /// @returns Reference to `*this`.
             SkeletonField &operator=(SkeletonField &&) noexcept = default;
 
             /// @brief Update field value and notify subscribers
+            /// @param value New field value.
             void Update(const T &value)
             {
                 mValue = value;
@@ -255,9 +297,11 @@ namespace ara
             }
 
             /// @brief Get current field value (for Get handler dispatch)
+            /// @returns Last stored field value.
             const T &GetValue() const noexcept { return mValue; }
 
             /// @brief Offer the notification event
+            /// @returns `Result<void>` indicating offer success/failure.
             core::Result<void> Offer()
             {
                 return mNotifier.Offer();

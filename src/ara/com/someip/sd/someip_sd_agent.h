@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_agent.h
+/// @brief Declarations for someip sd agent.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_SD_AGENT_H
 #define SOMEIP_SD_AGENT_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/machine_state.h
+/// @brief Declarations for machine state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef MACHINE_STATE_H
 #define MACHINE_STATE_H
 

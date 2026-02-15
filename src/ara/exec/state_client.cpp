@@ -1,3 +1,7 @@
+/// @file src/ara/exec/state_client.cpp
+/// @brief Implementation for state client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./state_client.h"
 
 namespace ara

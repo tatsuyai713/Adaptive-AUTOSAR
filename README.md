@@ -216,6 +216,7 @@ Current CI verifies:
 5. Split install workflow (`build_and_install_autosar_ap.sh`)
 6. External user app build and run against installed package (`build_user_apps_from_opt.sh --run`)
 7. Doxygen API documentation generation (`./scripts/generate_doxygen_docs.sh`) and artifact upload (`doxygen-html`)
+8. GitHub Pages publish for generated docs on push to `main`/`master`
 
 ## Documentation
 - GitHub Pages API docs: `https://tatsuyai713.github.io/Adaptive-AUTOSAR/`

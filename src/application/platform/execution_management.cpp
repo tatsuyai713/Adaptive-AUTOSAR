@@ -1,3 +1,7 @@
+/// @file src/application/platform/execution_management.cpp
+/// @brief Implementation for execution management.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../../ara/com/someip/rpc/socket_rpc_server.h"
 #include "../../ara/exec/execution_server.h"
 #include "../helper/argument_configuration.h"

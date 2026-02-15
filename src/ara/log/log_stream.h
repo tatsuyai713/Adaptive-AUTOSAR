@@ -1,3 +1,7 @@
+/// @file src/ara/log/log_stream.h
+/// @brief Declarations for log stream.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef LOG_STREAM_H
 #define LOG_STREAM_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/diag/condition.cpp
+/// @brief Implementation for condition.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./condition.h"
 
 namespace ara

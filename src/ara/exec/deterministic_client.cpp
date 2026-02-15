@@ -1,3 +1,7 @@
+/// @file src/ara/exec/deterministic_client.cpp
+/// @brief Implementation for deterministic client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <thread>
 #include "./deterministic_client.h"
 

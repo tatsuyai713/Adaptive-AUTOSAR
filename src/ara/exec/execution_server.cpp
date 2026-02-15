@@ -1,3 +1,7 @@
+/// @file src/ara/exec/execution_server.cpp
+/// @brief Implementation for execution server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./execution_server.h"
 
 namespace ara

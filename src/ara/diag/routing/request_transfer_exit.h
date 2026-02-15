@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/request_transfer_exit.h
+/// @brief Declarations for request transfer exit.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef REQUEST_TRANSFER_EXIT_H
 #define REQUEST_TRANSFER_EXIT_H
 

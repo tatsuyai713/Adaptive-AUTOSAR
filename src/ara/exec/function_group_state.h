@@ -1,3 +1,7 @@
+/// @file src/ara/exec/function_group_state.h
+/// @brief Declarations for function group state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef FUNCTION_GROUP_STATE_H
 #define FUNCTION_GROUP_STATE_H
 

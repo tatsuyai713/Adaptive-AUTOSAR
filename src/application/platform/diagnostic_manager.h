@@ -1,3 +1,7 @@
+/// @file src/application/platform/diagnostic_manager.h
+/// @brief Declarations for diagnostic manager.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DIAGNOSTIC_MANAGER_H
 #define DIAGNOSTIC_MANAGER_H
 

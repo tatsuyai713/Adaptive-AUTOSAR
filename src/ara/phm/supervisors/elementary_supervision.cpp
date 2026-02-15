@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/elementary_supervision.cpp
+/// @brief Implementation for elementary supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./elementary_supervision.h"
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/service_ready_state.h
+/// @brief Declarations for service ready state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SERVICE_READY_STATE_H
 #define SERVICE_READY_STATE_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/exec/helper/modelled_process.cpp
+/// @brief Implementation for modelled process.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./modelled_process.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/com/method.h
+/// @brief Declarations for method.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_METHOD_H
 #define ARA_COM_METHOD_H
 
@@ -51,6 +55,8 @@ namespace ara
             }
 
         public:
+            /// @brief Creates a proxy method wrapper bound to transport implementation.
+            /// @param binding Concrete method binding implementation.
             explicit ProxyMethod(
                 std::unique_ptr<internal::ProxyMethodBinding> binding) noexcept
                 : mBinding{std::move(binding)}
@@ -137,6 +143,8 @@ namespace ara
             }
 
         public:
+            /// @brief Creates a void-return proxy method wrapper.
+            /// @param binding Concrete method binding implementation.
             explicit ProxyMethod(
                 std::unique_ptr<internal::ProxyMethodBinding> binding) noexcept
                 : mBinding{std::move(binding)}
@@ -148,6 +156,9 @@ namespace ara
             ProxyMethod(ProxyMethod &&) noexcept = default;
             ProxyMethod &operator=(ProxyMethod &&) noexcept = default;
 
+            /// @brief Invokes a remote method that has no return payload.
+            /// @param args Method arguments.
+            /// @returns Future that resolves on acknowledgement or error.
             core::Future<void> operator()(Args... args)
             {
                 core::Promise<void> promise;

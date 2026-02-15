@@ -1,3 +1,7 @@
+/// @file src/ara/exec/exec_exception.cpp
+/// @brief Implementation for exec exception.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 
 #include "./exec_exception.h"
 

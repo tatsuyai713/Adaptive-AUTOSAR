@@ -1,3 +1,7 @@
+/// @file src/ara/com/service_skeleton_base.h
+/// @brief Declarations for service skeleton base.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_SERVICE_SKELETON_BASE_H
 #define ARA_COM_SERVICE_SKELETON_BASE_H
 
@@ -45,19 +49,24 @@ namespace ara
                 MethodCallProcessingMode mode =
                     MethodCallProcessingMode::kEvent) noexcept;
 
+            /// @brief Returns configured service identifier.
             std::uint16_t GetServiceId() const noexcept;
+            /// @brief Returns configured instance identifier.
             std::uint16_t GetInstanceId() const noexcept;
 
         public:
+            /// @brief Callback type to validate/deny event subscription changes.
             using EventSubscriptionStateHandler =
                 std::function<bool(std::uint16_t, bool)>;
 
             ServiceSkeletonBase(const ServiceSkeletonBase &) = delete;
             ServiceSkeletonBase &operator=(const ServiceSkeletonBase &) = delete;
 
+            /// @brief Virtual destructor.
             virtual ~ServiceSkeletonBase() noexcept;
 
             /// @brief Start offering the service
+            /// @returns `Result<void>` indicating offer success/failure.
             core::Result<void> OfferService();
 
             /// @brief Stop offering the service
@@ -77,9 +86,11 @@ namespace ara
                 std::uint16_t eventGroupId);
 
             /// @brief Check if the service is currently offered
+            /// @returns `true` when service offer state is active.
             bool IsOffered() const noexcept;
 
             /// @brief Get the instance specifier
+            /// @returns Instance specifier associated with this skeleton.
             const core::InstanceSpecifier &GetInstanceSpecifier() const noexcept;
         };
     }

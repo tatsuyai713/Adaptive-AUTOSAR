@@ -1,3 +1,7 @@
+/// @file src/application/helper/rpc_configuration.cpp
+/// @brief Implementation for rpc configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./rpc_configuration.h"
 
 namespace application

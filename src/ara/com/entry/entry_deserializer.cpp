@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/entry_deserializer.cpp
+/// @brief Implementation for entry deserializer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./entry_deserializer.h"
 
 namespace ara

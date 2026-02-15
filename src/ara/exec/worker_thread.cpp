@@ -1,3 +1,7 @@
+/// @file src/ara/exec/worker_thread.cpp
+/// @brief Implementation for worker thread.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./worker_thread.h"
 
 namespace ara

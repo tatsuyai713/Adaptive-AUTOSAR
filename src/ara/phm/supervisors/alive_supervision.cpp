@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervisors/alive_supervision.cpp
+/// @brief Implementation for alive supervision.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include <thread>
 #include "./alive_supervision.h"

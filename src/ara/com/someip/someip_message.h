@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/someip_message.h
+/// @brief Declarations for someip message.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_MESSAGE_H
 #define SOMEIP_MESSAGE_H
 

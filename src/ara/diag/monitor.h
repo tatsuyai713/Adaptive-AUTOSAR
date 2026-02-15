@@ -1,3 +1,7 @@
+/// @file src/ara/diag/monitor.h
+/// @brief Declarations for monitor.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef MONITOR_H
 #define MONITOR_H
 

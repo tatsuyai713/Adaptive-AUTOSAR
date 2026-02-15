@@ -1,3 +1,7 @@
+/// @file src/ara/diag/cancellation_handler.h
+/// @brief Declarations for cancellation handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CANCELLATION_HANDLER_H
 #define CANCELLATION_HANDLER_H
 

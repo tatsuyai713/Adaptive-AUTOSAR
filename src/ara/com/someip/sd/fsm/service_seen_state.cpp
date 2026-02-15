@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/service_seen_state.cpp
+/// @brief Implementation for service seen state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./service_seen_state.h"
 
 namespace ara

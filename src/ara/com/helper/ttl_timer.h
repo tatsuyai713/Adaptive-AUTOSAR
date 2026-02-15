@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/ttl_timer.h
+/// @brief Declarations for ttl timer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TTL_TIMER_H
 #define TTL_TIMER_H
 

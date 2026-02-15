@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/service_notseen_state.h
+/// @brief Declarations for service notseen state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SERVICE_NOTSEEN_STATE_H
 #define SERVICE_NOTSEEN_STATE_H
 

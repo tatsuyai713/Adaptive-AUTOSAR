@@ -1,3 +1,7 @@
+/// @file src/ara/per/per_error_domain.h
+/// @brief Declarations for per error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PER_ERROR_DOMAIN_H
 #define PER_ERROR_DOMAIN_H
 

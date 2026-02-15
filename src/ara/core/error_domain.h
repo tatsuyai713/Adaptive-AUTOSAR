@@ -1,3 +1,7 @@
+/// @file src/ara/core/error_domain.h
+/// @brief Declarations for error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ERROR_DOMAIN_H
 #define ERROR_DOMAIN_H
 
@@ -13,9 +17,9 @@ namespace ara
         class ErrorDomain
         {
         public:
-            /// @brief Alias type of the domain ID
+            /// @brief Unsigned integral type used as error-domain identifier.
             using IdType = uint64_t;
-            /// @brief Alias type of the error code
+            /// @brief Unsigned integral type used as raw error code value.
             using CodeType = uint32_t;
 
         private:
@@ -28,6 +32,7 @@ namespace ara
             {
             }
 
+            /// @brief Destructor.
             ~ErrorDomain() noexcept = default;
 
             ErrorDomain(const ErrorDomain &) = delete;
@@ -35,11 +40,13 @@ namespace ara
             ErrorDomain &operator=(const ErrorDomain &) = delete;
             ErrorDomain &operator=(ErrorDomain &&) = delete;
 
+            /// @brief Equality comparison by domain ID.
             constexpr bool operator==(const ErrorDomain &other) const noexcept
             {
                 return mId == other.mId;
             }
 
+            /// @brief Inequality comparison by domain ID.
             constexpr bool operator!=(const ErrorDomain &other) const noexcept
             {
                 return mId != other.mId;

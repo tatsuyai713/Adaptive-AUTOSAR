@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/client_initial_wait_state.cpp
+/// @brief Implementation for client initial wait state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "client_initial_wait_state.h"
 
 namespace ara

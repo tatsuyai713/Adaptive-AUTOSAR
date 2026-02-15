@@ -1,3 +1,7 @@
+/// @file src/ara/crypto/crypto_error_domain.cpp
+/// @brief Implementation for crypto error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./crypto_error_domain.h"
 
 namespace ara

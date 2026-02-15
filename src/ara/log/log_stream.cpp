@@ -1,3 +1,7 @@
+/// @file src/ara/log/log_stream.cpp
+/// @brief Implementation for log stream.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <sstream>
 #include <iomanip>
 #include "./log_stream.h"

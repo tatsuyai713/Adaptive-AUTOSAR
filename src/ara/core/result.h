@@ -1,3 +1,7 @@
+/// @file src/ara/core/result.h
+/// @brief Declarations for result.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef RESULT_H
 #define RESULT_H
 

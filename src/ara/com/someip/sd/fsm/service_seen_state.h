@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/service_seen_state.h
+/// @brief Declarations for service seen state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SERVICE_SEEN_STATE_H
 #define SERVICE_SEEN_STATE_H
 

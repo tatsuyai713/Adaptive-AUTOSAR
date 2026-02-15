@@ -1,3 +1,7 @@
+/// @file src/ara/com/e2e/profile11.cpp
+/// @brief Implementation for profile11.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./profile11.h"
 

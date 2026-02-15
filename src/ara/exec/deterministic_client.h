@@ -1,3 +1,7 @@
+/// @file src/ara/exec/deterministic_client.h
+/// @brief Declarations for deterministic client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DETERMINISTIC_CLIENT_H
 #define DETERMINISTIC_CLIENT_H
 

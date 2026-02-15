@@ -1,3 +1,7 @@
+/// @file src/ara/sm/trigger_in.h
+/// @brief Declarations for trigger in.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TRIGGER_IN_H
 #define TRIGGER_IN_H
 

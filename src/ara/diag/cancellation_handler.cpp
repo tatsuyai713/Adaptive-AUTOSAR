@@ -1,3 +1,7 @@
+/// @file src/ara/diag/cancellation_handler.cpp
+/// @brief Implementation for cancellation handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./cancellation_handler.h"
 
 namespace ara

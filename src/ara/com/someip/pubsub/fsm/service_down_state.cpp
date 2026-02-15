@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/fsm/service_down_state.cpp
+/// @brief Implementation for service down state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./service_down_state.h"
 
 namespace ara

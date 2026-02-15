@@ -1,3 +1,7 @@
+/// @file src/ara/diag/meta_info.cpp
+/// @brief Implementation for meta info.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./meta_info.h"
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/pubsub/someip_pubsub_server.h
+/// @brief Declarations for someip pubsub server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_PUBSUB_SERVER
 #define SOMEIP_PUBSUB_SERVER
 

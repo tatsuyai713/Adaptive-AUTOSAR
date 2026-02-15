@@ -16,8 +16,7 @@ Generate locally:
 ./scripts/generate_doxygen_docs.sh
 ```
 
-Regenerate the PNG preview from the current architecture model:
+Local requirement:
+- `doxygen` command must be installed.
 
-```bash
-python3 ./scripts/generate_simulation_flow_png.py
-```
+`docs/simulation_flow_diagram.png` is managed as a repository asset.

@@ -1,3 +1,7 @@
+/// @file src/ara/sm/trigger_out.h
+/// @brief Declarations for trigger out.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TRIGGER_OUT_H
 #define TRIGGER_OUT_H
 

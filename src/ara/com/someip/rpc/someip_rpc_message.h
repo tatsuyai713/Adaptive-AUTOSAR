@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/someip_rpc_message.h
+/// @brief Declarations for someip rpc message.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOMEIP_RPC_MESSAGE_H
 #define SOMEIP_RPC_MESSAGE_H
 

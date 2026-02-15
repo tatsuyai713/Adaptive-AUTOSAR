@@ -1,3 +1,7 @@
+/// @file src/ara/diag/dtc_information.h
+/// @brief Declarations for dtc information.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DTC_INFORMATION_H
 #define DTC_INFORMATION_H
 

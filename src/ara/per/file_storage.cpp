@@ -1,3 +1,7 @@
+/// @file src/ara/per/file_storage.cpp
+/// @brief Implementation for file storage.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./file_storage.h"
 #include <dirent.h>
 #include <sys/stat.h>

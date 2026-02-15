@@ -1,3 +1,7 @@
+/// @file src/ara/diag/operation_cycle.h
+/// @brief Declarations for operation cycle.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef OPERATION_CYCLE_H
 #define OPERATION_CYCLE_H
 

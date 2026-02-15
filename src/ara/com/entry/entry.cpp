@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/entry.cpp
+/// @brief Implementation for entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./entry.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/iam/iam_error_domain.h
+/// @brief Declarations for iam error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef IAM_ERROR_DOMAIN_H
 #define IAM_ERROR_DOMAIN_H
 

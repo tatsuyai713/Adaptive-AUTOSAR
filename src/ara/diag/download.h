@@ -1,3 +1,7 @@
+/// @file src/ara/diag/download.h
+/// @brief Declarations for download.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DOWNLOAD_H
 #define DOWNLOAD_H
 

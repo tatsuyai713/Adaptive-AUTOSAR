@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/client_service_state.h
+/// @brief Declarations for client service state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CLIENT_SERVICE_STATE_H
 #define CLIENT_SERVICE_STATE_H
 

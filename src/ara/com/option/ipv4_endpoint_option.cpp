@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/ipv4_endpoint_option.cpp
+/// @brief Implementation for ipv4 endpoint option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./ipv4_endpoint_option.h"
 
 namespace ara

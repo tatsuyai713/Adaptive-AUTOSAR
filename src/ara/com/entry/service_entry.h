@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/service_entry.h
+/// @brief Declarations for service entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SERVICE_ENTRY_H
 #define SERVICE_ENTRY_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/iam/iam_error_domain.cpp
+/// @brief Implementation for iam error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./iam_error_domain.h"
 
 namespace ara

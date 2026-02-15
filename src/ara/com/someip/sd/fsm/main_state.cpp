@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/main_state.cpp
+/// @brief Implementation for main state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <thread>
 #include <chrono>
 #include "./main_state.h"

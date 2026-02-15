@@ -1,3 +1,7 @@
+/// @file src/ara/phm/health_channel.h
+/// @brief Declarations for health channel.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef HEALTH_CHANNEL_H
 #define HEALTH_CHANNEL_H
 

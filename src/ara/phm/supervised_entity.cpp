@@ -1,3 +1,7 @@
+/// @file src/ara/phm/supervised_entity.cpp
+/// @brief Implementation for supervised entity.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./supervised_entity.h"
 
 #include <utility>

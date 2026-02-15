@@ -1,3 +1,7 @@
+/// @file src/ara/phm/recovery_action.cpp
+/// @brief Implementation for recovery action.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./recovery_action.h"
 
 namespace ara

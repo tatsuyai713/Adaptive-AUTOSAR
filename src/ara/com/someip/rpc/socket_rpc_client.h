@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/socket_rpc_client.h
+/// @brief Declarations for socket rpc client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef SOCKET_RPC_CLIENT_H
 #define SOCKET_RPC_CLIENT_H
 
@@ -8,6 +12,7 @@
 
 namespace AsyncBsdSocketLib
 {
+    /// @brief Forward declaration of async socket poller.
     class Poller;
 }
 

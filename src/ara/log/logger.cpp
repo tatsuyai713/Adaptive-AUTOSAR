@@ -1,3 +1,7 @@
+/// @file src/ara/log/logger.cpp
+/// @brief Implementation for logger.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./logger.h"
 
 namespace ara

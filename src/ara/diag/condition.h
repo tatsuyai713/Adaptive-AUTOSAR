@@ -1,3 +1,7 @@
+/// @file src/ara/diag/condition.h
+/// @brief Declarations for condition.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CONDITION_H
 #define CONDITION_H
 

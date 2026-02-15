@@ -1,3 +1,7 @@
+/// @file src/ara/exec/execution_client.h
+/// @brief Declarations for execution client.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EXECUTION_CLIENT_H
 #define EXECUTION_CLIENT_H
 
@@ -28,6 +32,7 @@ namespace ara
         class ExecutionClient final
         {
         private:
+            /// @brief Tracks one in-flight RPC report request.
             struct PendingRequest
             {
                 std::promise<void> promise;

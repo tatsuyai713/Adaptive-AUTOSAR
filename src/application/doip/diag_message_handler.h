@@ -1,3 +1,7 @@
+/// @file src/application/doip/diag_message_handler.h
+/// @brief Declarations for diag message handler.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef DIAG_MESSAGE_HANDLER_H
 #define DIAG_MESSAGE_HANDLER_H
 

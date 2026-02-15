@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/someip_rpc_message.cpp
+/// @brief Implementation for someip rpc message.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <utility>
 #include "./someip_rpc_message.h"
 

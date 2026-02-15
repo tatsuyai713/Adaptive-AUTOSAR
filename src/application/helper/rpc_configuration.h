@@ -1,3 +1,7 @@
+/// @file src/application/helper/rpc_configuration.h
+/// @brief Declarations for rpc configuration.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef RPC_CONFIGURATION_H
 #define RPC_CONFIGURATION_H
 

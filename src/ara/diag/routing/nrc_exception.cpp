@@ -1,3 +1,7 @@
+/// @file src/ara/diag/routing/nrc_exception.cpp
+/// @brief Implementation for nrc exception.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./nrc_exception.h"
 
 namespace ara

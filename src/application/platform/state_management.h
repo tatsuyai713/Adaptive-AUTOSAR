@@ -1,3 +1,7 @@
+/// @file src/application/platform/state_management.h
+/// @brief Declarations for state management.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef STATE_MANAGEMENT_H
 #define STATE_MANAGEMENT_H
 

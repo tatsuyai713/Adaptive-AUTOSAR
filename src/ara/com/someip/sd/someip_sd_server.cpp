@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/someip_sd_server.cpp
+/// @brief Implementation for someip sd server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <cstdlib>
 #include "./someip_sd_server.h"
 

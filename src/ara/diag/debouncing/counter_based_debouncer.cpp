@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/counter_based_debouncer.cpp
+/// @brief Implementation for counter based debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./counter_based_debouncer.h"
 
 namespace ara

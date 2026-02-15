@@ -1,3 +1,7 @@
+/// @file src/ara/core/promise.h
+/// @brief Declarations for promise.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PROMISE_H
 #define PROMISE_H
 

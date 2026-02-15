@@ -1,3 +1,7 @@
+/// @file src/ara/phm/health_channel.cpp
+/// @brief Implementation for health channel.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./health_channel.h"
 
 namespace ara

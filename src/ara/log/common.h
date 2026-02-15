@@ -1,3 +1,7 @@
+/// @file src/ara/log/common.h
+/// @brief Declarations for common.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef COMMON_H
 #define COMMON_H
 

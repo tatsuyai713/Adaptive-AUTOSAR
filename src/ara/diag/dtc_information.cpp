@@ -1,3 +1,7 @@
+/// @file src/ara/diag/dtc_information.cpp
+/// @brief Implementation for dtc information.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./dtc_information.h"
 #include "./diag_error_domain.h"
 #include <utility>

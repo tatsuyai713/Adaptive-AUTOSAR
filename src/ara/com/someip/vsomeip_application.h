@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/vsomeip_application.h
+/// @brief Declarations for vsomeip application.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef VSOMEIP_APPLICATION_H
 #define VSOMEIP_APPLICATION_H
 

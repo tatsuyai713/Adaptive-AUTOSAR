@@ -1,3 +1,7 @@
+/// @file src/ara/diag/event.cpp
+/// @brief Implementation for event.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include <limits>
 #include <bitset>

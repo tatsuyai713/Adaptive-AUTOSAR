@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/vsomeip_method_binding.h
+/// @brief Declarations for vsomeip method binding.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_INTERNAL_VSOMEIP_METHOD_BINDING_H
 #define ARA_COM_INTERNAL_VSOMEIP_METHOD_BINDING_H
 

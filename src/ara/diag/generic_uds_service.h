@@ -1,3 +1,7 @@
+/// @file src/ara/diag/generic_uds_service.h
+/// @brief Declarations for generic uds service.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef GENERIC_UDS_SERVICE_H
 #define GENERIC_UDS_SERVICE_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/sm/states.h
+/// @brief Declarations for states.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef STATES_H
 #define STATES_H
 

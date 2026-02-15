@@ -1,3 +1,7 @@
+/// @file src/application/extended_vehicle.h
+/// @brief Declarations for extended vehicle.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EXTENDED_VEHICLE_H
 #define EXTENDED_VEHICLE_H
 

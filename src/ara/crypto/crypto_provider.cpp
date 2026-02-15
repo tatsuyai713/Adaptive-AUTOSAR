@@ -1,3 +1,7 @@
+/// @file src/ara/crypto/crypto_provider.cpp
+/// @brief Implementation for crypto provider.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./crypto_provider.h"
 
 #include <limits>

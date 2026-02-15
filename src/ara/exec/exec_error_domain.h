@@ -1,3 +1,7 @@
+/// @file src/ara/exec/exec_error_domain.h
+/// @brief Declarations for exec error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EXEC_ERROR_DOMAIN_H
 #define EXEC_ERROR_DOMAIN_H
 

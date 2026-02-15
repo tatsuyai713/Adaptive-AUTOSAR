@@ -1,3 +1,7 @@
+/// @file src/ara/diag/operation_cycle.cpp
+/// @brief Implementation for operation cycle.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./operation_cycle.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/core/initialization.h
+/// @brief Declarations for initialization.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef INITIALIZATION_H
 #define INITIALIZATION_H
 

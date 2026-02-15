@@ -1,3 +1,7 @@
+/// @file src/ara/phm/recovery_action.h
+/// @brief Declarations for recovery action.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef RECOVERY_ACTION_H
 #define RECOVERY_ACTION_H
 

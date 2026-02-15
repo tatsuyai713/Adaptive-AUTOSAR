@@ -1,3 +1,7 @@
+/// @file src/ara/exec/execution_error_event.h
+/// @brief Declarations for execution error event.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EXECUTION_ERROR_EVENT_H
 #define EXECUTION_ERROR_EVENT_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/abstract_state_machine.h
+/// @brief Declarations for abstract state machine.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ABSTRACT_MACHINE_STATE_H
 #define ABSTRACT_MACHINE_STATE_H
 

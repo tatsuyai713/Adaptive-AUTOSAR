@@ -1,3 +1,7 @@
+/// @file src/ara/diag/debouncing/debouncer.cpp
+/// @brief Implementation for debouncer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./debouncer.h"
 
 namespace ara

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/repetition_state.h
+/// @brief Declarations for repetition state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef REPETITION_STATE_H
 #define REPETITION_STATE_H
 

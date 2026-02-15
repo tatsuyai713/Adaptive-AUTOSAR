@@ -1,3 +1,7 @@
+/// @file src/ara/tsync/tsync_error_domain.cpp
+/// @brief Implementation for tsync error domain.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./tsync_error_domain.h"
 
 namespace ara

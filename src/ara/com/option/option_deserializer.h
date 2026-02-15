@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/option_deserializer.h
+/// @brief Declarations for option deserializer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef OPTION_DESERIALIZER_H
 #define OPTION_DESERIALIZER_H
 

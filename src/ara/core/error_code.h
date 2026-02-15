@@ -1,3 +1,7 @@
+/// @file src/ara/core/error_code.h
+/// @brief Declarations for error code.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ERROR_CODE_H
 #define ERROR_CODE_H
 
@@ -26,6 +30,7 @@ namespace ara
             }
 
             ErrorCode() = delete;
+            /// @brief Destructor.
             ~ErrorCode() noexcept = default;
 
             /// @brief Get error code value
@@ -49,11 +54,13 @@ namespace ara
             /// @brief Throw the error as an exception
             void ThrowAsException() const;
 
+            /// @brief Equality comparison for domain and value.
             constexpr bool operator==(const ErrorCode &other) const noexcept
             {
                 return mDomain == other.mDomain && mValue == other.mValue;
             }
 
+            /// @brief Inequality comparison for domain and value.
             constexpr bool operator!=(const ErrorCode &other) const noexcept
             {
                 return mDomain != other.mDomain || mValue != other.mValue;

@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/rpc/rpc_server.cpp
+/// @brief Implementation for rpc server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <utility>
 #include "./rpc_server.h"
 

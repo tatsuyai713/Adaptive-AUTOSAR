@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/concurrent_queue.h
+/// @brief Declarations for concurrent queue.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef CONCURRENT_QUEUE_H
 #define CONCURRENT_QUEUE_H
 

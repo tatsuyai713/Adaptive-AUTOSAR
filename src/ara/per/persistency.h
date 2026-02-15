@@ -1,3 +1,7 @@
+/// @file src/ara/per/persistency.h
+/// @brief Declarations for persistency.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PERSISTENCY_H
 #define PERSISTENCY_H
 

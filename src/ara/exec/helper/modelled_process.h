@@ -1,3 +1,7 @@
+/// @file src/ara/exec/helper/modelled_process.h
+/// @brief Declarations for modelled process.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef MODELLED_PROCESS_H
 #define MODELLED_PROCESS_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/eventgroup_entry.h
+/// @brief Declarations for eventgroup entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef EVENTGROUP_ENTRY_H
 #define EVENTGROUP_ENTRY_H
 

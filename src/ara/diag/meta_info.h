@@ -1,3 +1,7 @@
+/// @file src/ara/diag/meta_info.h
+/// @brief Declarations for meta info.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef META_INFO_H
 #define META_INFO_H
 

@@ -1,3 +1,7 @@
+/// @file src/ara/com/internal/binding_factory.h
+/// @brief Declarations for binding factory.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_INTERNAL_BINDING_FACTORY_H
 #define ARA_COM_INTERNAL_BINDING_FACTORY_H
 

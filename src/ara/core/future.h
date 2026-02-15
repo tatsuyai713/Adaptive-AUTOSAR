@@ -1,3 +1,7 @@
+/// @file src/ara/core/future.h
+/// @brief Declarations for future.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef FUTURE_H
 #define FUTURE_H
 
@@ -18,10 +22,11 @@ namespace ara
             timeout = 1  ///< The shared state did not become ready before the specified timeout has passed
         };
 
-        // Forward declaration
+        /// @brief Forward declaration of `Future`.
         template <typename T, typename E>
         class Future;
 
+        /// @brief Forward declaration of `Promise`.
         template <typename T, typename E>
         class Promise;
 
@@ -59,17 +64,24 @@ namespace ara
             }
 
         public:
+            /// @brief Constructs an empty future.
             Future() noexcept = default;
+            /// @brief Destructor.
             ~Future() noexcept = default;
 
             Future(const Future &) = delete;
             Future &operator=(const Future &) = delete;
 
+            /// @brief Move constructor.
+            /// @param other Source future.
             Future(Future &&other) noexcept
                 : mFuture{std::move(other.mFuture)}
             {
             }
 
+            /// @brief Move assignment.
+            /// @param other Source future.
+            /// @returns Reference to `*this`.
             Future &operator=(Future &&other) noexcept
             {
                 if (this != &other)
@@ -188,17 +200,24 @@ namespace ara
             }
 
         public:
+            /// @brief Constructs an empty future.
             Future() noexcept = default;
+            /// @brief Destructor.
             ~Future() noexcept = default;
 
             Future(const Future &) = delete;
             Future &operator=(const Future &) = delete;
 
+            /// @brief Move constructor.
+            /// @param other Source future.
             Future(Future &&other) noexcept
                 : mFuture{std::move(other.mFuture)}
             {
             }
 
+            /// @brief Move assignment.
+            /// @param other Source future.
+            /// @returns Reference to `*this`.
             Future &operator=(Future &&other) noexcept
             {
                 if (this != &other)

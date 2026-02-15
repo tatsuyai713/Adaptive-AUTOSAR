@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/service_entry.cpp
+/// @brief Implementation for service entry.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./service_entry.h"
 
 namespace ara

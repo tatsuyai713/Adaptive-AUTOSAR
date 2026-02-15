@@ -1,3 +1,7 @@
+/// @file src/ara/com/option/option.h
+/// @brief Declarations for option.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef OPTION_H
 #define OPTION_H
 

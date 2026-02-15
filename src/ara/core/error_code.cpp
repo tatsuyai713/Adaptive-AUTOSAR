@@ -1,3 +1,7 @@
+/// @file src/ara/core/error_code.cpp
+/// @brief Implementation for error code.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <stdexcept>
 #include "./error_code.h"
 

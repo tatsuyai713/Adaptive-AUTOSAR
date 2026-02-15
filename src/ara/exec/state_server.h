@@ -1,3 +1,7 @@
+/// @file src/ara/exec/state_server.h
+/// @brief Declarations for state server.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef STATE_SERVER_H
 #define STATE_SERVER_H
 

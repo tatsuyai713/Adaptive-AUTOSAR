@@ -1,3 +1,7 @@
+/// @file src/ara/com/someip/sd/fsm/timer_set_state.h
+/// @brief Declarations for timer set state.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef TIMER_SET_STATE_H
 #define TIMER_SET_STATE_H
 

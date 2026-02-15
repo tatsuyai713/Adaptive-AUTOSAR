@@ -1,3 +1,7 @@
+/// @file src/ara/sm/power_mode.h
+/// @brief Declarations for power mode.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef POWER_MODE_H
 #define POWER_MODE_H
 

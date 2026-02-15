@@ -1,3 +1,7 @@
+/// @file src/application/extended_vehicle.cpp
+/// @brief Implementation for extended vehicle.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../ara/com/someip/sd/sd_network_layer.h"
 #include "../ara/diag/conversation.h"
 #include "../application/helper/argument_configuration.h"

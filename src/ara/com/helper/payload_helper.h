@@ -1,3 +1,7 @@
+/// @file src/ara/com/helper/payload_helper.h
+/// @brief Declarations for payload helper.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef PAYLOAD_HELPER_H
 #define PAYLOAD_HELPER_H
 

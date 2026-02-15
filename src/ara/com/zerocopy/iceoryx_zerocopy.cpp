@@ -1,3 +1,7 @@
+/// @file src/ara/com/zerocopy/iceoryx_zerocopy.cpp
+/// @brief Implementation for iceoryx zerocopy.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include <cstring>
 #include <limits>
 #include <mutex>

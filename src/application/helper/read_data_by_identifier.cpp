@@ -1,3 +1,7 @@
+/// @file src/application/helper/read_data_by_identifier.cpp
+/// @brief Implementation for read data by identifier.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "../../ara/diag/conversation.h"
 #include "./read_data_by_identifier.h"
 

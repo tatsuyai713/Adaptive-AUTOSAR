@@ -1,3 +1,7 @@
+/// @file src/ara/exec/worker_runnable.h
+/// @brief Declarations for worker runnable.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef WORKER_RUNNABLE_H
 #define WORKER_RUNNABLE_H
 

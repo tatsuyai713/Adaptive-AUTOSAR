@@ -1,3 +1,7 @@
+/// @file src/ara/com/entry/entry_deserializer.h
+/// @brief Declarations for entry deserializer.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ENTRY_DESERIALIZER_H
 #define ENTRY_DESERIALIZER_H
 

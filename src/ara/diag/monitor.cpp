@@ -1,3 +1,7 @@
+/// @file src/ara/diag/monitor.cpp
+/// @brief Implementation for monitor.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #include "./monitor.h"
 #include "./diag_error_domain.h"
 

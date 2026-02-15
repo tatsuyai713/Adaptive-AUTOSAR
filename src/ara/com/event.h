@@ -1,3 +1,7 @@
+/// @file src/ara/com/event.h
+/// @brief Declarations for event.
+/// @details This file is part of the Adaptive AUTOSAR educational implementation.
+
 #ifndef ARA_COM_EVENT_H
 #define ARA_COM_EVENT_H
 
@@ -26,6 +30,7 @@ namespace ara
 
         public:
             /// @brief Construct from a binding implementation
+            /// @param binding Proxy event binding instance.
             explicit ProxyEvent(
                 std::unique_ptr<internal::ProxyEventBinding> binding) noexcept
                 : mBinding{std::move(binding)}
@@ -34,7 +39,10 @@ namespace ara
 
             ProxyEvent(const ProxyEvent &) = delete;
             ProxyEvent &operator=(const ProxyEvent &) = delete;
+            /// @brief Move constructor.
             ProxyEvent(ProxyEvent &&) noexcept = default;
+            /// @brief Move assignment.
+            /// @returns Reference to `*this`.
             ProxyEvent &operator=(ProxyEvent &&) noexcept = default;
 
             /// @brief Subscribe to this event
@@ -57,6 +65,7 @@ namespace ara
             }
 
             /// @brief Get current subscription state
+            /// @returns Current state of event subscription.
             SubscriptionState GetSubscriptionState() const noexcept
             {
                 if (mBinding)
@@ -122,6 +131,7 @@ namespace ara
             }
 
             /// @brief Set handler called when new data arrives (no-argument form)
+            /// @param handler Callback invoked when new event data is available.
             void SetReceiveHandler(EventReceiveHandler handler)
             {
                 if (mBinding)
@@ -140,6 +150,7 @@ namespace ara
             }
 
             /// @brief Set handler for subscription state changes
+            /// @param handler Callback invoked when subscription state changes.
             void SetSubscriptionStateChangeHandler(
                 SubscriptionStateChangeHandler handler)
             {
@@ -160,6 +171,7 @@ namespace ara
             }
 
             /// @brief Number of free sample slots available
+            /// @returns Remaining free sample capacity in receive queue.
             std::size_t GetFreeSampleCount() const noexcept
             {
                 if (mBinding)
@@ -181,6 +193,7 @@ namespace ara
 
         public:
             /// @brief Construct from a binding implementation
+            /// @param binding Skeleton event binding instance.
             explicit SkeletonEvent(
                 std::unique_ptr<internal::SkeletonEventBinding> binding) noexcept
                 : mBinding{std::move(binding)}
@@ -189,7 +202,10 @@ namespace ara
 
             SkeletonEvent(const SkeletonEvent &) = delete;
             SkeletonEvent &operator=(const SkeletonEvent &) = delete;
+            /// @brief Move constructor.
             SkeletonEvent(SkeletonEvent &&) noexcept = default;
+            /// @brief Move assignment.
+            /// @returns Reference to `*this`.
             SkeletonEvent &operator=(SkeletonEvent &&) noexcept = default;
 
             /// @brief Allocate a sample for zero-copy send
@@ -227,6 +243,7 @@ namespace ara
             }
 
             /// @brief Send a pre-allocated sample (zero-copy path)
+            /// @param data Allocated sample that will be handed to binding.
             void Send(SampleAllocateePtr<T> data)
             {
                 if (mBinding && data)
@@ -237,6 +254,7 @@ namespace ara
             }
 
             /// @brief Send by copy (standard path)
+            /// @param data Sample value to serialize and publish.
             void Send(const T &data)
             {
                 if (mBinding)
@@ -247,6 +265,7 @@ namespace ara
             }
 
             /// @brief Offer this event
+            /// @returns `Result<void>` indicating offer success/failure.
             core::Result<void> Offer()
             {
                 if (mBinding)
