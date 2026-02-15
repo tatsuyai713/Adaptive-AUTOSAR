@@ -259,5 +259,172 @@ namespace ara
             ASSERT_FALSE(_activateResult.HasValue());
             EXPECT_STREQ(_activateResult.Error().Domain().Name(), "Ucm");
         }
+
+        // ---- Transfer API tests ----
+
+        TEST(UpdateManagerTest, TransferHappyPath)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg",
+                "VehicleControlCluster",
+                "1.0.0"};
+            const std::vector<std::uint8_t> cChunk1{'a'};
+            const std::vector<std::uint8_t> cChunk2{'b', 'c'};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("transfer-1").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 3U, GetAbcSha256Digest())
+                    .HasValue());
+            EXPECT_EQ(_manager.GetState(), UpdateSessionState::kTransferring);
+
+            ASSERT_TRUE(_manager.TransferData(cChunk1).HasValue());
+            ASSERT_TRUE(_manager.TransferData(cChunk2).HasValue());
+            ASSERT_TRUE(_manager.TransferExit().HasValue());
+            EXPECT_EQ(_manager.GetState(), UpdateSessionState::kPackageStaged);
+
+            ASSERT_TRUE(_manager.VerifyStagedSoftwarePackage().HasValue());
+            ASSERT_TRUE(_manager.ActivateSoftwarePackage().HasValue());
+            EXPECT_EQ(_manager.GetState(), UpdateSessionState::kActivated);
+            EXPECT_EQ(_manager.GetActiveVersion(), "1.0.0");
+        }
+
+        TEST(UpdateManagerTest, TransferStartFailsWhenNotPrepared)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            auto _result = _manager.TransferStart(
+                _metadata, 10U, GetAbcSha256Digest());
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_STREQ(_result.Error().Domain().Name(), "Ucm");
+        }
+
+        TEST(UpdateManagerTest, TransferDataFailsWhenNotTransferring)
+        {
+            UpdateManager _manager;
+            ASSERT_TRUE(_manager.PrepareUpdate("s1").HasValue());
+
+            auto _result = _manager.TransferData({'x'});
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_STREQ(_result.Error().Domain().Name(), "Ucm");
+        }
+
+        TEST(UpdateManagerTest, TransferExitSizeMismatch)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s2").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 100U, GetAbcSha256Digest())
+                    .HasValue());
+            ASSERT_TRUE(_manager.TransferData({'a', 'b'}).HasValue());
+
+            auto _result = _manager.TransferExit();
+            ASSERT_FALSE(_result.HasValue());
+        }
+
+        TEST(UpdateManagerTest, TransferExitEmptyBuffer)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s3").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 5U, GetAbcSha256Digest())
+                    .HasValue());
+
+            auto _result = _manager.TransferExit();
+            ASSERT_FALSE(_result.HasValue());
+        }
+
+        TEST(UpdateManagerTest, TransferStartInvalidMetadata)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _badMeta{"", "Cluster", "1.0.0"};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s4").HasValue());
+            auto _result = _manager.TransferStart(
+                _badMeta, 10U, GetAbcSha256Digest());
+            ASSERT_FALSE(_result.HasValue());
+        }
+
+        TEST(UpdateManagerTest, TransferStartInvalidDigestLength)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+            const std::vector<std::uint8_t> cBadDigest(16U, 0x00U);
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s5").HasValue());
+            auto _result = _manager.TransferStart(
+                _metadata, 10U, cBadDigest);
+            ASSERT_FALSE(_result.HasValue());
+        }
+
+        TEST(UpdateManagerTest, CancelDuringTransfer)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s6").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 10U, GetAbcSha256Digest())
+                    .HasValue());
+            ASSERT_TRUE(_manager.TransferData({'a'}).HasValue());
+
+            ASSERT_TRUE(_manager.CancelUpdateSession().HasValue());
+            EXPECT_EQ(_manager.GetState(), UpdateSessionState::kCancelled);
+        }
+
+        TEST(UpdateManagerTest, TransferProgressCallbackInvoked)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            std::vector<UpdateSessionState> _states;
+            std::vector<std::uint8_t> _progresses;
+
+            ASSERT_TRUE(_manager.SetStateChangeHandler(
+                                    [&_states](UpdateSessionState state)
+                                    {
+                                        _states.push_back(state);
+                                    })
+                            .HasValue());
+            ASSERT_TRUE(_manager.SetProgressHandler(
+                                    [&_progresses](std::uint8_t progress)
+                                    {
+                                        _progresses.push_back(progress);
+                                    })
+                            .HasValue());
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s7").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 3U, GetAbcSha256Digest())
+                    .HasValue());
+            ASSERT_TRUE(_manager.TransferData({'a', 'b', 'c'}).HasValue());
+            ASSERT_TRUE(_manager.TransferExit().HasValue());
+
+            ASSERT_FALSE(_states.empty());
+            ASSERT_FALSE(_progresses.empty());
+
+            // Should have seen kTransferring state
+            bool _sawTransferring = false;
+            for (auto s : _states)
+            {
+                if (s == UpdateSessionState::kTransferring)
+                {
+                    _sawTransferring = true;
+                    break;
+                }
+            }
+            EXPECT_TRUE(_sawTransferring);
+        }
     }
 }

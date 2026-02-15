@@ -15,6 +15,14 @@ namespace ara
 {
     namespace per
     {
+        /// @brief Seek origin for file position operations
+        enum class SeekOrigin
+        {
+            kBeginning = 0,
+            kCurrent = 1,
+            kEnd = 2
+        };
+
         /// @brief Read-only accessor for file storage per AUTOSAR AP SWS_PER
         class ReadAccessor
         {
@@ -49,6 +57,18 @@ namespace ara
             /// @param byte Output byte
             /// @returns Void Result on success, error if at end of file
             core::Result<void> Peek(std::uint8_t &byte);
+
+            /// @brief Seek to a position in the file
+            /// @param offset Byte offset relative to origin
+            /// @param origin Reference point for offset
+            /// @returns Void Result on success, error if seek fails
+            core::Result<void> Seek(
+                std::int64_t offset,
+                SeekOrigin origin = SeekOrigin::kBeginning);
+
+            /// @brief Get the current read position
+            /// @returns Current position in bytes, or error
+            core::Result<std::uint64_t> GetCurrentPosition();
 
             /// @brief Check if the stream is in a good state
             bool IsValid() const noexcept;

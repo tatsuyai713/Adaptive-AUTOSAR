@@ -78,6 +78,7 @@ namespace ara
 
         UpdateManager::UpdateManager() noexcept
             : mState{UpdateSessionState::kIdle},
+              mExpectedTransferSize{0U},
               mProgress{0U}
         {
         }
@@ -125,6 +126,8 @@ namespace ara
             mStagedMetadata = SoftwarePackageMetadata{};
             mStagedPayload.clear();
             mExpectedDigestSha256.clear();
+            mTransferBuffer.clear();
+            mExpectedTransferSize = 0U;
         }
 
         core::Result<void> UpdateManager::PrepareUpdate(
@@ -142,7 +145,8 @@ namespace ara
                 if (mState == UpdateSessionState::kPrepared ||
                     mState == UpdateSessionState::kPackageStaged ||
                     mState == UpdateSessionState::kPackageVerified ||
-                    mState == UpdateSessionState::kActivating)
+                    mState == UpdateSessionState::kActivating ||
+                    mState == UpdateSessionState::kTransferring)
                 {
                     return core::Result<void>::FromError(
                         MakeErrorCode(UcmErrc::kInvalidState));
@@ -342,6 +346,132 @@ namespace ara
             }
 
             Notify(handlers, UpdateSessionState::kRolledBack, 0U);
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> UpdateManager::TransferStart(
+            const SoftwarePackageMetadata &metadata,
+            std::uint64_t expectedSize,
+            const std::vector<std::uint8_t> &expectedDigestSha256)
+        {
+            if (!IsMetadataValid(metadata) ||
+                expectedDigestSha256.size() != 32U)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            if (expectedSize == 0U)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            std::pair<StateChangeHandler, ProgressHandler> handlers;
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                if (mState != UpdateSessionState::kPrepared)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kInvalidState));
+                }
+
+                if (mSessionId.empty())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kNoActiveSession));
+                }
+
+                mStagedMetadata = metadata;
+                mExpectedDigestSha256 = expectedDigestSha256;
+                mExpectedTransferSize = expectedSize;
+                mTransferBuffer.clear();
+                mTransferBuffer.reserve(
+                    static_cast<std::size_t>(expectedSize));
+                mState = UpdateSessionState::kTransferring;
+                mProgress = 10U;
+                handlers = CaptureHandlers(mStateChangeHandler, mProgressHandler);
+            }
+
+            Notify(handlers, UpdateSessionState::kTransferring, 10U);
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> UpdateManager::TransferData(
+            const std::vector<std::uint8_t> &chunk)
+        {
+            if (chunk.empty())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            std::pair<StateChangeHandler, ProgressHandler> handlers;
+            std::uint8_t progress{0U};
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                if (mState != UpdateSessionState::kTransferring)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kInvalidState));
+                }
+
+                mTransferBuffer.insert(
+                    mTransferBuffer.end(), chunk.begin(), chunk.end());
+
+                const auto transferred =
+                    static_cast<double>(mTransferBuffer.size());
+                const auto expected =
+                    static_cast<double>(mExpectedTransferSize);
+                progress = static_cast<std::uint8_t>(
+                    10U + static_cast<std::uint8_t>(
+                              (transferred / expected) * 15.0));
+                if (progress > 24U)
+                {
+                    progress = 24U;
+                }
+                mProgress = progress;
+                handlers = CaptureHandlers(mStateChangeHandler, mProgressHandler);
+            }
+
+            Notify(handlers, UpdateSessionState::kTransferring, progress);
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> UpdateManager::TransferExit()
+        {
+            std::pair<StateChangeHandler, ProgressHandler> handlers;
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                if (mState != UpdateSessionState::kTransferring)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kInvalidState));
+                }
+
+                if (mTransferBuffer.empty())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kTransferError));
+                }
+
+                if (mTransferBuffer.size() != static_cast<std::size_t>(mExpectedTransferSize))
+                {
+                    mTransferBuffer.clear();
+                    mExpectedTransferSize = 0U;
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kTransferSizeMismatch));
+                }
+
+                mStagedPayload = std::move(mTransferBuffer);
+                mTransferBuffer.clear();
+                mExpectedTransferSize = 0U;
+                mState = UpdateSessionState::kPackageStaged;
+                mProgress = 25U;
+                handlers = CaptureHandlers(mStateChangeHandler, mProgressHandler);
+            }
+
+            Notify(handlers, UpdateSessionState::kPackageStaged, 25U);
             return core::Result<void>::FromValue();
         }
 

@@ -10,6 +10,7 @@
 #include <string>
 #include "../core/result.h"
 #include "./per_error_domain.h"
+#include "./read_accessor.h"
 
 namespace ara
 {
@@ -60,6 +61,18 @@ namespace ara
             /// @param size Desired file size
             /// @returns Void Result on success
             core::Result<void> SetFileSize(std::uint64_t size);
+
+            /// @brief Seek to a position in the file
+            /// @param offset Byte offset relative to origin
+            /// @param origin Reference point for offset
+            /// @returns Void Result on success, error if seek fails
+            core::Result<void> Seek(
+                std::int64_t offset,
+                SeekOrigin origin = SeekOrigin::kBeginning);
+
+            /// @brief Get the current read/write position
+            /// @returns Current position in bytes, or error
+            core::Result<std::uint64_t> GetCurrentPosition();
 
             /// @brief Check if the stream is in a good state
             bool IsValid() const noexcept;

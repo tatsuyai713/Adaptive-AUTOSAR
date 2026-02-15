@@ -150,6 +150,64 @@ namespace ara
             return core::Result<void>::FromValue();
         }
 
+        core::Result<void> ReadWriteAccessor::Seek(
+            std::int64_t offset, SeekOrigin origin)
+        {
+            if (!mStream.is_open())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            std::ios_base::seekdir dir;
+            switch (origin)
+            {
+            case SeekOrigin::kBeginning:
+                dir = std::ios::beg;
+                break;
+            case SeekOrigin::kCurrent:
+                dir = std::ios::cur;
+                break;
+            case SeekOrigin::kEnd:
+                dir = std::ios::end;
+                break;
+            default:
+                dir = std::ios::beg;
+                break;
+            }
+
+            mStream.clear();
+            mStream.seekg(static_cast<std::streamoff>(offset), dir);
+            mStream.seekp(static_cast<std::streamoff>(offset), dir);
+
+            if (mStream.fail())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<std::uint64_t> ReadWriteAccessor::GetCurrentPosition()
+        {
+            if (!mStream.is_open())
+            {
+                return core::Result<std::uint64_t>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            auto pos = mStream.tellg();
+            if (pos == std::streampos(-1))
+            {
+                return core::Result<std::uint64_t>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<std::uint64_t>::FromValue(
+                static_cast<std::uint64_t>(pos));
+        }
+
         bool ReadWriteAccessor::IsValid() const noexcept
         {
             return mStream.is_open() && mStream.good();

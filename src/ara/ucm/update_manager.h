@@ -30,7 +30,8 @@ namespace ara
             kActivated = 5,
             kVerificationFailed = 6,
             kRolledBack = 7,
-            kCancelled = 8
+            kCancelled = 8,
+            kTransferring = 9
         };
 
         /// @brief Minimal software package metadata used by UpdateManager.
@@ -61,6 +62,9 @@ namespace ara
             SoftwarePackageMetadata mStagedMetadata;
             std::vector<std::uint8_t> mStagedPayload;
             std::vector<std::uint8_t> mExpectedDigestSha256;
+
+            std::vector<std::uint8_t> mTransferBuffer;
+            std::uint64_t mExpectedTransferSize;
 
             std::unordered_map<std::string, std::string> mClusterActiveVersions;
             std::unordered_map<std::string, std::string> mClusterPreviousVersions;
@@ -95,6 +99,19 @@ namespace ara
 
             /// @brief Roll back current update session.
             core::Result<void> RollbackSoftwarePackage();
+
+            /// @brief Start incremental transfer of a software package.
+            core::Result<void> TransferStart(
+                const SoftwarePackageMetadata &metadata,
+                std::uint64_t expectedSize,
+                const std::vector<std::uint8_t> &expectedDigestSha256);
+
+            /// @brief Append a data chunk during an active transfer.
+            core::Result<void> TransferData(
+                const std::vector<std::uint8_t> &chunk);
+
+            /// @brief Finalize the transfer, verifying size matches expectation.
+            core::Result<void> TransferExit();
 
             /// @brief Cancel current update session without activation.
             core::Result<void> CancelUpdateSession();

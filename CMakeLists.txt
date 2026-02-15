@@ -566,6 +566,8 @@ add_library(
   ${source_ara_exec_helper_dir}/atomic_optional.h
   ${source_ara_exec_helper_dir}/modelled_process.h
   ${source_ara_exec_helper_dir}/modelled_process.cpp
+  ${source_ara_exec_helper_dir}/process_watchdog.h
+  ${source_ara_exec_helper_dir}/process_watchdog.cpp
 )
 
 add_library(
@@ -1448,6 +1450,7 @@ if(build_tests)
     ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
     ${test_ara_com_e2e_dir}/e2e_event_test.cpp
     ${test_ara_exec_dir}/signal_handler_test.cpp
+    ${test_ara_exec_dir}/process_watchdog_test.cpp
     ${test_ara_per_dir}/per_error_domain_test.cpp
     ${test_ara_per_dir}/key_value_storage_test.cpp
     ${test_ara_per_dir}/file_storage_test.cpp
