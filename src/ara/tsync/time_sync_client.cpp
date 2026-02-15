@@ -22,9 +22,25 @@ namespace ara
                 std::chrono::duration_cast<std::chrono::system_clock::duration>(
                     referenceSteadyTime.time_since_epoch());
 
-            std::lock_guard<std::mutex> _lock{mMutex};
-            mOffset = referenceGlobalTime.time_since_epoch() - _steadyAsSystemDuration;
-            mState = SynchronizationState::kSynchronized;
+            StateChangeNotifier _notifierCopy;
+            bool _stateChanged{false};
+
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                mOffset = referenceGlobalTime.time_since_epoch() - _steadyAsSystemDuration;
+
+                if (mState != SynchronizationState::kSynchronized)
+                {
+                    mState = SynchronizationState::kSynchronized;
+                    _stateChanged = true;
+                    _notifierCopy = mStateNotifier;
+                }
+            }
+
+            if (_stateChanged && _notifierCopy)
+            {
+                _notifierCopy(SynchronizationState::kSynchronized);
+            }
 
             return core::Result<void>::FromValue();
         }
@@ -71,9 +87,44 @@ namespace ara
 
         void TimeSyncClient::Reset() noexcept
         {
+            StateChangeNotifier _notifierCopy;
+            bool _stateChanged{false};
+
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                if (mState != SynchronizationState::kUnsynchronized)
+                {
+                    mState = SynchronizationState::kUnsynchronized;
+                    _stateChanged = true;
+                    _notifierCopy = mStateNotifier;
+                }
+                mOffset = std::chrono::system_clock::duration::zero();
+            }
+
+            if (_stateChanged && _notifierCopy)
+            {
+                _notifierCopy(SynchronizationState::kUnsynchronized);
+            }
+        }
+
+        core::Result<void> TimeSyncClient::SetStateChangeNotifier(
+            StateChangeNotifier notifier)
+        {
+            if (!notifier)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(TsyncErrc::kInvalidArgument));
+            }
+
             std::lock_guard<std::mutex> _lock{mMutex};
-            mState = SynchronizationState::kUnsynchronized;
-            mOffset = std::chrono::system_clock::duration::zero();
+            mStateNotifier = std::move(notifier);
+            return core::Result<void>::FromValue();
+        }
+
+        void TimeSyncClient::ClearStateChangeNotifier() noexcept
+        {
+            std::lock_guard<std::mutex> _lock{mMutex};
+            mStateNotifier = nullptr;
         }
     }
 }

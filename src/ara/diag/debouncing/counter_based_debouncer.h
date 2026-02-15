@@ -61,6 +61,8 @@ namespace ara
                 virtual void Freeze() override;
 
                 virtual void Reset() override;
+
+                virtual int8_t GetFdc() const noexcept override;
             };
         }
     }

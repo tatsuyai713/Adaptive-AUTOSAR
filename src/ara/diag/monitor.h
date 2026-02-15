@@ -39,7 +39,6 @@ namespace ara
         };
 
         /// @brief A class to monitor the correct functionality of a system part
-        /// @note In constrast with the ARA standard, internal debouncing is not supported.
         class Monitor final
         {
         private:
@@ -100,6 +99,14 @@ namespace ara
             /// @brief Query whether an Event object is attached to this monitor
             /// @returns True if AttachEvent() has been called
             bool HasAttachedEvent() const noexcept;
+
+            /// @brief Get the current internal debouncing status
+            /// @returns Current event debouncing status
+            debouncing::EventStatus GetCurrentStatus() const noexcept;
+
+            /// @brief Get the current Fault Detection Counter from the internal debouncer
+            /// @returns Current FDC value in the range [-128, 127]
+            int8_t GetFaultDetectionCounter() const noexcept;
         };
     }
 }

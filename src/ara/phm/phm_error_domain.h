@@ -18,7 +18,9 @@ namespace ara
             kInvalidArgument = 1,             ///< Invalid input argument.
             kCheckpointCommunicationError = 2,///< Checkpoint could not be sent.
             kAlreadyExists = 3,               ///< Entity with same key already exists.
-            kNotFound = 4                     ///< Requested entity was not found.
+            kNotFound = 4,                    ///< Requested entity was not found.
+            kAlreadyOffered = 5,              ///< Service is already offered.
+            kNotOffered = 6                   ///< Service is not offered yet.
         };
 
         /// @brief Error domain implementation for PHM.

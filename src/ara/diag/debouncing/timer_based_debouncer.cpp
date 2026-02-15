@@ -131,6 +131,47 @@ namespace ara
                 SetEventStatus(EventStatus::kPending);
             }
 
+            int8_t TimerBasedDebouncer::GetFdc() const noexcept
+            {
+                const EventStatus _status = GetEventStatus();
+                if (_status == EventStatus::kFailed)
+                {
+                    return 127;
+                }
+                if (_status == EventStatus::kPassed)
+                {
+                    return -128;
+                }
+
+                const uint32_t _elapsed = mElapsedMs.load();
+                if (mIsPassing)
+                {
+                    if (mDefaultValues.passedMs == 0)
+                    {
+                        return 0;
+                    }
+                    const int32_t _fdc =
+                        -static_cast<int32_t>(
+                            (static_cast<uint64_t>(_elapsed) * 128U) /
+                            mDefaultValues.passedMs);
+                    return static_cast<int8_t>(
+                        _fdc < -128 ? -128 : _fdc);
+                }
+                else
+                {
+                    if (mDefaultValues.failedMs == 0)
+                    {
+                        return 0;
+                    }
+                    const int32_t _fdc =
+                        static_cast<int32_t>(
+                            (static_cast<uint64_t>(_elapsed) * 127U) /
+                            mDefaultValues.failedMs);
+                    return static_cast<int8_t>(
+                        _fdc > 127 ? 127 : _fdc);
+                }
+            }
+
             TimerBasedDebouncer::~TimerBasedDebouncer()
             {
                 Reset();

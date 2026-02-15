@@ -55,5 +55,75 @@ namespace ara
             const auto _result = _client.GetCurrentOffset();
             EXPECT_FALSE(_result.HasValue());
         }
+
+        TEST(TimeSyncClientTest, StateChangeNotifierOnSynchronization)
+        {
+            TimeSyncClient _client;
+            SynchronizationState _capturedState{SynchronizationState::kUnsynchronized};
+            int _callCount{0};
+
+            auto _result = _client.SetStateChangeNotifier(
+                [&](SynchronizationState state)
+                {
+                    _capturedState = state;
+                    ++_callCount;
+                });
+            ASSERT_TRUE(_result.HasValue());
+
+            _client.UpdateReferenceTime(std::chrono::system_clock::now());
+            EXPECT_EQ(_capturedState, SynchronizationState::kSynchronized);
+            EXPECT_EQ(_callCount, 1);
+
+            // Second update should not fire again (already synchronized)
+            _client.UpdateReferenceTime(std::chrono::system_clock::now());
+            EXPECT_EQ(_callCount, 1);
+        }
+
+        TEST(TimeSyncClientTest, StateChangeNotifierOnReset)
+        {
+            TimeSyncClient _client;
+            SynchronizationState _capturedState{SynchronizationState::kSynchronized};
+            int _callCount{0};
+
+            _client.UpdateReferenceTime(std::chrono::system_clock::now());
+
+            _client.SetStateChangeNotifier(
+                [&](SynchronizationState state)
+                {
+                    _capturedState = state;
+                    ++_callCount;
+                });
+
+            _client.Reset();
+            EXPECT_EQ(_capturedState, SynchronizationState::kUnsynchronized);
+            EXPECT_EQ(_callCount, 1);
+
+            // Second reset should not fire again
+            _client.Reset();
+            EXPECT_EQ(_callCount, 1);
+        }
+
+        TEST(TimeSyncClientTest, ClearStateChangeNotifier)
+        {
+            TimeSyncClient _client;
+            int _callCount{0};
+
+            _client.SetStateChangeNotifier(
+                [&](SynchronizationState)
+                {
+                    ++_callCount;
+                });
+            _client.ClearStateChangeNotifier();
+
+            _client.UpdateReferenceTime(std::chrono::system_clock::now());
+            EXPECT_EQ(_callCount, 0);
+        }
+
+        TEST(TimeSyncClientTest, SetEmptyNotifierFails)
+        {
+            TimeSyncClient _client;
+            auto _result = _client.SetStateChangeNotifier(nullptr);
+            EXPECT_FALSE(_result.HasValue());
+        }
     }
 }

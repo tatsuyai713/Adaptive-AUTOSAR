@@ -87,12 +87,18 @@ namespace ara
 
         LogStream Logger::WithLevel(LogLevel logLevel) const
         {
+            LogStream _result;
+
+            if (!IsEnabled(logLevel))
+            {
+                return _result;
+            }
+
             const std::string cContextId{"Context ID:"};
             const std::string cContextDescription{"Context Description:"};
             const std::string cLogLevel{"Log Level:"};
             const std::string cSeperator{";"};
 
-            LogStream _result;
             _result << cContextId << mContextId << cSeperator;
             _result << cContextDescription << mContextDescription << cSeperator;
             _result << cLogLevel << logLevel << cSeperator;

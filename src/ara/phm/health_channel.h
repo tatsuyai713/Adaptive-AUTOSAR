@@ -7,6 +7,7 @@
 
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
+#include "./phm_error_domain.h"
 
 namespace ara
 {
@@ -42,9 +43,20 @@ namespace ara
 
             ~HealthChannel() noexcept = default;
 
+            /// @brief Start offering health channel service
+            /// @returns Error if already offered
+            core::Result<void> Offer();
+
+            /// @brief Stop offering health channel service
+            void StopOffer();
+
+            /// @brief Query whether this health channel is offered
+            /// @returns True if Offer() was called and not stopped
+            bool IsOffered() const noexcept;
+
             /// @brief Report a health status to the PHM functional cluster
             /// @param status The health status to report
-            /// @returns Void Result if the health report was successful, otherwise a Result containing an error
+            /// @returns Void Result if the health report was successful, error if not offered
             core::Result<void> ReportHealthStatus(HealthStatus status);
 
             /// @brief Get the last reported health status

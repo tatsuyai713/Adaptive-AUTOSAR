@@ -113,5 +113,106 @@ namespace ara
                 DiagErrc::kInvalidArgument,
                 static_cast<DiagErrc>(_attachResult.Error().Value()));
         }
+
+        TEST(MonitorTest, GetCurrentStatusInitiallyPending)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            EXPECT_EQ(
+                debouncing::EventStatus::kPending,
+                _monitor.GetCurrentStatus());
+        }
+
+        TEST(MonitorTest, GetCurrentStatusAfterPassedReport)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            ASSERT_TRUE(_monitor.Offer().HasValue());
+
+            _monitor.ReportMonitorAction(MonitorAction::kPassed);
+            EXPECT_EQ(
+                debouncing::EventStatus::kPassed,
+                _monitor.GetCurrentStatus());
+        }
+
+        TEST(MonitorTest, GetCurrentStatusAfterFailedReport)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            ASSERT_TRUE(_monitor.Offer().HasValue());
+
+            _monitor.ReportMonitorAction(MonitorAction::kFailed);
+            EXPECT_EQ(
+                debouncing::EventStatus::kFailed,
+                _monitor.GetCurrentStatus());
+        }
+
+        TEST(MonitorTest, GetFaultDetectionCounterInitiallyZero)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            EXPECT_EQ(0, _monitor.GetFaultDetectionCounter());
+        }
+
+        TEST(MonitorTest, GetFaultDetectionCounterAfterFailed)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{
+                127, -128, 1, 1, 0, 0, false, false};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            ASSERT_TRUE(_monitor.Offer().HasValue());
+
+            _monitor.ReportMonitorAction(MonitorAction::kFailed);
+            EXPECT_EQ(127, _monitor.GetFaultDetectionCounter());
+        }
+
+        TEST(MonitorTest, GetFaultDetectionCounterAfterPassed)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{
+                127, -128, 1, 1, 0, 0, false, false};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            ASSERT_TRUE(_monitor.Offer().HasValue());
+
+            _monitor.ReportMonitorAction(MonitorAction::kPassed);
+            EXPECT_EQ(-128, _monitor.GetFaultDetectionCounter());
+        }
+
+        TEST(MonitorTest, ResetDebouncingResetsStatus)
+        {
+            core::InstanceSpecifier _specifier("Instance0");
+            auto _initMonitor = [](InitMonitorReason) {};
+            CounterBased _defaultValues{};
+
+            Monitor _monitor(_specifier, _initMonitor, _defaultValues);
+            ASSERT_TRUE(_monitor.Offer().HasValue());
+
+            _monitor.ReportMonitorAction(MonitorAction::kFailed);
+            EXPECT_EQ(
+                debouncing::EventStatus::kFailed,
+                _monitor.GetCurrentStatus());
+
+            _monitor.ReportMonitorAction(MonitorAction::kResetDebouncing);
+            EXPECT_EQ(
+                debouncing::EventStatus::kPending,
+                _monitor.GetCurrentStatus());
+            EXPECT_EQ(0, _monitor.GetFaultDetectionCounter());
+        }
     }
 }

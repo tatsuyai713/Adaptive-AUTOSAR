@@ -186,6 +186,24 @@ namespace ara
             return mEvent != nullptr;
         }
 
+        debouncing::EventStatus Monitor::GetCurrentStatus() const noexcept
+        {
+            if (mDebouncer)
+            {
+                return mDebouncer->GetEventStatus();
+            }
+            return debouncing::EventStatus::kPending;
+        }
+
+        int8_t Monitor::GetFaultDetectionCounter() const noexcept
+        {
+            if (mDebouncer)
+            {
+                return mDebouncer->GetFdc();
+            }
+            return 0;
+        }
+
         Monitor::~Monitor() noexcept
         {
             delete mDebouncer;

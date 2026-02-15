@@ -147,8 +147,35 @@ namespace ara
             other.mOffered = false;
         }
 
+        core::Result<void> HealthChannel::Offer()
+        {
+            if (mOffered)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kAlreadyOffered));
+            }
+            mOffered = true;
+            return core::Result<void>::FromValue();
+        }
+
+        void HealthChannel::StopOffer()
+        {
+            mOffered = false;
+        }
+
+        bool HealthChannel::IsOffered() const noexcept
+        {
+            return mOffered;
+        }
+
         core::Result<void> HealthChannel::ReportHealthStatus(HealthStatus status)
         {
+            if (!mOffered)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kNotOffered));
+            }
+
             mLastReportedStatus = status;
 
             const std::string statusFilePath{BuildHealthFilePath(mInstance)};

@@ -15,6 +15,11 @@ namespace ara
             {
             }
 
+            EventStatus Debouncer::GetEventStatus() const noexcept
+            {
+                return mEventStatus;
+            }
+
             void Debouncer::SetEventStatus(EventStatus status)
             {
                 if (mEventStatus != status)

@@ -74,6 +74,19 @@ namespace ara
                 mFdc = 0;
                 SetEventStatus(EventStatus::kPending);
             }
+
+            int8_t CounterBasedDebouncer::GetFdc() const noexcept
+            {
+                if (mFdc >= 127)
+                {
+                    return 127;
+                }
+                if (mFdc <= -128)
+                {
+                    return -128;
+                }
+                return static_cast<int8_t>(mFdc);
+            }
         }
     }
 }

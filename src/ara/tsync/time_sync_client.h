@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include "../core/result.h"
 #include "./tsync_error_domain.h"
@@ -29,10 +30,16 @@ namespace ara
         /// synchronized timestamp for "now" or for a specific local steady time.
         class TimeSyncClient
         {
+        public:
+            /// @brief Callback type for synchronization state changes
+            using StateChangeNotifier =
+                std::function<void(SynchronizationState)>;
+
         private:
             mutable std::mutex mMutex;
             SynchronizationState mState;
             std::chrono::system_clock::duration mOffset;
+            StateChangeNotifier mStateNotifier;
 
         public:
             TimeSyncClient() noexcept;
@@ -60,6 +67,15 @@ namespace ara
 
             /// @brief Reset state to unsynchronized.
             void Reset() noexcept;
+
+            /// @brief Register a notifier for synchronization state changes.
+            /// @param notifier Callback invoked when state transitions occur.
+            /// @returns Void Result on success, error if notifier is empty.
+            core::Result<void> SetStateChangeNotifier(
+                StateChangeNotifier notifier);
+
+            /// @brief Remove the synchronization state change notifier.
+            void ClearStateChangeNotifier() noexcept;
         };
     }
 }

@@ -33,6 +33,10 @@ namespace ara
                 return "Entry already exists";
             case PhmErrc::kNotFound:
                 return "Entry not found";
+            case PhmErrc::kAlreadyOffered:
+                return "Service is already offered";
+            case PhmErrc::kNotOffered:
+                return "Service is not offered yet";
             default:
                 return "Unsupported PHM error code";
             }

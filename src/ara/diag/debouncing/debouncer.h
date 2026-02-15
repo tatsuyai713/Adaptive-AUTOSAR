@@ -5,6 +5,7 @@
 #ifndef DEBOUNCER_H
 #define DEBOUNCER_H
 
+#include <cstdint>
 #include <functional>
 
 namespace ara
@@ -58,6 +59,14 @@ namespace ara
 
                 /// @brief Reset the debouncing mechanism
                 virtual void Reset() = 0;
+
+                /// @brief Get the current event status from the debouncing mechanism
+                /// @returns Current event status
+                EventStatus GetEventStatus() const noexcept;
+
+                /// @brief Get the current Fault Detection Counter value
+                /// @returns Current FDC value in the range [-128, 127]
+                virtual int8_t GetFdc() const noexcept = 0;
 
                 virtual ~Debouncer() noexcept = default;
             };
