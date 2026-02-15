@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEFAULT_AUTOSAR_AP_PREFIX="__AUTOSAR_AP_PREFIX__"
+DEFAULT_ENV_FILE="/etc/default/autosar-vsomeip-routing"
+
+if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${DEFAULT_ENV_FILE}"
+fi
+
+: "${AUTOSAR_AP_PREFIX:=${DEFAULT_AUTOSAR_AP_PREFIX}}"
+: "${AUTOSAR_VSOMEIP_ROUTING_BIN:=${AUTOSAR_AP_PREFIX}/bin/autosar_vsomeip_routing_manager}"
+: "${AUTOSAR_VSOMEIP_ROUTING_APP:=autosar_vsomeip_routing_manager}"
+: "${AUTOSAR_VSOMEIP_CONFIGURATION:=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json}"
+
+if [[ ! -x "${AUTOSAR_VSOMEIP_ROUTING_BIN}" ]]; then
+  echo "[ERROR] vSomeIP routing binary not found: ${AUTOSAR_VSOMEIP_ROUTING_BIN}" >&2
+  exit 1
+fi
+
+if [[ -z "${VSOMEIP_CONFIGURATION:-}" && -f "${AUTOSAR_VSOMEIP_CONFIGURATION}" ]]; then
+  export VSOMEIP_CONFIGURATION="${AUTOSAR_VSOMEIP_CONFIGURATION}"
+fi
+
+export VSOMEIP_ROUTING="${VSOMEIP_ROUTING:-${AUTOSAR_VSOMEIP_ROUTING_APP}}"
+export AUTOSAR_VSOMEIP_ROUTING_APP
+
+extra_libdirs=""
+for candidate in \
+  "${AUTOSAR_AP_PREFIX}/lib" \
+  "${AUTOSAR_AP_PREFIX}/lib64" \
+  "/opt/vsomeip/lib"; do
+  if [[ -d "${candidate}" ]]; then
+    if [[ -n "${extra_libdirs}" ]]; then
+      extra_libdirs="${extra_libdirs}:"
+    fi
+    extra_libdirs="${extra_libdirs}${candidate}"
+  fi
+done
+export LD_LIBRARY_PATH="${extra_libdirs}:${LD_LIBRARY_PATH:-}"
+
+exec "${AUTOSAR_VSOMEIP_ROUTING_BIN}" "$@"

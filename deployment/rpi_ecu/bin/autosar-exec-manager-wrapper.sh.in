@@ -13,6 +13,7 @@ fi
 : "${AUTOSAR_AP_PREFIX:=${DEFAULT_AUTOSAR_AP_PREFIX}}"
 : "${AUTOSAR_USER_APPS_BUILD_DIR:=${DEFAULT_USER_APPS_BUILD_DIR}}"
 : "${AUTOSAR_BRINGUP_SCRIPT:=/etc/autosar/bringup.sh}"
+: "${AUTOSAR_VSOMEIP_ROUTING_APP:=autosar_vsomeip_routing_manager}"
 
 if [[ ! -f "${AUTOSAR_BRINGUP_SCRIPT}" ]]; then
   echo "[ERROR] bringup script not found: ${AUTOSAR_BRINGUP_SCRIPT}" >&2
@@ -25,7 +26,9 @@ fi
 
 if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
   for candidate in \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json" \
     "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json" \
     "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json"; do
     if [[ -f "${candidate}" ]]; then
       export VSOMEIP_CONFIGURATION="${candidate}"
@@ -33,6 +36,8 @@ if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
     fi
   done
 fi
+
+export VSOMEIP_ROUTING="${VSOMEIP_ROUTING:-${AUTOSAR_VSOMEIP_ROUTING_APP}}"
 
 extra_libdirs=""
 for candidate in \

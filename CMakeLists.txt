@@ -870,6 +870,33 @@ if(AUTOSAR_AP_BUILD_PLATFORM_APP)
   endif()
 endif()
 
+if(ARA_COM_USE_VSOMEIP)
+  add_executable(
+    autosar_vsomeip_routing_manager
+    ${source_dir}/main_vsomeip_routing_manager.cpp
+  )
+
+  target_include_directories(
+    autosar_vsomeip_routing_manager
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+
+  target_link_directories(
+    autosar_vsomeip_routing_manager
+    PUBLIC
+    $<BUILD_INTERFACE:${VSOMEIP_PREFIX}/lib>
+    $<INSTALL_INTERFACE:${VSOMEIP_PREFIX}/lib>
+  )
+
+  target_link_libraries(
+    autosar_vsomeip_routing_manager
+    vsomeip3
+    vsomeip3-sd
+    vsomeip3-e2e
+  )
+endif()
+
 set(has_pubsub_sample_entrypoints OFF)
 if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
    EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
@@ -1457,6 +1484,13 @@ install(
 if(TARGET adaptive_autosar)
   install(
     TARGETS adaptive_autosar
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+endif()
+
+if(TARGET autosar_vsomeip_routing_manager)
+  install(
+    TARGETS autosar_vsomeip_routing_manager
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 endif()

@@ -120,6 +120,7 @@ Detailed runbook:
 
 User-app bringup entry points:
 - `/etc/autosar/bringup.sh` (edit this to launch your own applications)
+- `autosar-vsomeip-routing.service` (keeps SOME/IP routing manager resident)
 - `autosar-platform-app.service` (starts platform-side built-in process stack)
 - `autosar-exec-manager.service` (runs `bringup.sh` after platform service)
 

@@ -1,0 +1,18 @@
+[Unit]
+Description=Adaptive AUTOSAR vSomeIP routing manager
+After=network-online.target
+Wants=network-online.target
+Before=autosar-platform-app.service autosar-exec-manager.service autosar-ecu-full-stack.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-vsomeip-routing
+ExecStart=/usr/local/bin/autosar-vsomeip-routing-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+

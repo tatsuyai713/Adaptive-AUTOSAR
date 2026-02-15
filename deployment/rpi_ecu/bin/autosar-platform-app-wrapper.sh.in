@@ -15,6 +15,7 @@ fi
 : "${AUTOSAR_PLATFORM_EV_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/extended_vehicle_manifest.arxml}"
 : "${AUTOSAR_PLATFORM_DM_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/diagnostic_manager_manifest.arxml}"
 : "${AUTOSAR_PLATFORM_PHM_MANIFEST:=${AUTOSAR_AP_PREFIX}/configuration/health_monitoring_manifest.arxml}"
+: "${AUTOSAR_VSOMEIP_ROUTING_APP:=autosar_vsomeip_routing_manager}"
 
 if [[ ! -x "${AUTOSAR_PLATFORM_APP_BIN}" ]]; then
   echo "[ERROR] platform app binary not found: ${AUTOSAR_PLATFORM_APP_BIN}" >&2
@@ -34,8 +35,10 @@ done
 
 if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
   for candidate in \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json" \
     "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-local.json" \
     "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json" \
     "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-local.json" \
     "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json"; do
     if [[ -f "${candidate}" ]]; then
@@ -44,6 +47,8 @@ if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
     fi
   done
 fi
+
+export VSOMEIP_ROUTING="${VSOMEIP_ROUTING:-${AUTOSAR_VSOMEIP_ROUTING_APP}}"
 
 extra_libdirs=""
 for candidate in \

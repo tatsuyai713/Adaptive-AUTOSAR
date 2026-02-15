@@ -1,8 +1,8 @@
 [Unit]
 Description=Adaptive AUTOSAR ECU full-stack template (CAN + SOME/IP -> DDS)
-After=network-online.target autosar-iox-roudi.service autosar-platform-app.service
+After=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service
 Requires=autosar-iox-roudi.service autosar-platform-app.service
-Wants=network-online.target autosar-iox-roudi.service autosar-platform-app.service
+Wants=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service
 
 [Service]
 Type=simple

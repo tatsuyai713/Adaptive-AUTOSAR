@@ -119,6 +119,7 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 
 ユーザーアプリ起動の導線:
 - `/etc/autosar/bringup.sh` (ユーザーが自分の起動コマンドを記述)
+- `autosar-vsomeip-routing.service` (SOME/IP ルーティングマネージャを常駐起動)
 - `autosar-platform-app.service` (プラットフォーム側の常駐プロセス群を先に起動)
 - `autosar-exec-manager.service` (`bringup.sh` を起動する常駐サービス)
 
