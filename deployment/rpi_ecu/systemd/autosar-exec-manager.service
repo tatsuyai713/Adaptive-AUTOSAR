@@ -1,0 +1,16 @@
+[Unit]
+Description=Adaptive AUTOSAR execution manager bridge (runs user bringup script)
+After=network-online.target autosar-iox-roudi.service
+Wants=network-online.target autosar-iox-roudi.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-exec-manager
+ExecStart=/usr/local/bin/autosar-exec-manager-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

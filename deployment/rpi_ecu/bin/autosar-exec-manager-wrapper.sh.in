@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEFAULT_AUTOSAR_AP_PREFIX="__AUTOSAR_AP_PREFIX__"
+DEFAULT_USER_APPS_BUILD_DIR="__USER_APPS_BUILD_DIR__"
+DEFAULT_ENV_FILE="/etc/default/autosar-exec-manager"
+
+if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${DEFAULT_ENV_FILE}"
+fi
+
+: "${AUTOSAR_AP_PREFIX:=${DEFAULT_AUTOSAR_AP_PREFIX}}"
+: "${AUTOSAR_USER_APPS_BUILD_DIR:=${DEFAULT_USER_APPS_BUILD_DIR}}"
+: "${AUTOSAR_BRINGUP_SCRIPT:=/etc/autosar/bringup.sh}"
+
+if [[ ! -f "${AUTOSAR_BRINGUP_SCRIPT}" ]]; then
+  echo "[ERROR] bringup script not found: ${AUTOSAR_BRINGUP_SCRIPT}" >&2
+  exit 1
+fi
+
+if [[ ! -x "${AUTOSAR_BRINGUP_SCRIPT}" ]]; then
+  chmod +x "${AUTOSAR_BRINGUP_SCRIPT}" || true
+fi
+
+if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
+  for candidate in \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json"; do
+    if [[ -f "${candidate}" ]]; then
+      export VSOMEIP_CONFIGURATION="${candidate}"
+      break
+    fi
+  done
+fi
+
+extra_libdirs=""
+for candidate in \
+  "${AUTOSAR_AP_PREFIX}/lib" \
+  "${AUTOSAR_AP_PREFIX}/lib64" \
+  "/opt/vsomeip/lib" \
+  "/opt/cyclonedds/lib" \
+  "/opt/iceoryx/lib"; do
+  if [[ -d "${candidate}" ]]; then
+    if [[ -n "${extra_libdirs}" ]]; then
+      extra_libdirs="${extra_libdirs}:"
+    fi
+    extra_libdirs="${extra_libdirs}${candidate}"
+  fi
+done
+export LD_LIBRARY_PATH="${extra_libdirs}:${LD_LIBRARY_PATH:-}"
+
+export AUTOSAR_AP_PREFIX
+export AUTOSAR_USER_APPS_BUILD_DIR
+
+echo "[INFO] autosar-exec-manager: starting bringup script ${AUTOSAR_BRINGUP_SCRIPT}"
+exec "${AUTOSAR_BRINGUP_SCRIPT}"

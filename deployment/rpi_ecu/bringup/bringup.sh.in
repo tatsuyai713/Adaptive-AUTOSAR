@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This script is launched by autosar-exec-manager.service.
+# Put your own application startup commands here.
+
+# Runtime variables passed from the execution-manager wrapper:
+#   AUTOSAR_AP_PREFIX
+#   AUTOSAR_USER_APPS_BUILD_DIR
+#   LD_LIBRARY_PATH
+#   VSOMEIP_CONFIGURATION (if available)
+
+declare -a app_pids=()
+
+cleanup() {
+  local pid
+  for pid in "${app_pids[@]:-}"; do
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
+      kill "${pid}" >/dev/null 2>&1 || true
+      wait "${pid}" 2>/dev/null || true
+    fi
+  done
+}
+
+trap cleanup EXIT SIGINT SIGTERM
+
+# -------------------------------------------------------------------------
+# Example 1) Launch your own app binary (recommended)
+#
+# MY_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/feature/ecu/my_custom_ecu_app"
+# "${MY_APP}" --arg1=value1 --arg2=value2 &
+# app_pids+=($!)
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Example 2) Launch the built-in full-stack template
+#
+# ECU_APP="${AUTOSAR_USER_APPS_BUILD_DIR}/src/apps/feature/ecu/autosar_user_tpl_ecu_full_stack"
+# "${ECU_APP}" \
+#   --can-backend=socketcan \
+#   --ifname=can0 \
+#   --enable-can=true \
+#   --enable-someip=true \
+#   --publish-period-ms=50 &
+# app_pids+=($!)
+# -------------------------------------------------------------------------
+
+if [[ ${#app_pids[@]} -eq 0 ]]; then
+  echo "[INFO] bringup: no applications configured yet."
+  echo "[INFO] edit /etc/autosar/bringup.sh and add your app startup commands."
+  # Keep process alive so systemd service stays active until user configures apps.
+  while true; do
+    sleep 3600
+  done
+fi
+
+# Wait while at least one app is alive; stop all if one exits unexpectedly.
+wait -n "${app_pids[@]}"
+echo "[ERROR] bringup: one of the applications exited. shutting down remaining apps." >&2
+exit 1

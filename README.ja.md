@@ -92,6 +92,10 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 詳細ランブック:
 - `deployment/rpi_ecu/README.md`
 
+ユーザーアプリ起動の導線:
+- `/etc/autosar/bringup.sh` (ユーザーが自分の起動コマンドを記述)
+- `autosar-exec-manager.service` (`bringup.sh` を先に実行する常駐サービス)
+
 ### Vector/ETAS/EB 向け資産を移植して使う
 本実装は、ベンダ実装で開発した C++ 資産を「ソース互換で再ビルド」して、
 他 UNIT と通信確認する用途に利用できます。

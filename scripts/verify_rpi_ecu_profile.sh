@@ -152,6 +152,20 @@ build_ld_library_path() {
   echo "${lib_path}"
 }
 
+cleanup_vsomeip_runtime_artifacts() {
+  # Keep CI build/source directories (e.g., /tmp/vsomeip-build, /tmp/vsomeip-src)
+  # and remove only runtime files/sockets/fifos/symlinks.
+  local artifact
+  for artifact in /tmp/vsomeip-*; do
+    if [[ ! -e "${artifact}" ]]; then
+      continue
+    fi
+    if [[ -f "${artifact}" || -S "${artifact}" || -p "${artifact}" || -L "${artifact}" ]]; then
+      rm -f "${artifact}" || true
+    fi
+  done
+}
+
 RUN_ID="$(date +%s)-$$"
 BASE_LOG_DIR="/tmp/adaptive_autosar_rpi_verify_${RUN_ID}"
 mkdir -p "${BASE_LOG_DIR}"
@@ -291,7 +305,7 @@ run_someip_transport_smoke() {
   local pub_pid=""
   local sub_pid=""
 
-  rm -f /tmp/vsomeip-*
+  cleanup_vsomeip_runtime_artifacts
   export VSOMEIP_CONFIGURATION="${VSO_CONFIG}"
 
   (
@@ -485,7 +499,7 @@ run_ecu_someip_to_dds_smoke() {
   local src_pid=""
   local ecu_pid=""
 
-  rm -f /tmp/vsomeip-*
+  cleanup_vsomeip_runtime_artifacts
   export VSOMEIP_CONFIGURATION="${VSO_CONFIG}"
 
   (

@@ -130,4 +130,6 @@ fi
 echo "[OK] Raspberry Pi ECU profile build/install completed."
 echo "[INFO] Next step:"
 echo "       sudo ./scripts/install_rpi_ecu_services.sh --prefix ${INSTALL_PREFIX} --user-app-build-dir ${USER_APP_BUILD_DIR}"
+echo "       # edit /etc/autosar/bringup.sh and write your app startup commands"
+echo "       sudo systemctl start autosar-exec-manager.service"
 echo "       ./scripts/verify_rpi_ecu_profile.sh --prefix ${INSTALL_PREFIX} --user-app-build-dir ${USER_APP_BUILD_DIR} --can-backend mock"
