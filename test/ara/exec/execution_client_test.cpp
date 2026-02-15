@@ -64,6 +64,22 @@ namespace ara
             EXPECT_EQ(cExpectedResult, _actualResult);
         }
 
+        TEST_F(ExecutionClientTest, RetryAfterTimeoutScenario)
+        {
+            const ExecutionState cState{ExecutionState::kRunning};
+
+            SetBypass(true);
+            core::Result<void> _timeoutResult{Client.ReportExecutionState(cState)};
+            EXPECT_FALSE(_timeoutResult.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kCommunicationError,
+                static_cast<ExecErrc>(_timeoutResult.Error().Value()));
+
+            SetBypass(false);
+            core::Result<void> _retryResult{Client.ReportExecutionState(cState)};
+            EXPECT_TRUE(_retryResult.HasValue());
+        }
+
         TEST_F(ExecutionClientTest, CorruptedResponseScenario)
         {
             const ExecErrc cExpectedResult{ExecErrc::kCommunicationError};
@@ -91,6 +107,23 @@ namespace ara
             EXPECT_FALSE(_result.HasValue());
             auto _actualResult{static_cast<ExecErrc>(_result.Error().Value())};
             EXPECT_EQ(cExpectedResult, _actualResult);
+        }
+
+        TEST(ExecutionClientCtorTest, RejectsNullRpcClient)
+        {
+            const core::InstanceSpecifier cInstance{"test_instance"};
+            EXPECT_THROW(
+                ExecutionClient _client(cInstance, nullptr, 1),
+                std::invalid_argument);
+        }
+
+        TEST(ExecutionClientCtorTest, RejectsNonPositiveTimeout)
+        {
+            const core::InstanceSpecifier cInstance{"test_instance"};
+            helper::MockRpcClient _rpcClient;
+            EXPECT_THROW(
+                ExecutionClient _client(cInstance, &_rpcClient, 0),
+                std::invalid_argument);
         }
     }
 }

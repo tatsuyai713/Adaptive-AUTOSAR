@@ -1,42 +1,198 @@
-name: CMake
+name: CI
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Debug
+  VSOMEIP_PREFIX: /opt/vsomeip
+  ICEORYX_PREFIX: /opt/iceoryx
+  CYCLONEDDS_PREFIX: /opt/cyclonedds
 
 jobs:
-  build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  full-feature-test:
     runs-on: ubuntu-22.04
+    timeout-minutes: 120
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Install system packages
+      run: |
+        set -euxo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          cmake \
+          ninja-build \
+          pkg-config \
+          git \
+          python3 \
+          python3-pip \
+          libboost-system-dev \
+          libboost-thread-dev \
+          libboost-filesystem-dev \
+          libboost-log-dev \
+          libboost-program-options-dev \
+          libacl1-dev \
+          libsystemd-dev \
+          libssl-dev \
+          libncurses5-dev
+        python3 -m pip install --upgrade pip
+        python3 -m pip install pyyaml
+
+    - name: Build and install middleware dependencies
+      env:
+        VSOMEIP_PREFIX: ${{ env.VSOMEIP_PREFIX }}
+        ICEORYX_PREFIX: ${{ env.ICEORYX_PREFIX }}
+        CYCLONEDDS_PREFIX: ${{ env.CYCLONEDDS_PREFIX }}
+      run: |
+        set -euxo pipefail
+
+        if [[ ! -f "${VSOMEIP_PREFIX}/lib/libvsomeip3.so" ]]; then
+          git clone --depth 1 --branch 3.4.10 https://github.com/COVESA/vsomeip.git /tmp/vsomeip-src
+          cmake -S /tmp/vsomeip-src -B /tmp/vsomeip-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${VSOMEIP_PREFIX}" \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build /tmp/vsomeip-build -j"$(nproc)"
+          sudo cmake --install /tmp/vsomeip-build
+        fi
+
+        if [[ ! -x "${CYCLONEDDS_PREFIX}/bin/idlc" ]]; then
+          git clone --depth 1 --branch 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds.git /tmp/cyclonedds-src
+          cmake -S /tmp/cyclonedds-src -B /tmp/cyclonedds-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${CYCLONEDDS_PREFIX}" \
+            -DBUILD_IDLC=ON
+          cmake --build /tmp/cyclonedds-build -j"$(nproc)"
+          sudo cmake --install /tmp/cyclonedds-build
+        fi
+
+        if [[ ! -f "${CYCLONEDDS_PREFIX}/include/ddscxx/dds/dds.hpp" ]]; then
+          git clone --depth 1 --branch 0.10.5 https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git /tmp/cyclonedds-cxx-src
+          cmake -S /tmp/cyclonedds-cxx-src -B /tmp/cyclonedds-cxx-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${CYCLONEDDS_PREFIX}" \
+            -DCMAKE_PREFIX_PATH="${CYCLONEDDS_PREFIX}"
+          cmake --build /tmp/cyclonedds-cxx-build -j"$(nproc)"
+          sudo cmake --install /tmp/cyclonedds-cxx-build
+        fi
+
+        if [[ ! -f "${ICEORYX_PREFIX}/lib/cmake/iceoryx_posh/iceoryx_poshConfig.cmake" ]]; then
+          git clone --depth 1 --branch v2.0.5 https://github.com/eclipse-iceoryx/iceoryx.git /tmp/iceoryx-src
+          cmake -S /tmp/iceoryx-src/iceoryx_meta -B /tmp/iceoryx-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${ICEORYX_PREFIX}" \
+            -DBUILD_TEST=OFF \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build /tmp/iceoryx-build -j"$(nproc)"
+          sudo cmake --install /tmp/iceoryx-build
+        fi
+
+        sudo ldconfig
+
+    - name: Configure CMake (all backends)
+      env:
+        VSOMEIP_PREFIX: ${{ env.VSOMEIP_PREFIX }}
+        ICEORYX_PREFIX: ${{ env.ICEORYX_PREFIX }}
+        CYCLONEDDS_PREFIX: ${{ env.CYCLONEDDS_PREFIX }}
+      run: |
+        set -euxo pipefail
+        cmake -S "${GITHUB_WORKSPACE}" -B "${GITHUB_WORKSPACE}/build" \
+          -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+          -Dbuild_tests=ON \
+          -DARA_COM_USE_VSOMEIP=ON \
+          -DARA_COM_USE_ICEORYX=ON \
+          -DARA_COM_USE_CYCLONEDDS=ON \
+          -DARA_COM_ENABLE_ARXML_CODEGEN=ON \
+          -DAUTOSAR_AP_BUILD_SAMPLES=OFF \
+          -DVSOMEIP_PREFIX="${VSOMEIP_PREFIX}" \
+          -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
+          -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
 
     - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: |
+        set -euxo pipefail
+        cmake --build "${GITHUB_WORKSPACE}/build" --config "${BUILD_TYPE}" -j"$(nproc)"
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.  
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
-      
-    # Generate Doxygen code dodumentation and publish it to the GitHub Pages
+    - name: Run unit tests
+      env:
+        LD_LIBRARY_PATH: /opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib
+      run: |
+        set -euxo pipefail
+        ctest --test-dir "${GITHUB_WORKSPACE}/build" --output-on-failure -C "${BUILD_TYPE}"
+
+    - name: Run ARXML generator checks
+      run: |
+        set -euxo pipefail
+        python3 tools/arxml_generator/generate_arxml.py \
+          --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+          --output /tmp/ci_pubsub_vsomeip.arxml \
+          --overwrite \
+          --print-summary
+
+        python3 tools/arxml_generator/generate_arxml.py \
+          --input tools/arxml_generator/examples/pubsub_multi_transport.yaml \
+          --output /tmp/ci_pubsub_multi_transport.arxml \
+          --allow-extensions \
+          --overwrite \
+          --print-summary
+
+        python3 tools/arxml_generator/generate_ara_com_binding.py \
+          --input /tmp/ci_pubsub_vsomeip.arxml \
+          --output /tmp/ci_vehicle_status_manifest_binding.h \
+          --namespace sample::vehicle_status::generated \
+          --provided-service-short-name VehicleStatusProviderInstance \
+          --provided-event-group-short-name VehicleStatusEventGroup
+
+        test -s /tmp/ci_pubsub_vsomeip.arxml
+        test -s /tmp/ci_pubsub_multi_transport.arxml
+        test -s /tmp/ci_vehicle_status_manifest_binding.h
+
+    - name: Validate install split and user app build
+      env:
+        LD_LIBRARY_PATH: /opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib
+      run: |
+        set -euxo pipefail
+        ./scripts/build_and_install_autosar_ap.sh \
+          --prefix /tmp/autosar_ap \
+          --build-dir build-install-ci \
+          --build-type Release \
+          --source-dir "${GITHUB_WORKSPACE}"
+
+        ./scripts/build_user_apps_from_opt.sh \
+          --prefix /tmp/autosar_ap \
+          --source-dir /tmp/autosar_ap/user_apps \
+          --build-dir build-user-apps-ci
+
+        ./scripts/build_user_apps_from_opt.sh \
+          --prefix /tmp/autosar_ap \
+          --source-dir /tmp/autosar_ap/user_apps \
+          --build-dir build-user-apps-ci-run \
+          --run
+
+    - name: Verify Raspberry Pi ECU profile (mock CAN)
+      env:
+        LD_LIBRARY_PATH: /opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib
+      run: |
+        set -euxo pipefail
+        ./scripts/verify_rpi_ecu_profile.sh \
+          --prefix /tmp/autosar_ap \
+          --user-app-build-dir "${GITHUB_WORKSPACE}/build-user-apps-ci" \
+          --can-backend mock
+
+  docs:
+    runs-on: ubuntu-22.04
+    needs: full-feature-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+    - uses: actions/checkout@v4
+
     - uses: langroodi/doxygenize@v1
       with:
         doxygenconf: './doc/doxygen.conf'

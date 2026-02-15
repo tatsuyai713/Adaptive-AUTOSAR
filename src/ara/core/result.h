@@ -604,7 +604,7 @@ namespace ara
             Result &operator=(Result &&other) noexcept(
                 std::is_nothrow_move_assignable<E>::value)
             {
-                if (other.mHasError)
+                if (other.hasError())
                 {
                     mError = std::move(other.mError);
                 }

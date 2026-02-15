@@ -53,5 +53,13 @@ namespace ara
                 return "Unsupported error code";
             }
         }
+
+        core::ErrorCode MakeErrorCode(ExecErrc code) noexcept
+        {
+            static const ExecErrorDomain cDomain;
+            return core::ErrorCode{
+                static_cast<core::ErrorDomain::CodeType>(code),
+                cDomain};
+        }
     }
 }

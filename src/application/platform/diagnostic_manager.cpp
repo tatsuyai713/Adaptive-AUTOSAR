@@ -54,6 +54,11 @@ namespace application
 
         void DiagnosticManager::configureSdClient(const arxml::ArxmlReader &reader)
         {
+            const std::string cNetworkEndpoint{"ExtendedVehicleEP"};
+            const std::string cApplicationEndpoint{"ServerUnicastTcp"};
+            const ara::com::option::Layer4ProtocolType cProtocol{
+                ara::com::option::Layer4ProtocolType::Tcp};
+
             const arxml::ArxmlNode cServiceIdNode{
                 reader.GetRootNode({"AUTOSAR",
                                     "AR-PACKAGES",
@@ -86,13 +91,29 @@ namespace application
             const auto cServiceId{cServiceIdNode.GetValue<uint16_t>()};
             const auto cInitialDelayMin{cInitialDelayMinNode.GetValue<int>()};
             const auto cInitialDelayMax{cInitialDelayMaxNode.GetValue<int>()};
+            helper::NetworkConfiguration _networkConfiguration;
+            bool _networkResolved{
+                helper::TryGetNetworkConfiguration(
+                    reader,
+                    cNetworkEndpoint,
+                    cApplicationEndpoint,
+                    cProtocol,
+                    _networkConfiguration)};
+            if (!_networkResolved)
+            {
+                throw std::runtime_error("Fetching network configuration failed.");
+            }
 
             mSdClient =
                 new ara::com::someip::sd::SomeIpSdClient(
                     mNetworkLayer,
                     cServiceId,
                     cInitialDelayMin,
-                    cInitialDelayMax);
+                    cInitialDelayMax,
+                    30,
+                    3,
+                    _networkConfiguration.ipAddress,
+                    _networkConfiguration.portNumber);
         }
 
         void DiagnosticManager::onEventStatusChanged(

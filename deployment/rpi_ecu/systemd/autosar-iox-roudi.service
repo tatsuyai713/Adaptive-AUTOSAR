@@ -1,0 +1,13 @@
+[Unit]
+Description=iceoryx RouDi runtime for AUTOSAR AP zero-copy transport
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/iceoryx/bin/iox-roudi
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

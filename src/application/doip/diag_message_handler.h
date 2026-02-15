@@ -22,13 +22,8 @@ namespace application
 
         public:
             /// @brief Constructor
-            /// @param curl Configured CURL instance for RESTful communication
-            /// @param resourcesUrl Connected vehicle resources access RESTful URL
             /// @param protocolVersion DoIP protocol version
-            DiagMessageHandler(
-                helper::CurlWrapper *curl,
-                std::string resourcesUrl,
-                uint8_t protocolVersion);
+            DiagMessageHandler(uint8_t protocolVersion);
 
             DoipLib::Message *GetMessage() override;
 

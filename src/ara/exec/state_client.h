@@ -2,6 +2,8 @@
 #define STATE_CLIENT_H
 
 #include <future>
+#include <map>
+#include <mutex>
 #include "../com/someip/rpc/rpc_client.h"
 #include "./execution_error_event.h"
 #include "./function_group_state.h"
@@ -23,6 +25,8 @@ namespace ara
 
             std::function<void(const ExecutionErrorEvent &)> mUndefinedStateCallback;
             com::someip::rpc::RpcClient *const mRpcClient;
+            std::map<std::string, ExecutionErrorEvent> mExecutionErrors;
+            std::mutex mErrorsMutex;
             std::promise<void> mSetStatePromise;
             std::shared_future<void> mSetStateFuture;
             std::promise<void> mStateTransitionPromise;

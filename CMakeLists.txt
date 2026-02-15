@@ -7,27 +7,18 @@ project(Adaptive_Platform)
 
 # This AUTOSAR Adaptive Platform requires C++14
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable 'rdyamic' switch to export the executable's symbols for debugging
 set(CMAKE_ENABLE_EXPORTS 1)
 
 include(FetchContent)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Fetching GoogleTest 1.12.1 for unit testing
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/58d77fa8070e8cec2dc1ed015d66b454c8d78850.zip
-)
-
-# Fetching libcurl 7.88.0 for REST API
-FetchContent_Declare(
-  libcurl
-  URL https://github.com/curl/curl/archive/3027611ca6d4cc5510d2d0fccc3e5a074e09a2fb.zip
-)
-
-# Fetching JsonCpp 1.9.5 for JSON parsing
-FetchContent_Declare(
-  jsoncpp_lib
-  URL https://github.com/open-source-parsers/jsoncpp/archive/5defb4ed1a4293b8e2bf641e16b156fb9de498cc.zip
 )
 
 # Fetching Async-BSD-Socket-Lib for network abstraction
@@ -50,18 +41,112 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(
   googletest
-  libcurl
-  jsoncpp_lib
   Async-BSD-Socket-Lib
   OBD-II-Emulator
   Doip-Lib
 )
+
+# Normalize Async-BSD-Socket-Lib include usage so exported install targets
+# do not keep build-tree absolute include paths.
+FetchContent_GetProperties(
+  Async-BSD-Socket-Lib
+  SOURCE_DIR ASYNC_BSD_SOCKET_LIB_SOURCE_DIR)
+if(TARGET async_bsd_socket_lib)
+  set_property(
+    TARGET async_bsd_socket_lib
+    PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+      "$<BUILD_INTERFACE:${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+endif()
 
 ########################################################################
 #
 # Options:
 
 option(build_tests "Build all the tests." ON)
+option(ARA_COM_USE_VSOMEIP "Use vsomeip as SOME/IP transport backend." ON)
+option(ARA_COM_USE_ICEORYX "Use iceoryx for ara::com zero-copy backend." ON)
+option(ARA_COM_USE_CYCLONEDDS "Use Cyclone DDS as ara::com DDS backend." OFF)
+option(ARA_COM_ENABLE_ARXML_CODEGEN "Generate ara::com sample binding headers from ARXML." ON)
+option(AUTOSAR_AP_BUILD_PLATFORM_APP "Build the bundled platform executable (adaptive_autosar)." ON)
+option(AUTOSAR_AP_BUILD_SAMPLES "Build bundled sample applications in this repository." ON)
+option(AUTOSAR_AP_INSTALL_TOOLS "Install Python/shell helper tools into install prefix." ON)
+option(AUTOSAR_AP_INSTALL_USER_APP_TEMPLATE "Install standalone user-app template project." ON)
+
+find_package(OpenSSL REQUIRED)
+
+if(ARA_COM_USE_VSOMEIP)
+  set(VSOMEIP_PREFIX "/opt/vsomeip" CACHE PATH "vsomeip install prefix")
+  link_directories(${VSOMEIP_PREFIX}/lib)
+endif()
+
+if(ARA_COM_USE_ICEORYX)
+  set(ICEORYX_PREFIX "/opt/iceoryx" CACHE PATH "iceoryx install prefix")
+  list(APPEND CMAKE_PREFIX_PATH "${ICEORYX_PREFIX}/lib/cmake")
+  find_package(iceoryx_posh REQUIRED)
+endif()
+
+if(ARA_COM_USE_CYCLONEDDS)
+  set(CYCLONEDDS_PREFIX "/opt/cyclonedds" CACHE PATH "Cyclone DDS install prefix")
+  list(APPEND CMAKE_PREFIX_PATH "${CYCLONEDDS_PREFIX}/lib/cmake")
+
+  if(NOT ARA_COM_USE_ICEORYX)
+    set(ICEORYX_PREFIX "/opt/iceoryx" CACHE PATH "iceoryx install prefix")
+    list(APPEND CMAKE_PREFIX_PATH "${ICEORYX_PREFIX}/lib/cmake")
+  endif()
+
+  find_package(iceoryx_binding_c REQUIRED)
+  find_package(CycloneDDS REQUIRED)
+  find_package(CycloneDDS-CXX REQUIRED)
+endif()
+
+set(ARA_COM_GENERATED_INCLUDE_DIR "")
+if(ARA_COM_ENABLE_ARXML_CODEGEN)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  set(
+    ARA_COM_CODEGEN_INPUT_ARXML
+    "${CMAKE_SOURCE_DIR}/configuration/pubsub_sample_manifest.arxml"
+    CACHE FILEPATH
+    "ARXML file used for ara::com sample code generation")
+  set(
+    ARA_COM_CODEGEN_PROVIDED_SERVICE_SHORT_NAME
+    "VehicleStatusProviderInstance"
+    CACHE STRING
+    "SHORT-NAME of PROVIDED-SOMEIP-SERVICE-INSTANCE used by codegen")
+  set(
+    ARA_COM_CODEGEN_PROVIDED_EVENT_GROUP_SHORT_NAME
+    "VehicleStatusEventGroup"
+    CACHE STRING
+    "SHORT-NAME of SOMEIP-PROVIDED-EVENT-GROUP used by codegen")
+
+  set(ARA_COM_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+  set(
+    ARA_COM_CODEGEN_OUTPUT_HEADER
+    "${ARA_COM_GENERATED_INCLUDE_DIR}/ara_com_generated/vehicle_status_manifest_binding.h")
+  set(
+    ARA_COM_CODEGEN_SCRIPT
+    "${CMAKE_SOURCE_DIR}/tools/arxml_generator/generate_ara_com_binding.py")
+
+  add_custom_command(
+    OUTPUT ${ARA_COM_CODEGEN_OUTPUT_HEADER}
+    COMMAND ${Python3_EXECUTABLE} ${ARA_COM_CODEGEN_SCRIPT}
+      --input ${ARA_COM_CODEGEN_INPUT_ARXML}
+      --output ${ARA_COM_CODEGEN_OUTPUT_HEADER}
+      --namespace sample::vehicle_status::generated
+      --provided-service-short-name ${ARA_COM_CODEGEN_PROVIDED_SERVICE_SHORT_NAME}
+      --provided-event-group-short-name ${ARA_COM_CODEGEN_PROVIDED_EVENT_GROUP_SHORT_NAME}
+    DEPENDS
+      ${ARA_COM_CODEGEN_SCRIPT}
+      ${ARA_COM_CODEGEN_INPUT_ARXML}
+    COMMENT "Generate ara::com sample binding header from ARXML"
+    VERBATIM
+  )
+
+  add_custom_target(
+    ara_com_arxml_codegen
+    DEPENDS ${ARA_COM_CODEGEN_OUTPUT_HEADER}
+  )
+endif()
 
 ########################################################################
 #
@@ -85,6 +170,12 @@ set(source_ara_log_sink_dir
 set(source_ara_sm_dir
   "${CMAKE_SOURCE_DIR}/src/ara/sm")
 
+set(source_ara_com_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/com")
+
+set(source_ara_com_zerocopy_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/com/zerocopy")
+
 set(source_ara_com_cg_dir
   "${CMAKE_SOURCE_DIR}/src/ara/com/cg")
 
@@ -102,6 +193,12 @@ set(source_ara_com_entry_dir
 
 set(source_ara_com_someip_dir
   "${CMAKE_SOURCE_DIR}/src/ara/com/someip")
+
+set(source_ara_com_dds_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/com/dds")
+
+set(source_ara_com_internal_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/com/internal")
 
 set(source_ara_com_someip_rpc_dir
   "${CMAKE_SOURCE_DIR}/src/ara/com/someip/rpc")
@@ -136,6 +233,21 @@ set(source_ara_diag_debouncing_dir
 set(source_ara_phm_dir
   "${CMAKE_SOURCE_DIR}/src/ara/phm")
 
+set(source_ara_per_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/per")
+
+set(source_ara_crypto_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/crypto")
+
+set(source_ara_iam_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/iam")
+
+set(source_ara_tsync_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/tsync")
+
+set(source_ara_ucm_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/ucm")
+
 set(source_ara_phm_supervisors_dir
   "${CMAKE_SOURCE_DIR}/src/ara/phm/supervisors")
 
@@ -151,6 +263,18 @@ set(source_application_helper_dir
 set(source_application_platform_dir
   "${CMAKE_SOURCE_DIR}/src/application/platform")
 
+set(source_sample_ara_com_pubsub_dir
+  "${CMAKE_SOURCE_DIR}/user_apps/src/features/communication/pubsub")
+
+set(source_sample_ara_com_standard_dir
+  "${CMAKE_SOURCE_DIR}/user_apps/src/apps/communication/someip")
+
+set(source_sample_ara_com_socketcan_dir
+  "${CMAKE_SOURCE_DIR}/user_apps/src/features/communication/can")
+
+set(source_sample_ecu_showcase_dir
+  "${CMAKE_SOURCE_DIR}/user_apps/src/features/ecu")
+
 # Test Directories:
 
 set(test_arxml_dir
@@ -164,6 +288,12 @@ set(test_ara_log_dir
 
 set(test_ara_sm_dir
   "${CMAKE_SOURCE_DIR}/test/ara/sm")
+
+set(test_ara_com_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/com")
+
+set(test_ara_com_zerocopy_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/com/zerocopy")
 
 set(test_ara_com_e2e_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/e2e")
@@ -210,6 +340,21 @@ set(test_ara_diag_debouncing_dir
 set(test_ara_phm_dir
   "${CMAKE_SOURCE_DIR}/test/ara/phm")
 
+set(test_ara_per_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/per")
+
+set(test_ara_crypto_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/crypto")
+
+set(test_ara_iam_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/iam")
+
+set(test_ara_tsync_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/tsync")
+
+set(test_ara_ucm_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/ucm")
+
 set(test_ara_phm_supervisors_dir
   "${CMAKE_SOURCE_DIR}/test/ara/phm/supervisors")
 
@@ -232,11 +377,15 @@ add_library(
   ara_core
   ${source_ara_core_dir}/optional.h
   ${source_ara_core_dir}/result.h
+  ${source_ara_core_dir}/future.h
+  ${source_ara_core_dir}/promise.h
   ${source_ara_core_dir}/error_domain.h
   ${source_ara_core_dir}/error_code.h
   ${source_ara_core_dir}/error_code.cpp
   ${source_ara_core_dir}/instance_specifier.h
   ${source_ara_core_dir}/instance_specifier.cpp
+  ${source_ara_core_dir}/initialization.h
+  ${source_ara_core_dir}/initialization.cpp
 )
 
 add_library(
@@ -258,10 +407,30 @@ add_library(
 
 add_library(
   ara_com
+  ${source_ara_com_dir}/types.h
+  ${source_ara_com_dir}/sample_ptr.h
+  ${source_ara_com_dir}/serialization.h
+  ${source_ara_com_dir}/event.h
+  ${source_ara_com_dir}/method.h
+  ${source_ara_com_dir}/field.h
+  ${source_ara_com_dir}/service_proxy_base.h
+  ${source_ara_com_dir}/service_proxy_base.cpp
+  ${source_ara_com_dir}/service_skeleton_base.h
+  ${source_ara_com_dir}/service_skeleton_base.cpp
+  ${source_ara_com_dir}/service_handle_type.h
+  ${source_ara_com_dir}/com_error_domain.h
+  ${source_ara_com_dir}/com_error_domain.cpp
+  ${source_ara_com_dds_dir}/dds_pubsub.h
+  ${source_ara_com_dds_dir}/cyclonedds_pubsub.h
+  ${source_ara_com_zerocopy_dir}/zero_copy.h
+  ${source_ara_com_zerocopy_dir}/zero_copy_binding.h
+  ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.h
+  ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.cpp
   ${source_ara_com_cg_dir}/communication_group_client.h
   ${source_ara_com_cg_dir}/communication_group_server.h
   ${source_ara_com_e2e_dir}/profile11.h
   ${source_ara_com_e2e_dir}/profile11.cpp
+  ${source_ara_com_e2e_dir}/e2e_event.h
   ${source_ara_com_helper_dir}/payload_helper.h
   ${source_ara_com_helper_dir}/payload_helper.cpp
   ${source_ara_com_helper_dir}/ipv4_address.h
@@ -291,6 +460,8 @@ add_library(
   ${source_ara_com_option_dir}/option_deserializer.cpp
   ${source_ara_com_someip_dir}/someip_message.h
   ${source_ara_com_someip_dir}/someip_message.cpp
+  ${source_ara_com_someip_dir}/vsomeip_application.h
+  ${source_ara_com_someip_dir}/vsomeip_application.cpp
   ${source_ara_com_someip_rpc_dir}/someip_rpc_message.h
   ${source_ara_com_someip_rpc_dir}/someip_rpc_message.cpp
   ${source_ara_com_someip_rpc_dir}/rpc_server.h
@@ -340,6 +511,13 @@ add_library(
   ${source_ara_com_someip_sd_fsm_dir}/service_ready_state.cpp
   ${source_ara_com_someip_sd_fsm_dir}/service_seen_state.h
   ${source_ara_com_someip_sd_fsm_dir}/service_seen_state.cpp
+  ${source_ara_com_internal_dir}/event_binding.h
+  ${source_ara_com_internal_dir}/method_binding.h
+  ${source_ara_com_internal_dir}/vsomeip_event_binding.h
+  ${source_ara_com_internal_dir}/vsomeip_event_binding.cpp
+  ${source_ara_com_internal_dir}/vsomeip_method_binding.h
+  ${source_ara_com_internal_dir}/vsomeip_method_binding.cpp
+  ${source_ara_com_internal_dir}/binding_factory.h
 )
 
 add_library(
@@ -377,6 +555,8 @@ add_library(
   ${source_ara_exec_dir}/exec_exception.h
   ${source_ara_exec_dir}/exec_exception.cpp
   ${source_ara_exec_dir}/execution_error_event.h
+  ${source_ara_exec_dir}/signal_handler.h
+  ${source_ara_exec_dir}/signal_handler.cpp
   ${source_ara_exec_dir}/state_client.h
   ${source_ara_exec_dir}/state_client.cpp
   ${source_ara_exec_dir}/state_server.h
@@ -447,6 +627,8 @@ add_library(
   ${source_ara_phm_dir}/supervised_entity.cpp
   ${source_ara_phm_dir}/recovery_action.h
   ${source_ara_phm_dir}/recovery_action.cpp
+  ${source_ara_phm_dir}/health_channel.h
+  ${source_ara_phm_dir}/health_channel.cpp
   ${source_ara_phm_supervisors_dir}/elementary_supervision.h
   ${source_ara_phm_supervisors_dir}/elementary_supervision.cpp
   ${source_ara_phm_supervisors_dir}/alive_supervision.h
@@ -457,10 +639,139 @@ add_library(
   ${source_ara_phm_supervisors_dir}/global_supervision.cpp
 )
 
+add_library(
+  ara_per
+  ${source_ara_per_dir}/per_error_domain.h
+  ${source_ara_per_dir}/per_error_domain.cpp
+  ${source_ara_per_dir}/shared_handle.h
+  ${source_ara_per_dir}/read_accessor.h
+  ${source_ara_per_dir}/read_accessor.cpp
+  ${source_ara_per_dir}/read_write_accessor.h
+  ${source_ara_per_dir}/read_write_accessor.cpp
+  ${source_ara_per_dir}/key_value_storage.h
+  ${source_ara_per_dir}/key_value_storage.cpp
+  ${source_ara_per_dir}/file_storage.h
+  ${source_ara_per_dir}/file_storage.cpp
+  ${source_ara_per_dir}/persistency.h
+  ${source_ara_per_dir}/persistency.cpp
+)
+
+add_library(
+  ara_crypto
+  ${source_ara_crypto_dir}/crypto_error_domain.h
+  ${source_ara_crypto_dir}/crypto_error_domain.cpp
+  ${source_ara_crypto_dir}/crypto_provider.h
+  ${source_ara_crypto_dir}/crypto_provider.cpp
+)
+
+add_library(
+  ara_iam
+  ${source_ara_iam_dir}/iam_error_domain.h
+  ${source_ara_iam_dir}/iam_error_domain.cpp
+  ${source_ara_iam_dir}/access_control.h
+  ${source_ara_iam_dir}/access_control.cpp
+)
+
+add_library(
+  ara_tsync
+  ${source_ara_tsync_dir}/tsync_error_domain.h
+  ${source_ara_tsync_dir}/tsync_error_domain.cpp
+  ${source_ara_tsync_dir}/time_sync_client.h
+  ${source_ara_tsync_dir}/time_sync_client.cpp
+)
+
+add_library(
+  ara_ucm
+  ${source_ara_ucm_dir}/ucm_error_domain.h
+  ${source_ara_ucm_dir}/ucm_error_domain.cpp
+  ${source_ara_ucm_dir}/update_manager.h
+  ${source_ara_ucm_dir}/update_manager.cpp
+)
+
+target_link_libraries(
+  ara_per
+  ara_core
+)
+
+target_link_libraries(
+  ara_crypto
+  ara_core
+  OpenSSL::Crypto
+)
+
+target_link_libraries(
+  ara_iam
+  ara_core
+)
+
+target_link_libraries(
+  ara_tsync
+  ara_core
+)
+
+target_link_libraries(
+  ara_ucm
+  ara_core
+  ara_crypto
+)
+
 target_link_libraries(
   ara_com
+  ara_core
   async_bsd_socket_lib
 )
+
+if(ARA_COM_USE_VSOMEIP)
+  target_include_directories(
+    ara_com
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+
+  target_link_directories(
+    ara_com
+    PUBLIC
+    $<BUILD_INTERFACE:${VSOMEIP_PREFIX}/lib>
+    $<INSTALL_INTERFACE:${VSOMEIP_PREFIX}/lib>
+  )
+
+  target_compile_definitions(
+    ara_com
+    PUBLIC ARA_COM_USE_VSOMEIP=1
+  )
+
+  target_link_libraries(
+    ara_com
+    vsomeip3
+    vsomeip3-sd
+    vsomeip3-e2e
+  )
+endif()
+
+if(ARA_COM_USE_ICEORYX)
+  target_compile_definitions(
+    ara_com
+    PUBLIC ARA_COM_USE_ICEORYX=1
+  )
+
+  target_link_libraries(
+    ara_com
+    iceoryx_posh::iceoryx_posh
+  )
+endif()
+
+if(ARA_COM_USE_CYCLONEDDS)
+  target_compile_definitions(
+    ara_com
+    PUBLIC ARA_COM_USE_CYCLONEDDS=1
+  )
+
+  target_link_libraries(
+    ara_com
+    CycloneDDS::ddsc
+    CycloneDDS-CXX::ddscxx
+  )
+endif()
 
 target_link_libraries(
   ara_exec
@@ -484,58 +795,479 @@ target_link_libraries(
   ara_exec
 )
 
-add_executable(
-  adaptive_autosar
-  ${source_dir}/main.cpp
-  ${source_application_dir}/extended_vehicle.h
-  ${source_application_dir}/extended_vehicle.cpp
-  ${source_application_helper_dir}/argument_configuration.h
-  ${source_application_helper_dir}/argument_configuration.cpp
-  ${source_application_helper_dir}/curl_wrapper.h
-  ${source_application_helper_dir}/curl_wrapper.cpp
-  ${source_application_helper_dir}/network_configuration.h
-  ${source_application_helper_dir}/network_configuration.cpp
-  ${source_application_helper_dir}/rpc_configuration.h
-  ${source_application_helper_dir}/rpc_configuration.cpp
-  ${source_application_helper_dir}/read_data_by_identifier.h
-  ${source_application_helper_dir}/read_data_by_identifier.cpp
-  ${source_application_helper_dir}/memory_cache.h
-  ${source_application_helper_dir}/log_recovery_action.h
-  ${source_application_helper_dir}/log_recovery_action.cpp
-  ${source_application_helper_dir}/fifo_checkpoint_communicator.h
-  ${source_application_helper_dir}/fifo_checkpoint_communicator.cpp
-  ${source_application_doip_dir}/vehicle_id_request_handler.h
-  ${source_application_doip_dir}/vehicle_id_request_handler.cpp
-  ${source_application_doip_dir}/diag_message_handler.h
-  ${source_application_doip_dir}/diag_message_handler.cpp
-  ${source_application_doip_dir}/doip_server.h
-  ${source_application_doip_dir}/doip_server.cpp
-  ${source_application_doip_dir}/doip_client.h
-  ${source_application_doip_dir}/doip_client.cpp
-  ${source_application_doip_dir}/obd_to_doip_converter.h
-  ${source_application_doip_dir}/obd_to_doip_converter.cpp
-  ${source_application_platform_dir}/state_management.h
-  ${source_application_platform_dir}/state_management.cpp
-  ${source_application_platform_dir}/execution_management.h
-  ${source_application_platform_dir}/execution_management.cpp
-  ${source_application_platform_dir}/diagnostic_manager.h
-  ${source_application_platform_dir}/diagnostic_manager.cpp
-  ${source_application_platform_dir}/platform_health_management.h
-  ${source_application_platform_dir}/platform_health_management.cpp
+# Public include roots for installed consumers.
+set(autosar_ap_public_include_roots
+  ${CMAKE_SOURCE_DIR}/src
 )
 
-target_link_libraries(
-  adaptive_autosar
-  libcurl
-  jsoncpp_lib
-  obd_ii_emulator
-  doip_lib
-  arxml
-  ara_exec
-  ara_log
-  ara_diag
-  ara_phm
-)
+foreach(_autosar_target arxml ara_core ara_log ara_com ara_sm ara_exec ara_diag ara_phm ara_per ara_crypto ara_iam ara_tsync ara_ucm)
+  if(TARGET ${_autosar_target})
+    target_include_directories(
+      ${_autosar_target}
+      PUBLIC
+      $<BUILD_INTERFACE:${autosar_ap_public_include_roots}>
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+  endif()
+endforeach()
+
+if(AUTOSAR_AP_BUILD_PLATFORM_APP)
+  add_executable(
+    adaptive_autosar
+    ${source_dir}/main.cpp
+    ${source_application_dir}/extended_vehicle.h
+    ${source_application_dir}/extended_vehicle.cpp
+    ${source_application_helper_dir}/argument_configuration.h
+    ${source_application_helper_dir}/argument_configuration.cpp
+    ${source_application_helper_dir}/network_configuration.h
+    ${source_application_helper_dir}/network_configuration.cpp
+    ${source_application_helper_dir}/rpc_configuration.h
+    ${source_application_helper_dir}/rpc_configuration.cpp
+    ${source_application_helper_dir}/read_data_by_identifier.h
+    ${source_application_helper_dir}/read_data_by_identifier.cpp
+    ${source_application_helper_dir}/memory_cache.h
+    ${source_application_helper_dir}/log_recovery_action.h
+    ${source_application_helper_dir}/log_recovery_action.cpp
+    ${source_application_helper_dir}/fifo_checkpoint_communicator.h
+    ${source_application_helper_dir}/fifo_checkpoint_communicator.cpp
+    ${source_application_doip_dir}/vehicle_id_request_handler.h
+    ${source_application_doip_dir}/vehicle_id_request_handler.cpp
+    ${source_application_doip_dir}/diag_message_handler.h
+    ${source_application_doip_dir}/diag_message_handler.cpp
+    ${source_application_doip_dir}/doip_server.h
+    ${source_application_doip_dir}/doip_server.cpp
+    ${source_application_doip_dir}/doip_client.h
+    ${source_application_doip_dir}/doip_client.cpp
+    ${source_application_doip_dir}/obd_to_doip_converter.h
+    ${source_application_doip_dir}/obd_to_doip_converter.cpp
+    ${source_application_platform_dir}/state_management.h
+    ${source_application_platform_dir}/state_management.cpp
+    ${source_application_platform_dir}/execution_management.h
+    ${source_application_platform_dir}/execution_management.cpp
+    ${source_application_platform_dir}/diagnostic_manager.h
+    ${source_application_platform_dir}/diagnostic_manager.cpp
+    ${source_application_platform_dir}/platform_health_management.h
+    ${source_application_platform_dir}/platform_health_management.cpp
+  )
+
+  target_link_libraries(
+    adaptive_autosar
+    obd_ii_emulator
+    doip_lib
+    arxml
+    ara_exec
+    ara_log
+    ara_diag
+    ara_phm
+  )
+
+  if(ARA_COM_USE_VSOMEIP)
+    target_include_directories(
+      adaptive_autosar
+      PRIVATE
+      ${VSOMEIP_PREFIX}/include
+    )
+  endif()
+endif()
+
+set(has_pubsub_sample_entrypoints OFF)
+if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
+   EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
+  set(has_pubsub_sample_entrypoints ON)
+elseif(AUTOSAR_AP_BUILD_SAMPLES)
+  message(STATUS "AUTOSAR_AP_BUILD_SAMPLES=ON but pubsub sample entrypoints are not present in this tree. Skipping legacy pubsub sample targets.")
+endif()
+
+if(AUTOSAR_AP_BUILD_SAMPLES AND has_pubsub_sample_entrypoints AND (ARA_COM_USE_VSOMEIP OR ARA_COM_USE_CYCLONEDDS))
+  set(pubsub_sample_extra_link_libraries "")
+  set(pubsub_sample_common_sources
+    ${source_sample_ara_com_pubsub_dir}/pubsub_autosar_portable_api.h
+    ${source_sample_ara_com_pubsub_dir}/pubsub_autosar_portable_api.cpp
+    ${source_sample_ara_com_pubsub_dir}/pubsub_common.h
+    ${source_sample_ara_com_pubsub_dir}/pubsub_common.cpp
+  )
+
+  if(ARA_COM_USE_CYCLONEDDS)
+    set(pubsub_dds_idl
+      ${source_sample_ara_com_pubsub_dir}/idl/VehicleStatusFrame.idl)
+    set(pubsub_dds_generated_hpp
+      ${CMAKE_CURRENT_BINARY_DIR}/VehicleStatusFrame.hpp)
+    set(pubsub_dds_generated_cpp
+      ${CMAKE_CURRENT_BINARY_DIR}/VehicleStatusFrame.cpp)
+
+    add_custom_command(
+      OUTPUT
+        ${pubsub_dds_generated_hpp}
+        ${pubsub_dds_generated_cpp}
+      COMMAND ${CMAKE_COMMAND} -E env
+        LD_LIBRARY_PATH=${CYCLONEDDS_PREFIX}/lib:${ICEORYX_PREFIX}/lib:$ENV{LD_LIBRARY_PATH}
+        ${CYCLONEDDS_PREFIX}/bin/idlc
+        -l cxx
+        -fcase-sensitive
+        -I ${source_sample_ara_com_pubsub_dir}/idl
+        ${pubsub_dds_idl}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      DEPENDS ${pubsub_dds_idl}
+      COMMENT "Generate CycloneDDS C++ sample type from IDL"
+      VERBATIM
+    )
+
+    set_source_files_properties(
+      ${pubsub_dds_generated_hpp}
+      ${pubsub_dds_generated_cpp}
+      PROPERTIES GENERATED TRUE
+    )
+
+    add_library(
+      ara_com_pubsub_dds_types
+      STATIC
+      ${pubsub_dds_generated_hpp}
+      ${pubsub_dds_generated_cpp}
+    )
+
+    target_include_directories(
+      ara_com_pubsub_dds_types
+      BEFORE
+      PUBLIC
+      ${CYCLONEDDS_PREFIX}/include/ddscxx
+      ${CYCLONEDDS_PREFIX}/include
+      ${CMAKE_CURRENT_BINARY_DIR}
+    )
+
+    target_link_libraries(
+      ara_com_pubsub_dds_types
+      PUBLIC
+      CycloneDDS::ddsc
+      CycloneDDS-CXX::ddscxx
+    )
+
+    list(APPEND pubsub_sample_extra_link_libraries ara_com_pubsub_dds_types)
+  endif()
+
+  function(configure_pubsub_sample_target target_name)
+    target_link_libraries(
+      ${target_name}
+      ara_core
+      ara_com
+      ara_log
+      ${pubsub_sample_extra_link_libraries}
+    )
+
+    if(ARA_COM_USE_CYCLONEDDS)
+      target_include_directories(
+        ${target_name}
+        BEFORE PRIVATE
+        ${CYCLONEDDS_PREFIX}/include/ddscxx
+        ${CYCLONEDDS_PREFIX}/include
+      )
+    endif()
+
+    if(ARA_COM_USE_VSOMEIP)
+      target_include_directories(
+        ${target_name}
+        SYSTEM PRIVATE
+        ${VSOMEIP_PREFIX}/include
+      )
+    endif()
+
+    if(ARA_COM_ENABLE_ARXML_CODEGEN)
+      add_dependencies(${target_name} ara_com_arxml_codegen)
+      target_include_directories(
+        ${target_name}
+        PRIVATE
+        ${ARA_COM_GENERATED_INCLUDE_DIR}
+      )
+    endif()
+
+  endfunction()
+
+  function(add_pubsub_provider_sample target_name default_event_backend default_zerocopy_backend)
+    add_executable(
+      ${target_name}
+      ${pubsub_sample_common_sources}
+      ${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp
+    )
+
+    target_compile_definitions(
+      ${target_name}
+      PRIVATE
+      PUBSUB_DEFAULT_EVENT_BACKEND=\"${default_event_backend}\"
+      PUBSUB_DEFAULT_ZERO_COPY_BACKEND=\"${default_zerocopy_backend}\"
+    )
+
+    configure_pubsub_sample_target(${target_name})
+  endfunction()
+
+  function(add_pubsub_consumer_sample target_name default_event_backend default_zerocopy_backend)
+    add_executable(
+      ${target_name}
+      ${pubsub_sample_common_sources}
+      ${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp
+    )
+
+    target_compile_definitions(
+      ${target_name}
+      PRIVATE
+      PUBSUB_DEFAULT_EVENT_BACKEND=\"${default_event_backend}\"
+      PUBSUB_DEFAULT_ZERO_COPY_BACKEND=\"${default_zerocopy_backend}\"
+    )
+
+    configure_pubsub_sample_target(${target_name})
+  endfunction()
+
+  if(ARA_COM_USE_VSOMEIP)
+    add_pubsub_provider_sample(
+      ara_com_pubsub_vsomeip_pub_sample
+      someip
+      none
+    )
+    add_pubsub_consumer_sample(
+      ara_com_pubsub_vsomeip_sub_sample
+      someip
+      none
+    )
+  endif()
+
+  if(ARA_COM_USE_VSOMEIP AND ARA_COM_USE_ICEORYX)
+    add_pubsub_provider_sample(
+      ara_com_pubsub_iceoryx_pub_sample
+      someip
+      zerocopy
+    )
+    add_pubsub_consumer_sample(
+      ara_com_pubsub_iceoryx_sub_sample
+      someip
+      zerocopy
+    )
+  endif()
+
+  if(ARA_COM_USE_CYCLONEDDS)
+    add_pubsub_provider_sample(
+      ara_com_pubsub_cyclonedds_pub_sample
+      dds
+      none
+    )
+    add_pubsub_consumer_sample(
+      ara_com_pubsub_cyclonedds_sub_sample
+      dds
+      none
+    )
+  endif()
+
+  set(default_provider_event_backend "")
+  set(default_provider_zerocopy_backend "")
+  if(ARA_COM_USE_VSOMEIP AND ARA_COM_USE_ICEORYX)
+    set(default_provider_event_backend "someip")
+    set(default_provider_zerocopy_backend "zerocopy")
+  elseif(ARA_COM_USE_VSOMEIP)
+    set(default_provider_event_backend "someip")
+    set(default_provider_zerocopy_backend "none")
+  elseif(ARA_COM_USE_CYCLONEDDS)
+    set(default_provider_event_backend "dds")
+    set(default_provider_zerocopy_backend "none")
+  endif()
+
+  if(NOT "${default_provider_event_backend}" STREQUAL "")
+    add_pubsub_provider_sample(
+      ara_com_pubsub_provider_sample
+      ${default_provider_event_backend}
+      ${default_provider_zerocopy_backend}
+    )
+    add_pubsub_consumer_sample(
+      ara_com_pubsub_consumer_sample
+      ${default_provider_event_backend}
+      ${default_provider_zerocopy_backend}
+    )
+  endif()
+
+  if(ARA_COM_USE_VSOMEIP AND ARA_COM_USE_CYCLONEDDS)
+    add_executable(
+      ara_com_pubsub_bridge_someip_to_dds_sample
+      ${pubsub_sample_common_sources}
+      ${source_sample_ara_com_pubsub_dir}/pubsub_bridge_someip_to_dds.cpp
+    )
+    configure_pubsub_sample_target(ara_com_pubsub_bridge_someip_to_dds_sample)
+  endif()
+endif()
+
+# ── Standard AUTOSAR AP ara::com sample applications ──
+function(enable_arxml_codegen_for_target target_name)
+  if(ARA_COM_ENABLE_ARXML_CODEGEN)
+    add_dependencies(${target_name} ara_com_arxml_codegen)
+    target_include_directories(
+      ${target_name}
+      PRIVATE
+      ${ARA_COM_GENERATED_INCLUDE_DIR}
+    )
+  endif()
+endfunction()
+
+set(has_standard_sample_entrypoints OFF)
+if(EXISTS "${source_sample_ara_com_standard_dir}/standard_provider.cpp" AND
+   EXISTS "${source_sample_ara_com_standard_dir}/standard_consumer.cpp" AND
+   EXISTS "${source_sample_ara_com_socketcan_dir}/socketcan_gateway_provider.cpp" AND
+   EXISTS "${source_sample_ara_com_socketcan_dir}/socketcan_gateway_consumer.cpp")
+  set(has_standard_sample_entrypoints ON)
+elseif(AUTOSAR_AP_BUILD_SAMPLES)
+  message(STATUS "AUTOSAR_AP_BUILD_SAMPLES=ON but standard/socketcan sample entrypoints are not present in this tree. Skipping those sample targets.")
+endif()
+
+if(AUTOSAR_AP_BUILD_SAMPLES AND has_standard_sample_entrypoints AND ARA_COM_USE_VSOMEIP)
+  add_executable(
+    ara_com_standard_provider_sample
+    ${source_sample_ara_com_standard_dir}/standard_provider.cpp
+  )
+
+  target_link_libraries(
+    ara_com_standard_provider_sample
+    ara_core
+    ara_com
+  )
+
+  target_include_directories(
+    ara_com_standard_provider_sample
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+  enable_arxml_codegen_for_target(ara_com_standard_provider_sample)
+
+  add_executable(
+    ara_com_standard_consumer_sample
+    ${source_sample_ara_com_standard_dir}/standard_consumer.cpp
+  )
+
+  target_link_libraries(
+    ara_com_standard_consumer_sample
+    ara_core
+    ara_com
+  )
+
+  target_include_directories(
+    ara_com_standard_consumer_sample
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+  enable_arxml_codegen_for_target(ara_com_standard_consumer_sample)
+
+  add_executable(
+    ara_com_socketcan_provider_sample
+    ${source_sample_ara_com_socketcan_dir}/socketcan_gateway_provider.cpp
+    ${source_sample_ara_com_socketcan_dir}/socketcan_receiver.cpp
+    ${source_sample_ara_com_socketcan_dir}/mock_can_receiver.cpp
+    ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.cpp
+  )
+
+  target_link_libraries(
+    ara_com_socketcan_provider_sample
+    ara_core
+    ara_com
+  )
+
+  target_include_directories(
+    ara_com_socketcan_provider_sample
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+  enable_arxml_codegen_for_target(ara_com_socketcan_provider_sample)
+
+  add_executable(
+    ara_com_socketcan_consumer_sample
+    ${source_sample_ara_com_socketcan_dir}/socketcan_gateway_consumer.cpp
+  )
+
+  target_link_libraries(
+    ara_com_socketcan_consumer_sample
+    ara_core
+    ara_com
+  )
+
+  target_include_directories(
+    ara_com_socketcan_consumer_sample
+    PRIVATE
+    ${VSOMEIP_PREFIX}/include
+  )
+  enable_arxml_codegen_for_target(ara_com_socketcan_consumer_sample)
+endif()
+
+set(has_ecu_showcase_entrypoints OFF)
+if(EXISTS "${source_sample_ecu_showcase_dir}/can_to_dds_gateway.cpp" AND
+   EXISTS "${source_sample_ecu_showcase_dir}/someip_to_dds_bridge.cpp" AND
+   EXISTS "${source_sample_ecu_showcase_dir}/can_someip_fusion_to_dds.cpp" AND
+   EXISTS "${source_sample_ecu_showcase_dir}/ecu_reference_gateway.cpp")
+  set(has_ecu_showcase_entrypoints ON)
+elseif(AUTOSAR_AP_BUILD_SAMPLES)
+  message(STATUS "AUTOSAR_AP_BUILD_SAMPLES=ON but ECU showcase entrypoints are not present in this tree. Skipping ECU sample targets.")
+endif()
+
+if(AUTOSAR_AP_BUILD_SAMPLES AND has_ecu_showcase_entrypoints AND ARA_COM_USE_CYCLONEDDS)
+  set(ecu_showcase_shared_sources
+    ${source_sample_ecu_showcase_dir}/ecu_sample_common.h
+    ${source_sample_ecu_showcase_dir}/ecu_sample_common.cpp
+    ${source_sample_ara_com_pubsub_dir}/pubsub_autosar_portable_api.h
+    ${source_sample_ara_com_pubsub_dir}/pubsub_autosar_portable_api.cpp
+    ${source_sample_ara_com_pubsub_dir}/pubsub_common.h
+    ${source_sample_ara_com_pubsub_dir}/pubsub_common.cpp
+  )
+
+  set(ecu_showcase_can_sources
+    ${source_sample_ecu_showcase_dir}/ecu_sample_can_common.cpp
+    ${source_sample_ara_com_socketcan_dir}/can_frame_receiver.h
+    ${source_sample_ara_com_socketcan_dir}/socketcan_receiver.h
+    ${source_sample_ara_com_socketcan_dir}/socketcan_receiver.cpp
+    ${source_sample_ara_com_socketcan_dir}/mock_can_receiver.h
+    ${source_sample_ara_com_socketcan_dir}/mock_can_receiver.cpp
+  )
+
+  function(configure_ecu_showcase_target target_name)
+    configure_pubsub_sample_target(${target_name})
+    target_link_libraries(
+      ${target_name}
+      ara_exec
+      ara_phm
+      ara_per
+    )
+  endfunction()
+
+  add_executable(
+    ara_ecu_can_to_dds_gateway_sample
+    ${ecu_showcase_shared_sources}
+    ${ecu_showcase_can_sources}
+    ${source_sample_ecu_showcase_dir}/can_to_dds_gateway.cpp
+    ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.h
+    ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.cpp
+  )
+  configure_ecu_showcase_target(ara_ecu_can_to_dds_gateway_sample)
+
+  if(ARA_COM_USE_VSOMEIP)
+    add_executable(
+      ara_ecu_someip_to_dds_bridge_sample
+      ${ecu_showcase_shared_sources}
+      ${source_sample_ecu_showcase_dir}/someip_to_dds_bridge.cpp
+    )
+    configure_ecu_showcase_target(ara_ecu_someip_to_dds_bridge_sample)
+
+    add_executable(
+      ara_ecu_can_someip_fusion_to_dds_sample
+      ${ecu_showcase_shared_sources}
+      ${ecu_showcase_can_sources}
+      ${source_sample_ecu_showcase_dir}/can_someip_fusion_to_dds.cpp
+      ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.h
+      ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.cpp
+    )
+    configure_ecu_showcase_target(ara_ecu_can_someip_fusion_to_dds_sample)
+
+    # ECU reference sample: integrated CAN + SOME/IP ingress to DDS egress
+    add_executable(
+      ara_ecu_reference_gateway_sample
+      ${ecu_showcase_shared_sources}
+      ${ecu_showcase_can_sources}
+      ${source_sample_ecu_showcase_dir}/ecu_reference_gateway.cpp
+      ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.h
+      ${source_sample_ara_com_socketcan_dir}/vehicle_status_can_decoder.cpp
+    )
+    configure_ecu_showcase_target(ara_ecu_reference_gateway_sample)
+  endif()
+endif()
 
 if(build_tests)
   enable_testing()
@@ -594,6 +1326,8 @@ if(build_tests)
     ${test_ara_core_dir}/error_domain_test.cpp
     ${test_ara_core_dir}/error_code_test.cpp
     ${test_ara_core_dir}/instance_specifier_test.cpp
+    ${test_ara_core_dir}/future_test.cpp
+    ${test_ara_core_dir}/initialization_test.cpp
     ${test_ara_diag_dir}/obd_communication_test.cpp
     ${test_ara_diag_dir}/meta_info_test.cpp
     ${test_ara_diag_dir}/cancellation_handler_test.cpp
@@ -626,6 +1360,31 @@ if(build_tests)
     ${test_ara_phm_supervisors_dir}/alive_supervision_test.cpp
     ${test_ara_phm_supervisors_dir}/deadline_supervision_test.cpp
     ${test_ara_phm_supervisors_dir}/global_supervision_test.cpp
+    ${test_ara_phm_dir}/health_channel_test.cpp
+    ${test_ara_com_dir}/com_error_domain_test.cpp
+    ${test_ara_com_dir}/types_test.cpp
+    ${test_ara_com_dir}/sample_ptr_test.cpp
+    ${test_ara_com_dir}/serialization_test.cpp
+    ${test_ara_com_dir}/mock_event_binding.h
+    ${test_ara_com_dir}/event_test.cpp
+    ${test_ara_com_dir}/method_test.cpp
+    ${test_ara_com_dir}/field_test.cpp
+    ${test_ara_com_dir}/service_proxy_base_test.cpp
+    ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
+    ${test_ara_com_e2e_dir}/e2e_event_test.cpp
+    ${test_ara_exec_dir}/signal_handler_test.cpp
+    ${test_ara_per_dir}/per_error_domain_test.cpp
+    ${test_ara_per_dir}/key_value_storage_test.cpp
+    ${test_ara_per_dir}/file_storage_test.cpp
+    ${test_ara_per_dir}/read_accessor_test.cpp
+    ${test_ara_crypto_dir}/crypto_error_domain_test.cpp
+    ${test_ara_crypto_dir}/crypto_provider_test.cpp
+    ${test_ara_iam_dir}/iam_error_domain_test.cpp
+    ${test_ara_iam_dir}/access_control_test.cpp
+    ${test_ara_tsync_dir}/tsync_error_domain_test.cpp
+    ${test_ara_tsync_dir}/time_sync_client_test.cpp
+    ${test_ara_ucm_dir}/ucm_error_domain_test.cpp
+    ${test_ara_ucm_dir}/update_manager_test.cpp
   )
 
   target_link_libraries(
@@ -643,9 +1402,131 @@ if(build_tests)
     ara_sm
     ara_phm
     ara_diag
+    ara_per
+    ara_crypto
+    ara_iam
+    ara_tsync
+    ara_ucm
   )
+
+  if(ARA_COM_USE_VSOMEIP)
+    target_include_directories(
+      ara_unit_test
+      PRIVATE
+      ${VSOMEIP_PREFIX}/include
+    )
+  endif()
 
   include(GoogleTest)
   gtest_discover_tests(arxml_unit_test)
   gtest_discover_tests(ara_unit_test)
  endif()
+
+########################################################################
+#
+# Install / package export:
+
+set(autosar_ap_install_targets
+  arxml
+  ara_core
+  ara_log
+  ara_com
+  ara_sm
+  ara_exec
+  ara_diag
+  ara_phm
+  ara_per
+  ara_crypto
+  ara_iam
+  ara_tsync
+  ara_ucm
+)
+
+if(TARGET async_bsd_socket_lib)
+  list(APPEND autosar_ap_install_targets async_bsd_socket_lib)
+endif()
+
+install(
+  TARGETS ${autosar_ap_install_targets}
+  EXPORT AdaptiveAutosarAPTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if(TARGET adaptive_autosar)
+  install(
+    TARGETS adaptive_autosar
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+endif()
+
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/src/ara
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING
+  PATTERN "*.h"
+  PATTERN "*.hpp"
+)
+
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/src/arxml
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING
+  PATTERN "*.h"
+  PATTERN "*.hpp"
+)
+
+if(DEFINED ASYNC_BSD_SOCKET_LIB_SOURCE_DIR AND EXISTS "${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include")
+  install(
+    DIRECTORY ${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+endif()
+
+if(AUTOSAR_AP_INSTALL_TOOLS)
+  install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/tools/arxml_generator
+    DESTINATION tools
+  )
+  install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/tools/sample_runner
+    DESTINATION tools
+  )
+endif()
+
+if(AUTOSAR_AP_INSTALL_USER_APP_TEMPLATE AND EXISTS "${CMAKE_SOURCE_DIR}/user_apps/CMakeLists.txt")
+  install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/user_apps/
+    DESTINATION user_apps
+  )
+endif()
+
+set(ADAPTIVE_AUTOSAR_AP_CMAKE_INSTALL_DIR
+  "${CMAKE_INSTALL_LIBDIR}/cmake/AdaptiveAutosarAP")
+
+configure_package_config_file(
+  ${CMAKE_SOURCE_DIR}/cmake/AdaptiveAutosarAPConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/AdaptiveAutosarAPConfig.cmake
+  INSTALL_DESTINATION ${ADAPTIVE_AUTOSAR_AP_CMAKE_INSTALL_DIR}
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/AdaptiveAutosarAPConfigVersion.cmake
+  VERSION 0.1.0
+  COMPATIBILITY SameMajorVersion
+)
+
+install(
+  FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/AdaptiveAutosarAPConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/AdaptiveAutosarAPConfigVersion.cmake
+  DESTINATION ${ADAPTIVE_AUTOSAR_AP_CMAKE_INSTALL_DIR}
+)
+
+install(
+  EXPORT AdaptiveAutosarAPTargets
+  FILE AdaptiveAutosarAPTargets.cmake
+  NAMESPACE AdaptiveAutosarAP::
+  DESTINATION ${ADAPTIVE_AUTOSAR_AP_CMAKE_INSTALL_DIR}
+)

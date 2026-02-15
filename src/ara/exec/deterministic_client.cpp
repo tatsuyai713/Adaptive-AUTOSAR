@@ -16,15 +16,17 @@ namespace ara
         helper::AtomicOptional<uint64_t> DeterministicClient::mSeed;
         uint64_t DeterministicClient::mRandomNumber;
         DeterministicClient::TimeStamp  DeterministicClient::mActivationTime;
+        std::atomic_bool DeterministicClient::mTerminationRequested{false};
 
-        DeterministicClient::DeterministicClient() 
+        DeterministicClient::DeterministicClient() : mLifecycleState{ActivationReturnType::kRegisterService}
         {
-            ++mCounter;
+            // Atomically increment and check whether this is the first instance
+            uint8_t _previousCount = mCounter.fetch_add(1, std::memory_order_acq_rel);
 
-            // Check whether the constructing object is the first instance or not
-            if (mCounter == 1)
+            if (_previousCount == 0)
             {
                 mRunning = true;
+                mTerminationRequested = false;
 
                 mFuture =
                     std::async(
@@ -53,12 +55,50 @@ namespace ara
             }
         }
 
+        ActivationReturnType DeterministicClient::advanceLifecycle()
+        {
+            ActivationReturnType _current = mLifecycleState;
+
+            switch (mLifecycleState)
+            {
+            case ActivationReturnType::kRegisterService:
+                mLifecycleState = ActivationReturnType::kServiceDiscovery;
+                break;
+            case ActivationReturnType::kServiceDiscovery:
+                mLifecycleState = ActivationReturnType::kInit;
+                break;
+            case ActivationReturnType::kInit:
+                mLifecycleState = ActivationReturnType::kRun;
+                break;
+            case ActivationReturnType::kRun:
+            case ActivationReturnType::kTerminate:
+                // kRun stays in kRun; kTerminate stays in kTerminate
+                break;
+            }
+
+            return _current;
+        }
+
+        void DeterministicClient::RequestTerminate() noexcept
+        {
+            mTerminationRequested = true;
+            mCycleConditionVariable.notify_all();
+        }
+
         core::Result<ActivationReturnType> DeterministicClient::WaitForActivation()
         {
             std::unique_lock<std::mutex> _lock(mCycleMutex);
             mCycleConditionVariable.wait(_lock);
-            core::Result<ActivationReturnType> _result{ActivationReturnType::kRun};
-            
+
+            if (mTerminationRequested || !mRunning)
+            {
+                mLifecycleState = ActivationReturnType::kTerminate;
+                core::Result<ActivationReturnType> _result{ActivationReturnType::kTerminate};
+                return _result;
+            }
+
+            ActivationReturnType _activationType = advanceLifecycle();
+            core::Result<ActivationReturnType> _result{_activationType};
             return _result;
         }
 
@@ -85,21 +125,24 @@ namespace ara
             TimeStamp _nextActivationTime = mActivationTime + cCycleDuration;
             core::Result<TimeStamp> _result{_nextActivationTime};
 
-            return _nextActivationTime;
+            return _result;
         }
 
         DeterministicClient::~DeterministicClient()
         {
-            // Check whether the desctructing object is the last instance or not
-            if (mCounter == 1)
+            // Atomically decrement and check whether this is the last instance
+            uint8_t _previousCount = mCounter.fetch_sub(1, std::memory_order_acq_rel);
+
+            if (_previousCount == 1)
             {
                 mRunning = false;
+
+                // Wake up any blocked WaitForActivation callers
+                mCycleConditionVariable.notify_all();
 
                 // Wait for the cycling thread to exit gracefully
                 mFuture.get();
             }
-
-            --mCounter;
         }
     }
 }

@@ -32,5 +32,36 @@ namespace ara
             _activationTime = _deterministicClient.GetActivationTime();
             EXPECT_GE(_activationTime.Value(), _nextActivationTime.Value());
         }
+
+        TEST(DeterministicClientTest, LifecycleProgression)
+        {
+            DeterministicClient _client;
+
+            auto _result1 = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kRegisterService, _result1.Value());
+
+            auto _result2 = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kServiceDiscovery, _result2.Value());
+
+            auto _result3 = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kInit, _result3.Value());
+
+            auto _result4 = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kRun, _result4.Value());
+
+            // kRun should repeat
+            auto _result5 = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kRun, _result5.Value());
+        }
+
+        TEST(DeterministicClientTest, RequestTerminateMethod)
+        {
+            DeterministicClient _client;
+
+            DeterministicClient::RequestTerminate();
+
+            auto _result = _client.WaitForActivation();
+            EXPECT_EQ(ActivationReturnType::kTerminate, _result.Value());
+        }
     }
 }

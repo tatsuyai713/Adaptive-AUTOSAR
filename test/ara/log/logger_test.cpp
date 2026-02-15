@@ -75,5 +75,35 @@ namespace ara
                 _logStreamString.find(cCtxDescription) != std::string::npos;
             ASSERT_TRUE(_hasDescription);
         }
+
+        TEST(LoggerTest, RuntimeLogLevelCanBeUpdated)
+        {
+            Logger _logger = Logger::CreateLogger(
+                "CTX_RUNTIME",
+                "Runtime level test",
+                LogLevel::kOff);
+
+            EXPECT_FALSE(_logger.IsEnabled(LogLevel::kFatal));
+
+            _logger.SetLogLevel(LogLevel::kInfo);
+            EXPECT_EQ(_logger.GetLogLevel(), LogLevel::kInfo);
+            EXPECT_TRUE(_logger.IsEnabled(LogLevel::kFatal));
+            EXPECT_TRUE(_logger.IsEnabled(LogLevel::kInfo));
+            EXPECT_FALSE(_logger.IsEnabled(LogLevel::kVerbose));
+        }
+
+        TEST(LoggerTest, ContextMetadataAccessors)
+        {
+            const std::string cCtxId{"CTX_META"};
+            const std::string cCtxDescription{"Metadata accessor test"};
+
+            Logger _logger = Logger::CreateLogger(
+                cCtxId,
+                cCtxDescription,
+                LogLevel::kWarn);
+
+            EXPECT_EQ(_logger.GetContextId(), cCtxId);
+            EXPECT_EQ(_logger.GetContextDescription(), cCtxDescription);
+        }
     }
 }

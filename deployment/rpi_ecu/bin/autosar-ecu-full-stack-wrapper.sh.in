@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEFAULT_AUTOSAR_AP_PREFIX="__AUTOSAR_AP_PREFIX__"
+DEFAULT_USER_APPS_BUILD_DIR="__USER_APPS_BUILD_DIR__"
+DEFAULT_ENV_FILE="/etc/default/autosar-ecu-full-stack"
+
+if [[ -f "${DEFAULT_ENV_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  source "${DEFAULT_ENV_FILE}"
+fi
+
+: "${AUTOSAR_AP_PREFIX:=${DEFAULT_AUTOSAR_AP_PREFIX}}"
+: "${AUTOSAR_ECU_APP_BIN:=${DEFAULT_USER_APPS_BUILD_DIR}/src/apps/feature/ecu/autosar_user_tpl_ecu_full_stack}"
+: "${AUTOSAR_ECU_CAN_BACKEND:=socketcan}"
+: "${AUTOSAR_ECU_CAN_IF:=can0}"
+: "${AUTOSAR_ECU_ENABLE_CAN:=true}"
+: "${AUTOSAR_ECU_ENABLE_SOMEIP:=true}"
+: "${AUTOSAR_ECU_REQUIRE_SOMEIP:=false}"
+: "${AUTOSAR_ECU_REQUIRE_BOTH:=false}"
+: "${AUTOSAR_ECU_ENABLE_ZEROCOPY_LOCAL:=false}"
+: "${AUTOSAR_ECU_ZEROCOPY_RUNTIME_NAME:=autosar_user_tpl_ecu_full_stack}"
+: "${AUTOSAR_ECU_PUBLISH_PERIOD_MS:=50}"
+: "${AUTOSAR_ECU_SOURCE_STALE_MS:=500}"
+: "${AUTOSAR_ECU_SERVICE_WAIT_MS:=5000}"
+: "${AUTOSAR_ECU_DDS_DOMAIN_ID:=0}"
+: "${AUTOSAR_ECU_DDS_TOPIC:=adaptive_autosar/sample/ara_com_pubsub/VehicleStatusFrame}"
+: "${AUTOSAR_ECU_LOG_EVERY:=20}"
+: "${AUTOSAR_ECU_STORAGE_SYNC_EVERY:=100}"
+
+if [[ ! -x "${AUTOSAR_ECU_APP_BIN}" ]]; then
+  echo "[ERROR] ECU app binary not found: ${AUTOSAR_ECU_APP_BIN}" >&2
+  exit 1
+fi
+
+if [[ -z "${VSOMEIP_CONFIGURATION:-}" ]]; then
+  for candidate in \
+    "${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json" \
+    "${DEFAULT_AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json"; do
+    if [[ -f "${candidate}" ]]; then
+      export VSOMEIP_CONFIGURATION="${candidate}"
+      break
+    fi
+  done
+fi
+
+extra_libdirs=""
+for candidate in \
+  "${AUTOSAR_AP_PREFIX}/lib" \
+  "${AUTOSAR_AP_PREFIX}/lib64" \
+  "/opt/vsomeip/lib" \
+  "/opt/cyclonedds/lib" \
+  "/opt/iceoryx/lib"; do
+  if [[ -d "${candidate}" ]]; then
+    if [[ -n "${extra_libdirs}" ]]; then
+      extra_libdirs="${extra_libdirs}:"
+    fi
+    extra_libdirs="${extra_libdirs}${candidate}"
+  fi
+done
+export LD_LIBRARY_PATH="${extra_libdirs}:${LD_LIBRARY_PATH:-}"
+
+exec "${AUTOSAR_ECU_APP_BIN}" \
+  --can-backend="${AUTOSAR_ECU_CAN_BACKEND}" \
+  --ifname="${AUTOSAR_ECU_CAN_IF}" \
+  --enable-can="${AUTOSAR_ECU_ENABLE_CAN}" \
+  --enable-someip="${AUTOSAR_ECU_ENABLE_SOMEIP}" \
+  --require-someip="${AUTOSAR_ECU_REQUIRE_SOMEIP}" \
+  --require-both-sources="${AUTOSAR_ECU_REQUIRE_BOTH}" \
+  --enable-zerocopy-local="${AUTOSAR_ECU_ENABLE_ZEROCOPY_LOCAL}" \
+  --zerocopy-runtime-name="${AUTOSAR_ECU_ZEROCOPY_RUNTIME_NAME}" \
+  --publish-period-ms="${AUTOSAR_ECU_PUBLISH_PERIOD_MS}" \
+  --source-stale-ms="${AUTOSAR_ECU_SOURCE_STALE_MS}" \
+  --service-wait-ms="${AUTOSAR_ECU_SERVICE_WAIT_MS}" \
+  --dds-domain-id="${AUTOSAR_ECU_DDS_DOMAIN_ID}" \
+  --dds-topic="${AUTOSAR_ECU_DDS_TOPIC}" \
+  --log-every="${AUTOSAR_ECU_LOG_EVERY}" \
+  --storage-sync-every="${AUTOSAR_ECU_STORAGE_SYNC_EVERY}" \
+  "$@"

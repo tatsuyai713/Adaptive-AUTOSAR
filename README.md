@@ -1,68 +1,193 @@
 # Adaptive-AUTOSAR
 ![example workflow](https://github.com/langroodi/Adaptive-AUTOSAR/actions/workflows/cmake.yml/badge.svg)
 
-Adaptive AUTOSAR is a simulated _Adaptive Platform_ environment over Linux defined by [AUTOSAR](https://www.autosar.org/standards/adaptive-platform/). The goal of this project is to implement the interfaces defined by the standard for educational purposes. For more information, please refer to [the project Wiki](https://github.com/langroodi/Adaptive-AUTOSAR/wiki).
+Linux-oriented educational implementation of Adaptive AUTOSAR style APIs.
 
-![Simulation flow diagram](https://github.com/langroodi/Adaptive-AUTOSAR/blob/master/doc/simulation_flow_diagram.png)
+Language:
+- English: `README.md`
+- Japanese: `README.ja.md`
 
-## Dependecies
+## Scope and Version
+- ARXML schema baseline in this repository: `http://autosar.org/schema/r4.0` (`autosar_00050.xsd`).
+- This repository is an educational implementation of Adaptive AUTOSAR style APIs and behavior subsets.
+- This repository does not claim official AUTOSAR conformance certification.
 
-It will be tried to use minimum number of dependencies as much as possible. The current dependencies are as follows:
+## Quick Start (Build -> Install -> User App Build/Run)
+The following commands were validated in Docker on **2026-02-15**.
 
-- Cpp Standard: 14
-- Cmake mimimum version: 3.14
-- Compiler:
-    - GCC C/C++ Compiler (x86-64 Linux GNU): 11.2.0; or
-    - Clang C/C++ Compiler (x86-64 PC Linux GNU): 14.0.0
-- Google Test: v1.12.1
-- [pugixml 1.13](https://pugixml.org) (3rd party C++ libary)
-- [libcurl 7.88.0](https://github.com/curl/curl) (3rd party C libary)
-- [JsonCpp 1.9.5](https://github.com/open-source-parsers/jsoncpp) (3rd party C++ library)
-- [Async BSD Socket Lib](https://github.com/langroodi/Async-BSD-Socket-Lib) (in-house C++ libary)
-- [OBD-II Emulator](https://github.com/langroodi/OBD-II-Emulator) (in-house C++ emulator)
-- [DoIP Lib](https://github.com/langroodi/DoIP-Lib) (in-house C++ libary)
+### Prerequisites
+- C++14 compiler
+- CMake >= 3.14
+- Python3 + `PyYAML`
+- OpenSSL development package (`libcrypto`)
+- Installed middleware (default paths used by this repo):
+  - vSomeIP: `/opt/vsomeip`
+  - iceoryx: `/opt/iceoryx`
+  - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
-## Build
+### 1) Build and install AUTOSAR AP runtime libraries
+Use `/tmp` first (no root privilege required):
 
-### Compiler debug configuration
-
-- GCC:
 ```bash
-cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/x86_64-linux-gnu-gcc-11 -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/x86_64-linux-gnu-g++-11 -S . -B build
-```
-- Clang:
-```bash
-cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/clang-14 -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/clang++-14 -S . -B build
-```
-
-### Compiling
-```bash
-cmake --build build
+./scripts/build_and_install_autosar_ap.sh \
+  --prefix /tmp/autosar_ap \
+  --build-dir build-install-autosar-ap
 ```
 
-### Unit tests running
+If you want the production-like layout:
+
 ```bash
-cd build && ctest
+sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
 ```
 
-## Run
-To run the Adaptive AUTOSAR simulation, launch the following executable by passing the execution manifest file path as the argument:
+### 2) Build user apps against installed runtime only
+
 ```bash
-./build/adaptive_autosar ./configuration/execution_manifest.arxml ./configuration/extended_vehicle_manifest.arxml ./configuration/diagnostic_manager_manifest.arxml ./configuration/health_monitoring_manifest.arxml
+./scripts/build_user_apps_from_opt.sh \
+  --prefix /tmp/autosar_ap \
+  --source-dir /tmp/autosar_ap/user_apps \
+  --build-dir build-user-apps-opt
 ```
-Then the executable will ask for:
 
-1. First, the VCC API key;
-2. And then the test access OAuth 2.0 token;
+### 3) Run default smoke apps via script
 
-in order to connect to the [Volvo Extended Vehicle](https://developer.volvocars.com/apis/extended-vehicle/v1/overview/) RESTful API. To create the API key and the access token, you can follow [this tutorial](https://developer.volvocars.com/apis/docs/getting-started/).
+```bash
+./scripts/build_user_apps_from_opt.sh \
+  --prefix /tmp/autosar_ap \
+  --source-dir /tmp/autosar_ap/user_apps \
+  --build-dir build-user-apps-opt-run \
+  --run
+```
 
-> ⚠️ Due to security reasons, the terminal echo is temporarily disabled while typing the key and the token.
+This executes:
+- `autosar_user_minimal_runtime`
+- `autosar_user_per_phm_demo`
+
+### 4) Run additional app templates manually (optional)
+Example:
+
+```bash
+./build-user-apps-opt/src/apps/feature/runtime/autosar_user_tpl_runtime_lifecycle
+./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
+```
+
+### Raspberry Pi ECU profile (Linux + systemd)
+The repository includes a deployment profile to run a Raspberry Pi machine as a
+prototype ECU.
+
+```bash
+sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
+  --prefix /opt/autosar_ap \
+  --runtime-build-dir build-rpi-autosar-ap \
+  --user-app-build-dir /opt/autosar_ap/user_apps_build
+
+sudo ./scripts/setup_socketcan_interface.sh --ifname can0 --bitrate 500000
+sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-build-dir /opt/autosar_ap/user_apps_build --enable
+
+./scripts/verify_rpi_ecu_profile.sh \
+  --prefix /opt/autosar_ap \
+  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --can-backend mock
+```
+
+Detailed runbook:
+- `deployment/rpi_ecu/README.md`
+
+### Porting Vector/ETAS/EB-oriented app assets
+This repository can be used to rebuild vendor-developed C++ app assets at source
+level and validate communication with other units.
+
+Porting tutorial:
+- `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`
+
+## Implemented Feature Matrix (Against AUTOSAR AP Scope)
+Status meanings:
+- `Implemented (subset)`: Implemented in this repo, but not full AUTOSAR feature-complete.
+- `Not implemented`: Not provided in this repo currently.
+
+| AUTOSAR AP area | Status | Available in this repo | Missing / Notes |
+| --- | --- | --- | --- |
+| `ara::core` | Implemented (subset) | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, runtime init/deinit, initialization-state query API | Full standard API surface is not complete |
+| `ara::log` | Implemented (subset) | Logging framework, logger, sink abstraction (console/file), runtime log-level override/query API | Limited configuration/features compared to commercial stacks |
+| `ara::com` common API | Implemented (subset) | Event/Method/Field wrappers, Proxy/Skeleton base, Subscribe/Unsubscribe, receive/state handlers, sample pointer abstractions, concurrent `StartFindService`/handle-aware `StopFindService`, capability-aware Field behavior | Generated API coverage and SWS corner cases are partial |
+| `ara::com` SOME/IP transport | Implemented (subset) | SOME/IP SD, pub/sub, RPC paths over vSomeIP backend | Not all SOME/IP/AP options and edge behavior are covered |
+| `ara::com` DDS transport | Implemented (subset) | DDS pub/sub via Cyclone DDS wrappers (`ara::com::dds`) | DDS QoS/profile coverage is partial |
+| `ara::com` zero-copy transport | Implemented (subset) | Zero-copy pub/sub via iceoryx wrappers (`ara::com::zerocopy`) | Zero-copy is backend-mapped implementation, not full AUTOSAR transport standardization scope |
+| `ara::com` E2E | Implemented (subset) | E2E Profile11 and event decorators | Other E2E profiles are not implemented |
+| `ara::exec` | Implemented (subset) | Execution/state client-server helpers, signal handler, worker thread utilities, execution-state change callback API | Full EM/Process orchestration behaviors are partial |
+| `ara::diag` | Implemented (subset) | UDS/DoIP-oriented components, routing and debouncing helpers, monitor FDC-threshold action support | Not full Diagnostic Manager feature set |
+| `ara::phm` | Implemented (subset) | Health channel, supervision primitives | Full PHM integration scope is partial |
+| `ara::per` | Implemented (subset) | Key-value/file storage abstractions and APIs | Production-grade persistence policies are partial |
+| `ara::sm` | Implemented (subset) | State/trigger utility abstractions | Not full AUTOSAR SM functional cluster |
+| ARXML tooling | Implemented (subset) | YAML -> ARXML, ARXML -> ara::com binding header generator | Supports repository scope and extensions, not full ARXML universe |
+| `ara::crypto` | Implemented (subset) | Error domain, SHA-256 digest API, random-byte API | Minimal primitives only (no key management/PKI stack yet) |
+| `ara::iam` | Implemented (subset) | In-memory IAM policy engine (subject/resource/action, wildcard rules), error domain | Policy persistence and platform IAM integration are not implemented |
+| `ara::ucm` | Implemented (subset) | UCM error domain and update-session manager (`Prepare/Stage/Verify/Activate/Rollback/Cancel`), SHA-256 payload verification, state/progress callbacks, per-cluster active-version tracking with downgrade rejection | Simplified software update model (no installer daemon, campaign management, secure boot integration) |
+| Time sync (`ara::tsync`) | Implemented (subset) | Time sync client with reference update, synchronized time conversion, offset/state APIs, error domain | No network time protocol daemon integration yet |
+| Raspberry Pi ECU deployment profile | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
+
+## User App Templates (Installed as `/opt|/tmp/autosar_ap/user_apps`)
+- Basic:
+  - `autosar_user_minimal_runtime`
+  - `autosar_user_exec_signal_template`
+  - `autosar_user_per_phm_demo`
+- Communication:
+  - `autosar_user_com_someip_provider_template`
+  - `autosar_user_com_someip_consumer_template`
+  - `autosar_user_com_zerocopy_pub_template`
+  - `autosar_user_com_zerocopy_sub_template`
+  - `autosar_user_com_dds_pub_template`
+  - `autosar_user_com_dds_sub_template`
+- Feature:
+  - `autosar_user_tpl_runtime_lifecycle`
+  - `autosar_user_tpl_can_socketcan_receiver`
+  - `autosar_user_tpl_ecu_full_stack`
+  - `autosar_user_tpl_ecu_someip_source`
+
+See also:
+- `user_apps/README.md`
+- `user_apps/tutorials/README.ja.md`
+- `deployment/rpi_ecu/README.md`
+- `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (porting Vector/ETAS/EB-oriented app assets)
+
+## ARXML and Code Generation
+### YAML -> ARXML
+
+```bash
+python3 tools/arxml_generator/generate_arxml.py \
+  --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+  --output /tmp/pubsub.generated.arxml \
+  --overwrite \
+  --print-summary
+```
+
+### ARXML -> ara::com binding header
+
+```bash
+python3 tools/arxml_generator/generate_ara_com_binding.py \
+  --input /tmp/pubsub.generated.arxml \
+  --output /tmp/vehicle_status_manifest_binding.h \
+  --namespace sample::vehicle_status::generated \
+  --provided-service-short-name VehicleStatusProviderInstance \
+  --provided-event-group-short-name VehicleStatusEventGroup
+```
+
+Detailed manuals:
+- `tools/arxml_generator/README.md`
+- `tools/arxml_generator/YAML_MANUAL.ja.md`
+
+## GitHub Actions Coverage
+Workflow: `.github/workflows/cmake.yml`
+
+Current CI verifies:
+1. Middleware dependency build/install (vSomeIP, iceoryx, Cyclone DDS)
+2. Full configure/build (`build_tests=ON`, all backends ON, samples OFF)
+3. Unit tests (`ctest`) with required runtime library paths
+4. ARXML generation and ARXML-based binding generation checks
+5. Split install workflow (`build_and_install_autosar_ap.sh`)
+6. External user app build and run against installed package (`build_user_apps_from_opt.sh --run`)
 
 ## Documentation
-
-Please refer to [the project GitHub pages](https://langroodi.github.io/Adaptive-AUTOSAR/) powered by Doxygen.
-
-## Contribution
-
-Please refer to [the contributing page](https://github.com/langroodi/Adaptive-AUTOSAR/blob/master/CONTRIBUTING.md).
+- Doxygen pages: https://langroodi.github.io/Adaptive-AUTOSAR/
+- Project Wiki: https://github.com/langroodi/Adaptive-AUTOSAR/wiki
+- Contributing guide: `CONTRIBUTING.md`

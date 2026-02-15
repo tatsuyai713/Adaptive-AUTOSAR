@@ -88,6 +88,14 @@ namespace ara
 
             /// @brief Stop offering monitoring requests handling
             void StopOffer();
+
+            /// @brief Query whether monitor offering is currently enabled
+            /// @returns True if Offer() was called and not stopped
+            bool IsOffered() const noexcept;
+
+            /// @brief Query whether an Event object is attached to this monitor
+            /// @returns True if AttachEvent() has been called
+            bool HasAttachedEvent() const noexcept;
         };
     }
 }

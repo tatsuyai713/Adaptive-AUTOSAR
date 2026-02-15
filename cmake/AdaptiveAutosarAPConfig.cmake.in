@@ -1,0 +1,28 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Optional transport dependencies are resolved only when enabled in the
+# installed AUTOSAR AP build.
+if(@ARA_COM_USE_ICEORYX@)
+  if(EXISTS "@ICEORYX_PREFIX@/lib/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "@ICEORYX_PREFIX@/lib/cmake")
+  endif()
+  find_dependency(iceoryx_posh REQUIRED)
+endif()
+
+if(@ARA_COM_USE_CYCLONEDDS@)
+  if(EXISTS "@ICEORYX_PREFIX@/lib/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "@ICEORYX_PREFIX@/lib/cmake")
+  endif()
+  if(EXISTS "@CYCLONEDDS_PREFIX@/lib/cmake")
+    list(APPEND CMAKE_PREFIX_PATH "@CYCLONEDDS_PREFIX@/lib/cmake")
+  endif()
+  find_dependency(iceoryx_binding_c REQUIRED)
+  find_dependency(CycloneDDS REQUIRED)
+  find_dependency(CycloneDDS-CXX REQUIRED)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/AdaptiveAutosarAPTargets.cmake")
+
+check_required_components(AdaptiveAutosarAP)

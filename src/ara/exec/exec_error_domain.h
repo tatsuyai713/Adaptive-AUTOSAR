@@ -2,6 +2,7 @@
 #define EXEC_ERROR_DOMAIN_H
 
 #include "../core/error_domain.h"
+#include "../core/error_code.h"
 
 namespace ara
 {
@@ -40,6 +41,11 @@ namespace ara
             const char *Message(
                 core::ErrorDomain::CodeType errorCode) const noexcept override;
         };
+
+        /// @brief Create ara::core::ErrorCode in ara::exec domain
+        /// @param code Execution management error code
+        /// @returns Error code bound to ExecErrorDomain
+        core::ErrorCode MakeErrorCode(ExecErrc code) noexcept;
     }
 }
 

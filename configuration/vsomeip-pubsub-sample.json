@@ -1,0 +1,40 @@
+{
+    "unicast": "127.0.0.1",
+    "logging": {
+        "level": "info",
+        "console": "true",
+        "file": {
+            "enable": "false"
+        },
+        "dlt": "false"
+    },
+    "applications": [
+        {
+            "name": "adaptive_autosar_pubsub_provider",
+            "id": "0x2201"
+        },
+        {
+            "name": "adaptive_autosar_pubsub_consumer",
+            "id": "0x2202"
+        }
+    ],
+    "routing": "adaptive_autosar_pubsub_provider",
+    "services": [
+        {
+            "service": "0x1234",
+            "instance": "0x0001",
+            "unreliable": "30509"
+        }
+    ],
+    "service-discovery": {
+        "enable": "true",
+        "multicast": "224.224.224.245",
+        "port": "30490",
+        "protocol": "udp",
+        "initial_delay_min": "10",
+        "initial_delay_max": "100",
+        "repetitions_base_delay": "200",
+        "repetitions_max": "3",
+        "ttl": "3"
+    }
+}

@@ -1,0 +1,11 @@
+module user_apps {
+  module templates {
+    struct UserAppsStatus {
+      unsigned long SequenceCounter;
+      unsigned long SpeedCentiKph;
+      unsigned long EngineRpm;
+      octet Gear;
+      octet StatusFlags;
+    };
+  };
+};

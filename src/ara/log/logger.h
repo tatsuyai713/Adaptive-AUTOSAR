@@ -61,6 +61,22 @@ namespace ara
             /// @returns True if the level is enabled; otherwise false
             bool IsEnabled(LogLevel logLevel) const noexcept;
 
+            /// @brief Override log level at runtime for this logger context
+            /// @param logLevel New effective log level
+            void SetLogLevel(LogLevel logLevel) noexcept;
+
+            /// @brief Get the current effective log level for this logger context
+            /// @returns Effective log level
+            LogLevel GetLogLevel() const noexcept;
+
+            /// @brief Get logger context identifier
+            /// @returns Context ID string
+            const std::string &GetContextId() const noexcept;
+
+            /// @brief Get logger context description
+            /// @returns Context description string
+            const std::string &GetContextDescription() const noexcept;
+
             /// @brief Create a stream for certian level logs
             /// @param logLevel Input log severity level
             /// @returns Log stream with the determined level in the current context

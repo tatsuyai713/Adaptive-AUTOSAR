@@ -1,0 +1,70 @@
+# Minimal communication manifest sample for ara::com Pub/Sub (SOME/IP)
+# Usage:
+#   python3 tools/arxml_generator/generate_arxml.py \
+#     --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+#     --output /tmp/pubsub_vsomeip_generated.arxml \
+#     --print-summary
+
+variables:
+  LOOPBACK_IP: "127.0.0.1"
+  MULTICAST_IP: "239.255.0.1"
+
+autosar:
+  schema_namespace: "http://autosar.org/schema/r4.0"
+  schema_location: "http://autosar.org/schema/r4.0 autosar_00050.xsd"
+  packages:
+    - short_name: AraComPubSubSampleManifest
+      communication_cluster:
+        short_name: LocalCommunicationCluster
+        protocol_version: 1
+        ethernet_physical_channels:
+          - short_name: LoopbackChannel
+            network_endpoints:
+              - short_name: ProviderEndpoint
+                ipv4_address: "${LOOPBACK_IP}"
+              - short_name: ConsumerEndpoint
+                ipv4_address: "${LOOPBACK_IP}"
+
+      ethernet_communication_connectors:
+        - short_name: ProviderConnector
+          ap_application_endpoints:
+            - short_name: ProviderUdpEndpoint
+              transport: udp
+              port: 30509
+
+        - short_name: ConsumerConnector
+          ap_application_endpoints:
+            - short_name: ConsumerUdpEndpoint
+              transport: udp
+              port: 30510
+
+      someip:
+        provided_service_instances:
+          - short_name: VehicleStatusProviderInstance
+            service_interface:
+              id: 0x1234
+              major: 1
+              minor: 0
+            service_instance_id: 1
+            event_groups:
+              - short_name: VehicleStatusEventGroup
+                event_group_id: 1
+                event_id: 0x8001
+                multicast_udp_port: 30509
+                ipv4_multicast_ip_address: "${MULTICAST_IP}"
+            sd_server:
+              initial_delay_min: 20
+              initial_delay_max: 200
+
+        required_service_instances:
+          - short_name: VehicleStatusConsumerRequirement
+            service_interface_id: 0x1234
+            major_version: 1
+            minor_version: 0
+            required_event_groups:
+              - short_name: VehicleStatusEventGroupRequirement
+                event_group_id: 1
+                event_id: 0x8001
+            sd_client:
+              initial_delay_min: 20
+              initial_delay_max: 200

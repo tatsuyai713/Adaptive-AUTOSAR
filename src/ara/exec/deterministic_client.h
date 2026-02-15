@@ -6,6 +6,7 @@
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
+#include <random>
 #include "../core/result.h"
 #include "./worker_runnable.h"
 #include "./helper/atomic_optional.h"
@@ -45,13 +46,22 @@ namespace ara
             static helper::AtomicOptional<uint64_t> mSeed;
             static uint64_t mRandomNumber;
             static TimeStamp mActivationTime;
+            static std::atomic_bool mTerminationRequested;
             WorkerThread mWorkerThread;
+            ActivationReturnType mLifecycleState;
 
             static void activateCycle();
+
+            /// @brief Advance the lifecycle state to the next phase
+            /// @returns The activation type for the current cycle
+            ActivationReturnType advanceLifecycle();
 
         public:
             DeterministicClient();
             ~DeterministicClient();
+
+            /// @brief Request all DeterministicClient instances to return kTerminate
+            static void RequestTerminate() noexcept;
 
             /// @brief Blocks the caller till reaching the next activation time
             /// @returns Value that controls the caller's internal lifecylce

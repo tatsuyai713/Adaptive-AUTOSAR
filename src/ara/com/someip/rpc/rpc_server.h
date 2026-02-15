@@ -53,6 +53,10 @@ namespace ara
                     RpcServer(
                         uint8_t protocolVersion, uint8_t interfaceVersion) noexcept;
 
+                    /// @brief Hook invoked whenever a new handler is registered.
+                    virtual void OnHandlerRegistered(
+                        uint16_t serviceId, uint16_t methodId);
+
                     /// @brief Try to invoke corresponding request handler at a message reception
                     /// @param[in] requestPayload Serialized SOME/IP request payload byte vector
                     /// @param[out] responsePayload Serialized SOME/IP response payload byte vector

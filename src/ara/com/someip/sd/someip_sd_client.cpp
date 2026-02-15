@@ -1,5 +1,7 @@
+#include <chrono>
+#include <cstdlib>
 #include <stdexcept>
-#include "../../option/ipv4_endpoint_option.h"
+#include <string>
 #include "./someip_sd_client.h"
 
 namespace ara
@@ -16,278 +18,185 @@ namespace ara
                     int initialDelayMin,
                     int initialDelayMax,
                     int repetitionBaseDelay,
-                    uint32_t repetitionMax) : SomeIpSdAgent<helper::SdClientState>(networkLayer),
-                                              mValidState{true},
-                                              mServiceNotseenState(&mTtlTimer, &mStopOfferingConditionVariable),
-                                              mServiceSeenState(&mTtlTimer, &mOfferingConditionVariable),
-                                              mInitialWaitState(
-                                                  &mTtlTimer,
-                                                  std::bind(&SomeIpSdClient::sendFind, this),
-                                                  initialDelayMin,
-                                                  initialDelayMax),
-                                              mRepetitionState(
-                                                  &mTtlTimer,
-                                                  std::bind(&SomeIpSdClient::sendFind, this),
-                                                  repetitionMax,
-                                                  repetitionBaseDelay),
-                                              mStoppedState(&mTtlTimer, &mStopOfferingConditionVariable),
-                                              mServiceReadyState(&mTtlTimer, &mOfferingConditionVariable),
-                                              mOfferingLock(mOfferingMutex, std::defer_lock),
-                                              mStopOfferingLock(mStopOfferingMutex, std::defer_lock),
-                                              mServiceId{serviceId},
-                                              mEndpointLock(mEndpointMutex, std::defer_lock)
+                    uint32_t repetitionMax,
+                    core::Optional<std::string> offeredIpAddress,
+                    core::Optional<uint16_t> offeredPort) : SomeIpSdAgent<helper::SdClientState>(
+                                                                networkLayer,
+                                                                helper::SdClientState::ServiceNotSeen),
+                                                            mServiceId{serviceId},
+                                                            mApplication{nullptr},
+                                                            mServiceOffered{false},
+                                                            mServiceRequested{false},
+                                                            mOfferedIpAddress{offeredIpAddress},
+                                                            mOfferedPort{offeredPort}
                 {
-                    this->StateMachine.Initialize(
-                        {&mServiceNotseenState,
-                         &mServiceSeenState,
-                         &mInitialWaitState,
-                         &mRepetitionState,
-                         &mServiceReadyState,
-                         &mStoppedState},
-                        helper::SdClientState::ServiceNotSeen);
+                    (void)initialDelayMin;
+                    (void)initialDelayMax;
+                    (void)repetitionBaseDelay;
+                    (void)repetitionMax;
+                }
 
-                    auto _findServiceEntry{entry::ServiceEntry::CreateFindServiceEntry(serviceId)};
-                    mFindServieMessage.AddEntry(std::move(_findServiceEntry));
+                void SomeIpSdClient::ensureApplication()
+                {
+                    if (mApplication)
+                    {
+                        return;
+                    }
 
-                    auto _receiver =
+                    mApplication = VsomeipApplication::GetClientApplication();
+                    if (!mApplication)
+                    {
+                        throw std::runtime_error(
+                            "vsomeip client application could not be created.");
+                    }
+
+                    mApplication->register_availability_handler(
+                        mServiceId,
+                        vsomeip::ANY_INSTANCE,
                         std::bind(
-                            &SomeIpSdClient::receiveSdMessage,
+                            &SomeIpSdClient::onAvailability,
                             this,
-                            std::placeholders::_1);
-                    this->CommunicationLayer->SetReceiver(this, _receiver);
+                            std::placeholders::_1,
+                            std::placeholders::_2,
+                            std::placeholders::_3));
                 }
 
-                void SomeIpSdClient::sendFind()
+                void SomeIpSdClient::onAvailability(
+                    vsomeip::service_t service,
+                    vsomeip::instance_t instance,
+                    bool isAvailable)
                 {
-                    this->CommunicationLayer->Send(mFindServieMessage);
-                    mFindServieMessage.IncrementSessionId();
-                }
+                    (void)service;
+                    (void)instance;
 
-                bool SomeIpSdClient::matchRequestedService(
-                    const SomeIpSdMessage &message, uint32_t &ttl) const
-                {
-                    // Iterate over all the message entry to search for the first Service Offering entry
-                    for (auto &_entry : message.Entries())
+                    std::lock_guard<std::mutex> _stateLock(mStateEventMutex);
+                    mServiceOffered = isAvailable;
+
+                    if (mServiceRequested)
                     {
-                        if (_entry->Type() == entry::EntryType::Offering)
-                        {
-                            if (auto _serviceEnty = dynamic_cast<entry::ServiceEntry *>(_entry.get()))
-                            {
-                                // Compare service ID
-                                bool _result = _serviceEnty->ServiceId() == mServiceId;
-
-                                if (_result)
-                                {
-                                    ttl = _serviceEnty->TTL();
-                                }
-
-                                return _result;
-                            }
-                        }
+                        SetState(
+                            isAvailable ? helper::SdClientState::ServiceReady
+                                        : helper::SdClientState::Stopped);
+                    }
+                    else
+                    {
+                        SetState(
+                            isAvailable ? helper::SdClientState::ServiceSeen
+                                        : helper::SdClientState::ServiceNotSeen);
                     }
 
-                    return false;
-                }
-
-                bool SomeIpSdClient::tryExtractOfferedEndpoint(
-                    const SomeIpSdMessage &message,
-                    std::string &ipAddress, uint16_t &port) const
-                {
-                    for (size_t i = 0; i < message.Entries().size(); ++i)
+                    if (isAvailable)
                     {
-                        auto entry = message.Entries().at(i).get();
-
-                        // Endpoints are end-up in the first options
-                        for (size_t j = 0; entry->FirstOptions().size(); ++j)
-                        {
-                            auto option = entry->FirstOptions().at(j).get();
-
-                            if (option->Type() == option::OptionType::IPv4Endpoint)
-                            {
-                                auto cEndpoint{
-                                    dynamic_cast<const option::Ipv4EndpointOption *>(
-                                        option)};
-
-                                if (cEndpoint &&
-                                    cEndpoint->L4Proto() == option::Layer4ProtocolType::Tcp)
-                                {
-                                    ipAddress = cEndpoint->IpAddress().ToString();
-                                    port = cEndpoint->Port();
-
-                                    return true;
-                                }
-                            }
-                        }
+                        mOfferingConditionVariable.notify_all();
                     }
-
-                    return false;
-                }
-
-                void SomeIpSdClient::onOfferChanged(uint32_t ttl)
-                {
-                    mTtlTimer.SetOffered(ttl);
-                }
-
-                void SomeIpSdClient::receiveSdMessage(SomeIpSdMessage &&message)
-                {
-                    // While destruction, ignore communication layer received messages
-                    if (mValidState)
+                    else
                     {
-                        uint32_t _ttl;
-                        bool _successful = matchRequestedService(message, _ttl);
-                        if (_successful)
-                        {
-                            onOfferChanged(_ttl);
+                        mStopOfferingConditionVariable.notify_all();
+                    }
+                }
 
-                            mEndpointLock.lock();
-                            std::string _ipAddress;
-                            uint16_t _port;
-                            _successful =
-                                tryExtractOfferedEndpoint(
-                                    message, _ipAddress, _port);
+                bool SomeIpSdClient::waitForCondition(
+                    std::condition_variable &conditionVariable,
+                    int duration,
+                    std::function<bool()> predicate)
+                {
+                    std::unique_lock<std::mutex> _stateLock(mStateEventMutex);
 
-                            if (_successful)
-                            {
-                                mOfferedIpAddress = _ipAddress;
-                                mOfferedPort = _port;
-                            }
-                            mEndpointLock.unlock();
-                        }
+                    if (duration > 0)
+                    {
+                        return conditionVariable.wait_for(
+                            _stateLock,
+                            std::chrono::milliseconds(duration),
+                            predicate);
+                    }
+                    else
+                    {
+                        conditionVariable.wait(_stateLock, predicate);
+                        return true;
                     }
                 }
 
                 void SomeIpSdClient::StartAgent(helper::SdClientState state)
                 {
-                    mTtlTimer.SetRequested(true);
+                    (void)state;
+                    ensureApplication();
 
-                    // Set the future if has not been set already
-                    if (!Future.valid())
                     {
-                        this->Future =
-                            std::async(
-                                std::launch::async,
-                                &fsm::ServiceNotseenState::RequestService,
-                                &mServiceNotseenState);
+                        std::lock_guard<std::mutex> _stateLock(mStateEventMutex);
+                        mServiceRequested = true;
+                        SetState(helper::SdClientState::InitialWaitPhase);
                     }
+
+                    mApplication->request_service(mServiceId, vsomeip::ANY_INSTANCE);
                 }
 
                 void SomeIpSdClient::StopAgent()
                 {
-                    if (!mValidState)
                     {
-                        // Dispose the entry point state to stop the service offer monitoring
-                        mServiceNotseenState.Dispose();
-                        // Dispose the TTL timer to singal all the states for stopping immediately
-                        mTtlTimer.Dispose();
+                        std::lock_guard<std::mutex> _stateLock(mStateEventMutex);
+                        mServiceRequested = false;
+                        SetState(
+                            mServiceOffered ? helper::SdClientState::ServiceSeen
+                                            : helper::SdClientState::ServiceNotSeen);
                     }
 
-                    // Send a synchronized cancel signal to all the state
-                    mTtlTimer.SetRequested(false);
+                    if (mApplication)
+                    {
+                        mApplication->release_service(mServiceId, vsomeip::ANY_INSTANCE);
+                    }
+                    mStopOfferingConditionVariable.notify_all();
                 }
 
                 bool SomeIpSdClient::TryWaitUntiServiceOffered(int duration)
                 {
-                    bool _result;
-
-                    if (mValidState)
-                    {
-                        std::cv_status _cvStatus;
-
-                        mOfferingLock.lock();
-                        if (duration > 0)
-                        {
-                            _cvStatus = mOfferingConditionVariable.wait_for(
-                                mOfferingLock, std::chrono::milliseconds(duration));
-                        }
-                        else
-                        {
-                            mOfferingConditionVariable.wait(mOfferingLock);
-                            _cvStatus = std::cv_status::no_timeout;
-                        }
-                        mOfferingLock.unlock();
-
-                        // Get the state in case of being already in the desired state
-                        // leads to a timeout while the service is already offered
-                        helper::SdClientState _state = GetState();
-
-                        _result =
-                            mValidState && (_cvStatus == std::cv_status::no_timeout ||
-                                            _state == helper::SdClientState::ServiceReady ||
-                                            _state == helper::SdClientState::ServiceSeen);
-                    }
-                    else
-                    {
-                        _result = false;
-                    }
-
-                    return _result;
+                    return waitForCondition(
+                        mOfferingConditionVariable,
+                        duration,
+                        [this]()
+                        { return mServiceOffered; });
                 }
 
                 bool SomeIpSdClient::TryWaitUntiServiceOfferStopped(int duration)
                 {
-                    bool _result;
-
-                    if (mValidState)
-                    {
-                        std::cv_status _cvStatus;
-
-                        mStopOfferingLock.lock();
-                        if (duration > 0)
-                        {
-                            _cvStatus =
-                                mStopOfferingConditionVariable.wait_for(
-                                    mStopOfferingLock, std::chrono::milliseconds(duration));
-                        }
-                        else
-                        {
-                            mStopOfferingConditionVariable.wait(mStopOfferingLock);
-                            _cvStatus = std::cv_status::no_timeout;
-                        }
-
-                        mStopOfferingLock.unlock();
-
-                        // Get the state in case of being already in the desired state
-                        // leads to a timeout while the service offering is already stopped
-                        helper::SdClientState _state = GetState();
-
-                        _result =
-                            mValidState && (_cvStatus == std::cv_status::no_timeout ||
-                                            _state == helper::SdClientState::Stopped ||
-                                            _state == helper::SdClientState::ServiceNotSeen);
-                    }
-                    else
-                    {
-                        _result = false;
-                    }
-
-                    return _result;
+                    return waitForCondition(
+                        mStopOfferingConditionVariable,
+                        duration,
+                        [this]()
+                        { return !mServiceOffered; });
                 }
 
                 bool SomeIpSdClient::TryGetOfferedEndpoint(
                     std::string &ipAddress, uint16_t &port)
                 {
-                    mEndpointLock.lock();
+                    std::lock_guard<std::mutex> _stateLock(mStateEventMutex);
+                    if (!(mOfferedIpAddress && mOfferedPort))
+                    {
+                        const char *cIpAddress{std::getenv("ADAPTIVE_AUTOSAR_SD_OFFERED_IP")};
+                        const char *cPort{std::getenv("ADAPTIVE_AUTOSAR_SD_OFFERED_PORT")};
+                        if (cIpAddress && cPort)
+                        {
+                            mOfferedIpAddress = std::string(cIpAddress);
+                            mOfferedPort = static_cast<uint16_t>(std::stoi(cPort));
+                        }
+                    }
+
                     if (mOfferedIpAddress && mOfferedPort)
                     {
                         ipAddress = mOfferedIpAddress.Value();
                         port = mOfferedPort.Value();
-                        mEndpointLock.unlock();
                         return true;
                     }
-                    else
-                    {
-                        mEndpointLock.unlock();
-                        return false;
-                    }
+
+                    return false;
                 }
 
                 SomeIpSdClient::~SomeIpSdClient()
                 {
-                    // Client state is not valid anymore during destruction.
-                    mValidState = false;
-                    // Release the threads waiting for the condition variables before desctruction
-                    mOfferingConditionVariable.notify_one();
-                    mStopOfferingConditionVariable.notify_one();
+                    if (mApplication)
+                    {
+                        mApplication->unregister_availability_handler(
+                            mServiceId, vsomeip::ANY_INSTANCE);
+                    }
 
                     Stop();
                     Join();

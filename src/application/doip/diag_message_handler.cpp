@@ -6,10 +6,7 @@ namespace application
     namespace doip
     {
         DiagMessageHandler::DiagMessageHandler(
-            helper::CurlWrapper *curl,
-            std::string resourcesUrl,
-            uint8_t protocolVersion) : mService(curl, resourcesUrl),
-                                       cProtocolVersion{protocolVersion}
+            uint8_t protocolVersion) : cProtocolVersion{protocolVersion}
         {
             mRouter.AddService(&mService);
             mService.Offer();

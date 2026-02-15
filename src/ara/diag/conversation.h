@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <vector>
 #include <string>
 #include "../core/result.h"
@@ -46,9 +48,11 @@ namespace ara
         class Conversation
         {
         private:
-            static std::vector<Conversation> mConversations;
+            static std::vector<std::unique_ptr<Conversation>> mConversations;
+            static std::mutex mMutex;
+            static int64_t mNextConversationId;
 
-            const MetaInfo &mMetaInfo;
+            Context mContext;
             ActivityStatusType mActivityStatus;
             std::function<void(ActivityStatusType)> mActivityNotifier;
             ConversationIdentifierType mConversationIdentifier;
@@ -57,7 +61,8 @@ namespace ara
             SecurityLevelType mDiagnosticSecurityLevel;
             std::function<void(SecurityLevelType)> mSecurityLevelNotifier;
 
-            Conversation(const MetaInfo &metaInfo);
+            explicit Conversation(Context context, int64_t conversationId);
+            void Reactivate();
 
         public:
             /// @brief Conversation factory

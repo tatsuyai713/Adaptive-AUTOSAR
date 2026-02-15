@@ -187,7 +187,7 @@ namespace ara
             {
                 if (HasValue())
                 {
-                    mValuePtr;
+                    return mValuePtr;
                 }
                 else
                 {

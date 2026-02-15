@@ -2,7 +2,9 @@
 #define SOMEIP_SD_AGENT_H
 
 #include <future>
-#include "../../helper/finite_state_machine.h"
+#include <mutex>
+#include <stdexcept>
+#include "../../helper/machine_state.h"
 #include "../../helper/network_layer.h"
 #include "./someip_sd_message.h"
 
@@ -14,75 +16,69 @@ namespace ara
         {
             namespace sd
             {
-                /// @brief SOME/IP service discovery agent (i.e., a server or a client)
-                /// @tparam T Agent state enumeration type
+                /// @brief SOME/IP service discovery agent (server/client base).
                 template <typename T>
                 class SomeIpSdAgent
                 {
-                protected:
-                    /// @brief Agent's FSM
-                    helper::FiniteStateMachine<T> StateMachine;
+                private:
+                    mutable std::mutex mStateMutex;
+                    bool mStarted;
+                    T mState;
 
-                    /// @brief Agent running state future object
+                protected:
                     std::future<void> Future;
 
-                    /// @brief Network communication abstraction layer
+                    /// @brief Retained for compatibility with existing constructors.
                     helper::NetworkLayer<SomeIpSdMessage> *CommunicationLayer;
 
-                    /// @brief Start the service discovery agent
-                    /// @param state Current FSM state before start
-                    virtual void StartAgent(T state) = 0;
+                    void SetState(T state)
+                    {
+                        std::lock_guard<std::mutex> _stateLock(mStateMutex);
+                        mState = state;
+                    }
 
-                    /// @brief Stop the service discovery agent
-                    /// @param state Current FSM state before stop
+                    virtual void StartAgent(T state) = 0;
                     virtual void StopAgent() = 0;
 
                 public:
-                    /// @brief Constructor
-                    /// @param networkLayer Network communication abstraction layer
                     SomeIpSdAgent(
-                        helper::NetworkLayer<SomeIpSdMessage> *networkLayer) : CommunicationLayer{networkLayer}
+                        helper::NetworkLayer<SomeIpSdMessage> *networkLayer,
+                        T initialState) : mStarted{false},
+                                          mState{initialState},
+                                          CommunicationLayer{networkLayer}
                     {
                     }
 
-                    /// @brief Start the service discovery agent
                     void Start()
                     {
-                        // Valid future means the timer is not expired yet.
-                        if (Future.valid())
+                        if (mStarted)
                         {
                             throw std::logic_error(
                                 "The state has been already activated.");
                         }
-                        else
-                        {
-                            T _state = GetState();
-                            StartAgent(_state);
-                        }
+
+                        StartAgent(GetState());
+                        mStarted = true;
                     }
 
-                    /// @brief Get the current server state
-                    /// @returns Server machine state
                     T GetState() const noexcept
                     {
-                        return StateMachine.GetState();
+                        std::lock_guard<std::mutex> _stateLock(mStateMutex);
+                        return mState;
                     }
 
-                    /// @brief Join to the timer's thread
                     void Join()
                     {
-                        // If the future is valid, block unitl its result becomes avialable after the timer expiration.
                         if (Future.valid())
                         {
-                            Future.get();
+                            Future.wait();
                         }
                     }
 
-                    /// @brief Stop the service discovery agent
-                    /// @note It is safe to recall the function if the agent has been already stopped.
                     void Stop()
                     {
                         StopAgent();
+                        mStarted = false;
                     }
 
                     virtual ~SomeIpSdAgent() noexcept = default;

@@ -112,5 +112,47 @@ namespace ara
                 helper::MockRpcServer::TryGetErrorCode(_response, _actualResult));
             EXPECT_EQ(cExpectedResult, _actualResult);
         }
+
+        TEST_F(ExecutionServerTest, StateChangeHandlerGetsCalledOnTransition)
+        {
+            std::string _reportedId;
+            ExecutionState _reportedState{ExecutionState::kTerminating};
+            std::size_t _callbackCount{0U};
+
+            auto _setResult = Server.SetStateChangeHandler(
+                [&](const std::string &id, ExecutionState state)
+                {
+                    _reportedId = id;
+                    _reportedState = state;
+                    ++_callbackCount;
+                });
+
+            ASSERT_TRUE(_setResult.HasValue());
+
+            auto _response{Send(std::vector<uint8_t>({0, 0, 0, 2, 105, 100, 0}))};
+            EXPECT_EQ(_response.ReturnCode(), com::someip::SomeIpReturnCode::eOK);
+            EXPECT_EQ(_callbackCount, 1U);
+            EXPECT_EQ(_reportedId, "id");
+            EXPECT_EQ(_reportedState, ExecutionState::kRunning);
+
+            Server.UnsetStateChangeHandler();
+        }
+
+        TEST_F(ExecutionServerTest, EmptyStateChangeHandlerReturnsError)
+        {
+            auto _result = Server.SetStateChangeHandler(
+                ExecutionServer::ExecutionStateChangeHandler{});
+            EXPECT_FALSE(_result.HasValue());
+        }
+
+        TEST_F(ExecutionServerTest, GetExecutionStatesSnapshotReturnsReportedState)
+        {
+            auto _response{Send(std::vector<uint8_t>({0, 0, 0, 2, 105, 100, 0}))};
+            EXPECT_EQ(_response.ReturnCode(), com::someip::SomeIpReturnCode::eOK);
+
+            auto _snapshot = Server.GetExecutionStatesSnapshot();
+            ASSERT_EQ(_snapshot.size(), 1U);
+            EXPECT_EQ(_snapshot["id"], ExecutionState::kRunning);
+        }
     }
 }

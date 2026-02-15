@@ -1,0 +1,25 @@
+{
+    "unicast": "127.0.0.1",
+    "logging": {
+        "level": "info",
+        "console": "true",
+        "file": {
+            "enable": "false"
+        },
+        "dlt": "false"
+    },
+    "applications": [
+        {
+            "name": "adaptive_autosar_server",
+            "id": "0x1101"
+        },
+        {
+            "name": "adaptive_autosar_client",
+            "id": "0x1102"
+        }
+    ],
+    "routing": "adaptive_autosar_server",
+    "service-discovery": {
+        "enable": "false"
+    }
+}

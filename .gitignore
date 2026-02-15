@@ -4,6 +4,7 @@
 
 # CMake build
 build/
+build-*/
 
 # Doxygen HTML
 doc/html/

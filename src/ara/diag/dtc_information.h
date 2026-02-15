@@ -2,7 +2,9 @@
 #define DTC_INFORMATION_H
 
 #include <stdint.h>
+#include <mutex>
 #include <map>
+#include <vector>
 #include <functional>
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
@@ -50,6 +52,7 @@ namespace ara
             std::function<void(uint32_t)> mNumberOfStoredEntriesNotifier;
             ControlDtcStatusType mControlDtcStatus;
             std::function<void(ControlDtcStatusType)> mControlDtcStatusNotifier;
+            mutable std::mutex mMutex;
 
         public:
             /// @brief Constructor
@@ -81,6 +84,10 @@ namespace ara
             /// @returns Number of currently stored DTC in the primary fault memory
             core::Result<uint32_t> GetNumberOfStoredEntries();
 
+            /// @brief Get currently stored DTC identifiers.
+            /// @returns List of stored DTC identifiers.
+            core::Result<std::vector<uint32_t>> GetStoredDtcIds();
+
             /// @brief Set a notifer on the number of stored DTC change
             /// @param notifier Callback to be invoked if the number of stored DTC is changed
             /// @returns Error in case of invalid callback pointer
@@ -91,6 +98,10 @@ namespace ara
             /// @param dtc ID of the DTC that should be removed
             /// @returns Error if the requested DTC ID does not exist
             core::Result<void> Clear(uint32_t dtc);
+
+            /// @brief Clear all stored DTCs.
+            /// @returns No error.
+            core::Result<void> ClearAll();
 
             /// @brief Indicate whether the UDS DTC byte update is enabled or not
             /// @returns Control UDS status relates to the UDS service 0x85
@@ -105,6 +116,10 @@ namespace ara
             /// @brief Enforce enabling the USD DTC status byte update
             /// @returns No error
             core::Result<void> EnableControlDtc();
+
+            /// @brief Enforce disabling the USD DTC status byte update
+            /// @returns No error
+            core::Result<void> DisableControlDtc();
         };
     }
 }

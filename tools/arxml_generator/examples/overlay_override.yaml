@@ -1,0 +1,23 @@
+# Merge sample: use this together with another input file.
+# Later files can append packages and update template variables.
+
+variables:
+  LOOPBACK_IP: "127.0.0.1"
+
+autosar:
+  packages:
+    - short_name: OverlayManifest
+      communication_cluster:
+        short_name: OverlayCluster
+        protocol_version: 1
+        ethernet_physical_channels:
+          - short_name: OverlayChannel
+            network_endpoints:
+              - short_name: OverlayEndpoint
+                ipv4_address: "${LOOPBACK_IP}"
+      ethernet_communication_connectors:
+        - short_name: OverlayConnector
+          ap_application_endpoints:
+            - short_name: OverlayUdp
+              transport: udp
+              port: 30999

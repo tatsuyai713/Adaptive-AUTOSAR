@@ -1,6 +1,5 @@
 #include "../../ara/diag/conversation.h"
 #include "./read_data_by_identifier.h"
-#include <iostream>
 
 namespace application
 {
@@ -16,12 +15,8 @@ namespace application
         const std::chrono::seconds ReadDataByIdentifier::cCacheLifetime{60};
         const ara::core::InstanceSpecifier ReadDataByIdentifier::cSpecifer("ReadDataByIdentifier");
 
-        ReadDataByIdentifier::ReadDataByIdentifier(
-            CurlWrapper *curl,
-            std::string resourcesUrl) : ara::diag::routing::RoutableUdsService(cSpecifer, cSid),
-                                        mCurl{curl},
-                                        cResourcesUrl{resourcesUrl},
-                                        mCache(cCacheLifetime)
+        ReadDataByIdentifier::ReadDataByIdentifier() : ara::diag::routing::RoutableUdsService(cSpecifer, cSid),
+                                                       mCache(cCacheLifetime)
         {
         }
 
@@ -52,101 +47,33 @@ namespace application
             response.responseData.push_back(cDidLsb);
         }
 
-        bool ReadDataByIdentifier::tryGetResourceValue(
-            std::string resourceKey, Json::Value &jsonValue)
-        {
-            const std::string cValueKey{"value"};
-            const std::string cRequestUrl{cResourcesUrl + "/" + resourceKey};
-
-            std::string _restfulResponse;
-            bool _result{mCurl->TryExecute(cRequestUrl, &_restfulResponse)};
-
-            if (_result)
-            {
-                _result =
-                    mJsonReader.parse(
-                        _restfulResponse, jsonValue, cCollectJsonComments);
-
-                if (_result)
-                {
-                    jsonValue = jsonValue[resourceKey][cValueKey];
-                }
-            }
-
-            return _result;
-        }
-
         void ReadDataByIdentifier::getAverageSpeed(
             ara::diag::OperationOutput &response)
         {
-            const std::string cResourceKey{"averageSpeed"};
-            Json::Value _jsonResponse;
-
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
-            {
-                generateResponse(cAverageSpeedDid, response);
-                const std::string cAverageSpeedStr{_jsonResponse.asString()};
-                const auto cAverageSpeed{
-                    static_cast<uint8_t>(std::stoul(cAverageSpeedStr))};
-                response.responseData.push_back(cAverageSpeed);
-                mCache.Add(cAverageSpeedDid, response);
-            }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+            generateResponse(cAverageSpeedDid, response);
+            const auto cAverageSpeed{static_cast<uint8_t>(60)};
+            response.responseData.push_back(cAverageSpeed);
+            mCache.Add(cAverageSpeedDid, response);
         }
 
         void ReadDataByIdentifier::getFuelAmount(
             ara::diag::OperationOutput &response)
         {
             const double cConversionGain{2.55};
-            const std::string cResourceKey{"fuelAmount"};
-            Json::Value _jsonResponse;
-
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
-            {
-                generateResponse(cFuelAmountDid, response);
-                const std::string cFuelAmountStr{_jsonResponse.asString()};
-                const unsigned long cFuelAmountUL{std::stoul(cFuelAmountStr)};
-                const auto cFuelAmount{
-                    static_cast<uint8_t>(cConversionGain * cFuelAmountUL)};
-                response.responseData.push_back(cFuelAmount);
-                mCache.Add(cFuelAmountDid, response);
-            }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+            generateResponse(cFuelAmountDid, response);
+            const auto cFuelAmount{static_cast<uint8_t>(cConversionGain * 35)};
+            response.responseData.push_back(cFuelAmount);
+            mCache.Add(cFuelAmountDid, response);
         }
 
         void ReadDataByIdentifier::getExternalTemperature(
             ara::diag::OperationOutput &response)
         {
             const uint8_t cCompensationValue{40};
-            const std::string cResourceKey{"externalTemp"};
-            Json::Value _jsonResponse;
-
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
-            {
-                generateResponse(cExternalTemperatureDid, response);
-                const std::string cExternalTemperatureStr{
-                    _jsonResponse.asString()};
-                const unsigned long cExternalTemperatureUL{
-                    std::stoul(cExternalTemperatureStr)};
-                const auto cExternalTemperature{
-                    static_cast<uint8_t>(
-                        cExternalTemperatureUL + cCompensationValue)};
-                response.responseData.push_back(cExternalTemperature);
-                mCache.Add(cExternalTemperatureDid, response);
-            }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+            generateResponse(cExternalTemperatureDid, response);
+            const auto cExternalTemperature{static_cast<uint8_t>(22 + cCompensationValue)};
+            response.responseData.push_back(cExternalTemperature);
+            mCache.Add(cExternalTemperatureDid, response);
         }
 
         void ReadDataByIdentifier::getAverageFuelConsumption(
@@ -154,63 +81,28 @@ namespace application
         {
             const uint16_t cConversionGain{20};
             const uint16_t cConversionBase{256};
-            const std::string cResourceKey{"averageFuelConsumption"};
-            Json::Value _jsonResponse;
+            generateResponse(cAverageFuelConsumptionDid, response);
+            const auto cAverageFuelConsumptionInt{
+                static_cast<uint16_t>(cConversionGain * 7.5)};
 
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
-            {
-                generateResponse(cAverageFuelConsumptionDid, response);
-                const std::string cAverageFuelConsumptionStr{
-                    _jsonResponse.asString()};
-                const double cAverageFuelConsumption{
-                    std::stod(cAverageFuelConsumptionStr)};
-                const auto cAverageFuelConsumptionInt{
-                    static_cast<uint16_t>(
-                        cConversionGain * cAverageFuelConsumption)};
+            const auto cAverageFuelConsumptionMsb{
+                static_cast<uint8_t>(cAverageFuelConsumptionInt / cConversionBase)};
+            response.responseData.push_back(cAverageFuelConsumptionMsb);
 
-                const auto cAverageFuelConsumptionMsb{
-                    static_cast<uint8_t>(
-                        cAverageFuelConsumptionInt / cConversionBase)};
-                response.responseData.push_back(cAverageFuelConsumptionMsb);
-
-                const auto cAverageFuelConsumptionLsb{
-                    static_cast<uint8_t>(
-                        cAverageFuelConsumptionInt % cConversionBase)};
-                response.responseData.push_back(cAverageFuelConsumptionLsb);
-                mCache.Add(cAverageFuelConsumptionDid, response);
-            }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+            const auto cAverageFuelConsumptionLsb{
+                static_cast<uint8_t>(cAverageFuelConsumptionInt % cConversionBase)};
+            response.responseData.push_back(cAverageFuelConsumptionLsb);
+            mCache.Add(cAverageFuelConsumptionDid, response);
         }
 
         void ReadDataByIdentifier::getEngineCoolantTemperature(
             ara::diag::OperationOutput &response)
         {
             const uint8_t cCompensationValue{40};
-            const std::string cResourceKey{"engineCoolantTemp"};
-            Json::Value _jsonResponse;
-
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
-            {
-                generateResponse(cEngineCoolantTemperatureDid, response);
-                const std::string cEngineCoolantTemperatureStr{
-                    _jsonResponse.asString()};
-                const unsigned long cEngineCoolantTemperatureUL{
-                    std::stoul(cEngineCoolantTemperatureStr)};
-                const auto cEngineCoolantTemperature{
-                    static_cast<uint8_t>(
-                        cEngineCoolantTemperatureUL + cCompensationValue)};
-                response.responseData.push_back(cEngineCoolantTemperature);
-                mCache.Add(cEngineCoolantTemperatureDid, response);
-            }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+            generateResponse(cEngineCoolantTemperatureDid, response);
+            const auto cEngineCoolantTemperature{static_cast<uint8_t>(90 + cCompensationValue)};
+            response.responseData.push_back(cEngineCoolantTemperature);
+            mCache.Add(cEngineCoolantTemperatureDid, response);
         }
 
         void ReadDataByIdentifier::getOdometerValue(
@@ -219,37 +111,24 @@ namespace application
             constexpr size_t cCount{3};
             const uint32_t cConversionGain{10};
             const uint32_t cConversionBases[cCount]{16777216, 65536, 256};
-            const std::string cResourceKey{"odometer"};
-            Json::Value _jsonResponse;
+            generateResponse(cOdometerValueDid, response);
+            auto _odometerValueInt{
+                static_cast<uint32_t>(cConversionGain * 15000.0)};
 
-            bool _successful{tryGetResourceValue(cResourceKey, _jsonResponse)};
-            if (_successful)
+            for (size_t i = 0; i < cCount; ++i)
             {
-                generateResponse(cOdometerValueDid, response);
-                const std::string cOdometerValueStr{_jsonResponse.asString()};
-                const double cOdometerValue{std::stod(cOdometerValueStr)};
-                auto _odometerValueInt{
-                    static_cast<uint32_t>(cConversionGain * cOdometerValue)};
+                const auto cOdometerValueMsb{
+                    static_cast<uint8_t>(
+                        _odometerValueInt / cConversionBases[i])};
 
-                for (size_t i = 0; i < cCount; ++i)
-                {
-                    const auto cOdometerValueMsb{
-                        static_cast<uint8_t>(
-                            _odometerValueInt / cConversionBases[i])};
-
-                    response.responseData.push_back(cOdometerValueMsb);
-                    _odometerValueInt %= cConversionBases[i];
-                }
-
-                const auto cOdometerValueLsb{
-                    static_cast<uint8_t>(_odometerValueInt)};
-                response.responseData.push_back(cOdometerValueLsb);
-                mCache.Add(cOdometerValueDid, response);
+                response.responseData.push_back(cOdometerValueMsb);
+                _odometerValueInt %= cConversionBases[i];
             }
-            else
-            {
-                GenerateNegativeResponse(response, cConditionsNotCorrectNrc);
-            }
+
+            const auto cOdometerValueLsb{
+                static_cast<uint8_t>(_odometerValueInt)};
+            response.responseData.push_back(cOdometerValueLsb);
+            mCache.Add(cOdometerValueDid, response);
         }
 
         std::future<ara::diag::OperationOutput> ReadDataByIdentifier::HandleMessage(

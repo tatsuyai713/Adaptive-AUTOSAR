@@ -61,6 +61,26 @@ namespace ara
             return _result;
         }
 
+        void Logger::SetLogLevel(LogLevel logLevel) noexcept
+        {
+            mContextDefaultLogLevel = logLevel;
+        }
+
+        LogLevel Logger::GetLogLevel() const noexcept
+        {
+            return mContextDefaultLogLevel;
+        }
+
+        const std::string &Logger::GetContextId() const noexcept
+        {
+            return mContextId;
+        }
+
+        const std::string &Logger::GetContextDescription() const noexcept
+        {
+            return mContextDescription;
+        }
+
         LogStream Logger::WithLevel(LogLevel logLevel) const
         {
             const std::string cContextId{"Context ID:"};

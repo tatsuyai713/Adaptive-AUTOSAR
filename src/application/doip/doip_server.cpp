@@ -10,8 +10,6 @@ namespace application
 
         DoipServer::DoipServer(
             AsyncBsdSocketLib::Poller *poller,
-            helper::CurlWrapper *curl,
-            std::string resourcesUrl,
             std::string ipAddress,
             uint16_t port,
             DoipLib::ControllerConfig &&config,
@@ -20,7 +18,7 @@ namespace application
             uint64_t eid,
             uint64_t gid) : mPoller{poller},
                             mVehicleIdRequestHandler(config.protocolVersion, std::move(vin), logicalAddress, eid, gid),
-                            mDiagMessageHandler(curl, resourcesUrl, config.protocolVersion),
+                            mDiagMessageHandler(config.protocolVersion),
                             mListener(ipAddress, port),
                             mController(std::move(config))
         {

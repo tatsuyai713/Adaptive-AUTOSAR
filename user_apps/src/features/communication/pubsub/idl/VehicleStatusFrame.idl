@@ -1,0 +1,20 @@
+module adaptive_autosar
+{
+    module sample
+    {
+        module ara_com_pubsub
+        {
+            // Shared topic type for DDS samples.
+            // Field order intentionally matches pubsub_common.{h,cpp} serialization.
+            struct VehicleStatusFrame
+            {
+                unsigned long SequenceCounter;
+                unsigned long SpeedCentiKph;
+                unsigned long EngineRpm;
+                unsigned short SteeringAngleCentiDeg;
+                octet Gear;
+                octet StatusFlags;
+            };
+        };
+    };
+};

@@ -1,7 +1,12 @@
 #ifndef EXECUTION_CLIENT_H
 #define EXECUTION_CLIENT_H
 
+#include <chrono>
+#include <cstdint>
 #include <future>
+#include <map>
+#include <memory>
+#include <mutex>
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
 #include "../com/someip/rpc/rpc_client.h"
@@ -14,24 +19,38 @@ namespace ara
         /// @brief Adaptive application internal state
         enum class ExecutionState : uint8_t
         {
-            kRunning = 0 ///< Application process performs normally
+            kRunning = 0,     ///< Application process performs normally
+            kTerminating = 1, ///< Application process is about to terminate
+            kIdle = 2         ///< Application process is idle (not actively processing)
         };
 
         /// @brief Class that enables an adaptive application to interact with Execution Management
         class ExecutionClient final
         {
         private:
+            struct PendingRequest
+            {
+                std::promise<void> promise;
+                std::future<void> future;
+
+                PendingRequest() : future(promise.get_future())
+                {
+                }
+            };
+
             static const ExecErrorDomain cErrorDomain;
             const uint16_t cServiceId{1};
             const uint16_t cMethodId{1};
             const uint16_t cClientId{2};
 
-            mutable std::promise<void> mPromise;
-            mutable std::future<void> mFuture;
-
             const core::InstanceSpecifier mInstanceSpecifier;
             com::someip::rpc::RpcClient *const mRpcClient;
             const std::chrono::seconds mTimeout;
+            mutable std::mutex mMutex;
+            mutable std::map<uint16_t, std::shared_ptr<PendingRequest>> mPendingRequests;
+            mutable uint16_t mNextSessionId{1};
+
+            uint16_t reserveSessionId() const noexcept;
 
             ExecException generateException(ExecErrc executionErrorCode) const;
 

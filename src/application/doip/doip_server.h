@@ -34,8 +34,6 @@ namespace application
         public:
             /// @brief Constructor
             /// @param poller Global poller for network communication
-            /// @param curl Configured CURL instance for RESTful communication
-            /// @param resourcesUrl Connected vehicle resources access RESTful URL
             /// @param ipAddress DoIP server listening IPv4 address
             /// @param port DoIP server TCP listening port number
             /// @param config DoIP controller configuration
@@ -46,8 +44,6 @@ namespace application
             /// @throws std::runtime_error Throws when the TCP connection configuration failed
             DoipServer(
                 AsyncBsdSocketLib::Poller *poller,
-                helper::CurlWrapper *curl,
-                std::string resourcesUrl,
                 std::string ipAddress,
                 uint16_t port,
                 DoipLib::ControllerConfig &&config,

@@ -1,4 +1,5 @@
 #include "./state_server.h"
+#include <stdexcept>
 
 namespace ara
 {
@@ -61,13 +62,21 @@ namespace ara
             com::helper::Inject(payload, cErrorCodeInt);
         }
 
-        void StateServer::notify(std::string funcitonGroup, std::string state)
+        void StateServer::notify(const std::string &functionGroup)
         {
-            auto _itr{mNotifiers.find(funcitonGroup)};
-
-            if (_itr != mNotifiers.end())
+            std::function<void()> _callback;
             {
-                _itr->second->Write(state);
+                const std::lock_guard<std::mutex> _lock{mMutex};
+                auto _itr{mNotifiers.find(functionGroup)};
+                if (_itr != mNotifiers.end())
+                {
+                    _callback = _itr->second;
+                }
+            }
+
+            if (_callback)
+            {
+                _callback();
             }
         }
 
@@ -131,34 +140,29 @@ namespace ara
                 return false;
             }
 
-            std::unique_lock<std::mutex> _currentStatesLock(
-                mMutex, std::defer_lock);
-            if (!_currentStatesLock.try_lock())
             {
-                injectErrorCode(rpcResponsePayload, ExecErrc::kGeneralError);
-                return false;
+                const std::lock_guard<std::mutex> _currentStatesLock{mMutex};
+
+                auto _currentStatesItr{mCurrentStates.find(_functionGroup)};
+                if (_currentStatesItr == mCurrentStates.end())
+                {
+                    injectErrorCode(rpcResponsePayload, ExecErrc::kInvalidTransition);
+                    return false;
+                }
+                else if (_currentStatesItr->second == _state)
+                {
+                    injectErrorCode(rpcResponsePayload, ExecErrc::kAlreadyInState);
+                    return false;
+                }
+
+                // Update the newly reported state.
+                _currentStatesItr->second = _state;
             }
 
-            auto _currentStatesItr{mCurrentStates.find(_functionGroup)};
-            if (_currentStatesItr == mCurrentStates.end())
-            {
-                injectErrorCode(rpcResponsePayload, ExecErrc::kInvalidTransition);
-                return false;
-            }
-            else if (_currentStatesItr->second == _state)
-            {
-                injectErrorCode(rpcResponsePayload, ExecErrc::kAlreadyInState);
-                return false;
-            }
-            else
-            {
-                // Update the newly reported state and react with an empty RPC response payload
-                mCurrentStates[_functionGroup] = _state;
-                _currentStatesLock.unlock();
-                notify(_functionGroup, _state);
-                rpcResponsePayload.clear();
-                return true;
-            }
+            // Notify out of lock to prevent callback-induced deadlocks.
+            notify(_functionGroup);
+            rpcResponsePayload.clear();
+            return true;
         }
 
         bool StateServer::handleStateTransition(
@@ -173,30 +177,22 @@ namespace ara
                 return false;
             }
 
-            if (mInitialized)
+            bool _expected{false};
+            if (!mInitialized.compare_exchange_strong(_expected, true))
             {
                 // EM re-initialization is not possible.
                 injectErrorCode(rpcResponsePayload, ExecErrc::kFailed);
                 return false;
             }
-            else
-            {
-                mInitialized = true;
-                return true;
-            }
+
+            return true;
         }
 
         bool StateServer::TryGetState(
             std::string functionGroup, std::string &state)
         {
-            std::unique_lock<std::mutex> _currentStatesLock(
-                mMutex, std::defer_lock);
-            
-            if (!_currentStatesLock.try_lock())
-            {
-                return false;
-            }
-            
+            const std::lock_guard<std::mutex> _currentStatesLock{mMutex};
+
             auto _itr{mCurrentStates.find(functionGroup)};
             if (_itr != mCurrentStates.end())
             {
@@ -212,33 +208,45 @@ namespace ara
         void StateServer::SetNotifier(
             std::string functionGroup, std::function<void()> callback)
         {
-            std::reference_wrapper<std::string> _state{
-                std::ref(mCurrentStates.at(functionGroup))};
+            std::string _functionGroup(functionGroup);
+            auto _result{TrySetNotifier(std::move(functionGroup), std::move(callback))};
+            if (!_result.HasValue())
+            {
+                auto _errorCode{static_cast<ExecErrc>(_result.Error().Value())};
+                if (_errorCode == ExecErrc::kInvalidTransition)
+                {
+                    throw std::out_of_range(
+                        "Function group: " + _functionGroup + " does not exist.");
+                }
 
-            auto _notifier{new sm::Trigger<std::string>(_state, callback)};
-            auto _itr{mNotifiers.find(functionGroup)};
-            if (_itr != mNotifiers.end())
-            {
-                delete _itr->second;
-                _itr->second = _notifier;
+                throw std::invalid_argument("Notifier callback is empty.");
             }
-            else
+        }
+
+        core::Result<void> StateServer::TrySetNotifier(
+            std::string functionGroup, std::function<void()> callback)
+        {
+            if (!callback)
             {
-                mNotifiers[functionGroup] = _notifier;
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidArguments));
             }
+
+            const std::lock_guard<std::mutex> _currentStatesLock{mMutex};
+            auto _stateItr{mCurrentStates.find(functionGroup)};
+            if (_stateItr == mCurrentStates.end())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidTransition));
+            }
+
+            mNotifiers[std::move(functionGroup)] = std::move(callback);
+            return core::Result<void>::FromValue();
         }
 
         bool StateServer::Initialized() const noexcept
         {
             return mInitialized;
-        }
-
-        StateServer::~StateServer()
-        {
-            for (auto notifier : mNotifiers)
-            {
-                delete notifier.second;
-            }
         }
     }
 }

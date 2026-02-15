@@ -227,5 +227,30 @@ namespace ara
 
             EXPECT_TRUE(_notified);
         }
+
+        TEST_F(StateServerTest, TrySetNotifierRejectsUnknownFunctionGroup)
+        {
+            auto _result = Server.TrySetNotifier("UnknownFG", []() {});
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kInvalidTransition,
+                static_cast<ExecErrc>(_result.Error().Value()));
+        }
+
+        TEST_F(StateServerTest, TrySetNotifierRejectsEmptyCallback)
+        {
+            auto _result = Server.TrySetNotifier("MachineFG", std::function<void()>{});
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                ExecErrc::kInvalidArguments,
+                static_cast<ExecErrc>(_result.Error().Value()));
+        }
+
+        TEST_F(StateServerTest, SetNotifierThrowsOnUnknownFunctionGroup)
+        {
+            EXPECT_THROW(
+                Server.SetNotifier("UnknownFG", []() {}),
+                std::out_of_range);
+        }
     }
 }

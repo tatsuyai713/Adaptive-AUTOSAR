@@ -1,9 +1,7 @@
 #ifndef READ_DATA_BY_IDENTIFIER_H
 #define READ_DATA_BY_IDENTIFIER_H
 
-#include <json/json.h>
 #include "../../ara/diag/routing/uds_service_router.h"
-#include "./curl_wrapper.h"
 #include "./memory_cache.h"
 
 namespace application
@@ -26,11 +24,7 @@ namespace application
 
             const uint8_t cConditionsNotCorrectNrc{0x22};
             const uint8_t cRequestOutOfRangeNrc{0x31};
-            const bool cCollectJsonComments{false};
 
-            const std::string cResourcesUrl;
-            CurlWrapper *mCurl;
-            Json::Reader mJsonReader;
             MemoryCache<uint16_t, ara::diag::OperationOutput> mCache;
 
             static uint16_t getDid(const std::vector<uint8_t> &requestData);
@@ -38,7 +32,6 @@ namespace application
                 uint16_t did,
                 ara::diag::OperationOutput &response);
 
-            bool tryGetResourceValue(std::string resourceKey, Json::Value &jsonValue);
             void getAverageSpeed(ara::diag::OperationOutput &response);
             void getFuelAmount(ara::diag::OperationOutput &response);
             void getExternalTemperature(ara::diag::OperationOutput &response);
@@ -48,11 +41,7 @@ namespace application
 
         public:
             /// @brief Constructor
-            /// @param curl Configured CURL instance for RESTful communication
-            /// @param resourcesUrl Connected vehicle resources access RESTful URL
-            ReadDataByIdentifier(
-                CurlWrapper *curl,
-                std::string resourcesUrl);
+            ReadDataByIdentifier();
 
             std::future<ara::diag::OperationOutput> HandleMessage(
                 const std::vector<uint8_t> &requestData,

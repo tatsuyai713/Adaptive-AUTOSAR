@@ -1,4 +1,3 @@
-#include <json/json.h>
 #include "../ara/com/someip/sd/sd_network_layer.h"
 #include "../ara/diag/conversation.h"
 #include "../application/helper/argument_configuration.h"
@@ -14,8 +13,7 @@ namespace application
         ara::phm::CheckpointCommunicator *checkpointCommunicator) : ara::exec::helper::ModelledProcess(cAppId, poller),
                                                                     mSupervisedEntity{cSeInstance, checkpointCommunicator},
                                                                     mNetworkLayer{nullptr},
-                                                                    mSdServer{nullptr},
-                                                                    mCurl{nullptr}
+                                                                    mSdServer{nullptr}
     {
     }
 
@@ -156,62 +154,15 @@ namespace application
                 cInitialDelayMax);
     }
 
-    bool ExtendedVehicle::tryConfigureRestCommunication(
-        std::string apiKey, std::string bearerToken, std::string &vin)
+    void ExtendedVehicle::configureMockVehicleData(std::string &vin)
     {
-        const bool cCollectJsonComments{false};
-        const std::string cVehiclesKey{"vehicles"};
-        const std::string cErrorKey{"error"};
-        const std::string cRequestUrl{
-            "https://api.volvocars.com/extended-vehicle/v1/vehicles"};
-
-        mCurl = new helper::CurlWrapper(apiKey, bearerToken);
-
-        std::string _response;
-        bool _successful{mCurl->TryExecute(cRequestUrl, &_response)};
-
-        if (!_successful)
-        {
-            return false;
-        }
-
-        Json::Value _jsonResponse;
-        Json::Reader _jsonReader;
-
-        _successful =
-            _jsonReader.parse(_response, _jsonResponse, cCollectJsonComments);
-
-        if (!_successful)
-        {
-            return false;
-        }
+        const std::string cMockVin{"YV1RS61P532MOCK01"};
+        vin = cMockVin;
+        mResourcesUrl = "mock://vehicle/" + vin + "/resources";
 
         ara::log::LogStream _logStream;
-
-        if (_jsonResponse.isMember(cVehiclesKey))
-        {
-            vin = _jsonResponse[cVehiclesKey][0]["id"].asString();
-            mResourcesUrl = cRequestUrl + "/" + vin + "/resources";
-            _logStream << "The VIN is set to " << vin;
-            Log(cLogLevel, _logStream);
-
-            return true;
-        }
-        else if (_jsonResponse.isMember(cErrorKey))
-        {
-            std::string _message = _jsonResponse[cErrorKey]["message"].asString();
-            _logStream << "Setting the VIN failed. " << _message;
-            Log(cErrorLevel, _logStream);
-
-            return false;
-        }
-        else
-        {
-            _logStream << "Setting the VIN failed due to unexpected RESTful response format.";
-            Log(cErrorLevel, _logStream);
-
-            return false;
-        }
+        _logStream << "The VIN is set to " << vin << " (mock data)";
+        Log(cLogLevel, _logStream);
     }
 
     DoipLib::ControllerConfig ExtendedVehicle::getDoipConfiguration(
@@ -307,8 +258,6 @@ namespace application
         mDoipServer =
             new doip::DoipServer(
                 Poller,
-                mCurl,
-                mResourcesUrl,
                 _networkConfiguration.ipAddress,
                 _networkConfiguration.portNumber,
                 std::move(_controllConfig),
@@ -339,16 +288,10 @@ namespace application
             Log(cLogLevel, _logStream);
 
             std::string _vin;
-            bool cConfigured{tryConfigureRestCommunication(
-                arguments.at(helper::ArgumentConfiguration::cApiKeyArgument),
-                arguments.at(helper::ArgumentConfiguration::cBearerTokenArgument),
-                _vin)};
+            configureMockVehicleData(_vin);
 
-            if (cConfigured)
-            {
-                configureDoipServer(cReader, std::move(_vin));
-                mSdServer->Start();
-            }
+            configureDoipServer(cReader, std::move(_vin));
+            mSdServer->Start();
 
             while (!cancellationToken->load() && _running)
             {
@@ -398,9 +341,6 @@ namespace application
     {
         if (mDoipServer)
             delete mDoipServer;
-
-        if (mCurl)
-            delete mCurl;
 
         if (mSdServer)
             delete mSdServer;

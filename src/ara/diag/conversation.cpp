@@ -5,21 +5,51 @@ namespace ara
 {
     namespace diag
     {
-        std::vector<Conversation> Conversation::mConversations;
+        std::vector<std::unique_ptr<Conversation>> Conversation::mConversations;
+        std::mutex Conversation::mMutex;
+        int64_t Conversation::mNextConversationId{0};
 
-        Conversation::Conversation(const MetaInfo &metaInfo) : mMetaInfo{metaInfo},
-                                                               mActivityStatus{ActivityStatusType::kActive},
-                                                               mDiagnosticSession{SessionControlType::kDefaultSession},
-                                                               mDiagnosticSecurityLevel{SecurityLevelType::kLocked}
+        Conversation::Conversation(
+            Context context, int64_t conversationId) : mContext{context},
+                                                       mActivityStatus{ActivityStatusType::kActive},
+                                                       mDiagnosticSession{SessionControlType::kDefaultSession},
+                                                       mDiagnosticSecurityLevel{SecurityLevelType::kLocked}
         {
-            mConversationIdentifier.id = -1;
+            mConversationIdentifier.id = conversationId;
+        }
+
+        void Conversation::Reactivate()
+        {
+            if (mActivityStatus != ActivityStatusType::kActive)
+            {
+                mActivityStatus = ActivityStatusType::kActive;
+                if (mActivityNotifier)
+                {
+                    mActivityNotifier(mActivityStatus);
+                }
+            }
         }
 
         ara::core::Result<std::reference_wrapper<Conversation>> Conversation::GetConversation(MetaInfo &metaInfo)
         {
-            Conversation _conversation(metaInfo);
-            mConversations.push_back(std::move(_conversation));
-            std::reference_wrapper<Conversation> _conversationRef(mConversations.back());
+            const std::lock_guard<std::mutex> _lock{mMutex};
+
+            const auto _context{metaInfo.GetContext()};
+            for (auto &_conversation : mConversations)
+            {
+                if (_conversation->mContext == _context)
+                {
+                    _conversation->Reactivate();
+                    std::reference_wrapper<Conversation> _conversationRef{*_conversation};
+                    return ara::core::Result<std::reference_wrapper<Conversation>>(_conversationRef);
+                }
+            }
+
+            auto _conversation{
+                std::unique_ptr<Conversation>(
+                    new Conversation(_context, ++mNextConversationId))};
+            std::reference_wrapper<Conversation> _conversationRef{*_conversation};
+            mConversations.emplace_back(std::move(_conversation));
             ara::core::Result<std::reference_wrapper<Conversation>> _result(_conversationRef);
 
             return _result;
@@ -27,21 +57,27 @@ namespace ara
 
         std::vector<std::reference_wrapper<Conversation>> Conversation::GetAllConversations()
         {
-            std::vector<std::reference_wrapper<Conversation>> _result(
-                mConversations.begin(), mConversations.end());
+            const std::lock_guard<std::mutex> _lock{mMutex};
+            std::vector<std::reference_wrapper<Conversation>> _result;
+            _result.reserve(mConversations.size());
+            for (auto &_conversation : mConversations)
+            {
+                _result.emplace_back(*_conversation);
+            }
 
             return _result;
         }
 
         std::vector<std::reference_wrapper<Conversation>> Conversation::GetCurrentActiveConversations()
         {
+            const std::lock_guard<std::mutex> _lock{mMutex};
             std::vector<std::reference_wrapper<Conversation>> _result;
 
-            for (auto conversation : mConversations)
+            for (auto &_conversation : mConversations)
             {
-                if (conversation.GetActivityStatus() == ActivityStatusType::kActive)
+                if (_conversation->mActivityStatus == ActivityStatusType::kActive)
                 {
-                    _result.emplace_back(conversation);
+                    _result.emplace_back(*_conversation);
                 }
             }
 

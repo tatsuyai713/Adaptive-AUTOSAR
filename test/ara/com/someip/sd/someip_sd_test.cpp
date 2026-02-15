@@ -1,3 +1,4 @@
+#include <cmath>
 #include <gtest/gtest.h>
 #include "../../../../../src/ara/com/someip/sd/someip_sd_server.h"
 #include "../../../../../src/ara/com/someip/sd/someip_sd_client.h"

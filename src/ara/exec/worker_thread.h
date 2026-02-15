@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <stdint.h>
-#include <random>
 
 namespace ara
 {
@@ -14,7 +13,6 @@ namespace ara
         {
         private:
             static std::atomic_uint64_t mOffset;
-            static thread_local std::default_random_engine mGenerator;
 
         public:
             /// @brief Offset step that WorkerThread takes to generate the next unique random number

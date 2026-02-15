@@ -13,6 +13,26 @@ namespace ara
             mRpcServer->SetHandler(cService, cMethodId, _handler);
         }
 
+        core::Result<void> ExecutionServer::SetStateChangeHandler(
+            ExecutionStateChangeHandler handler)
+        {
+            if (!handler)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidArguments));
+            }
+
+            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
+            mStateChangeHandler = std::move(handler);
+            return core::Result<void>::FromValue();
+        }
+
+        void ExecutionServer::UnsetStateChangeHandler()
+        {
+            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
+            mStateChangeHandler = nullptr;
+        }
+
         void ExecutionServer::injectErrorCode(
             std::vector<uint8_t> &payload, ExecErrc errorCode)
         {
@@ -54,7 +74,9 @@ namespace ara
             // Validate the reported execution state range
             const auto cRunningStateInt{
                 static_cast<uint8_t>(ExecutionState::kRunning)};
-            if (_executionStateByte != cRunningStateInt)
+            const auto cIdleStateInt{
+                static_cast<uint8_t>(ExecutionState::kIdle)};
+            if (_executionStateByte > cIdleStateInt)
             {
                 injectErrorCode(rpcResponsePayload, ExecErrc::kInvalidArguments);
                 return false;
@@ -65,22 +87,34 @@ namespace ara
                 rpcRequestPayload.cbegin() + _endOffset);
 
             auto _executionState{static_cast<ExecutionState>(_executionStateByte)};
+            ExecutionStateChangeHandler _callback;
+            bool _stateChanged{false};
 
-            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
-            auto _itr{mExecutionStates.find(_id)};
-            if (_itr == mExecutionStates.end() || _itr->second != _executionState)
             {
-                // Insert/update the newly reported state and
-                // react with an empty RPC response payload
-                mExecutionStates[_id] = _executionState;
-                rpcResponsePayload.clear();
-                return true;
+                const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
+                auto _itr{mExecutionStates.find(_id)};
+                if (_itr == mExecutionStates.end() || _itr->second != _executionState)
+                {
+                    // Insert/update the newly reported state and
+                    // react with an empty RPC response payload
+                    mExecutionStates[_id] = _executionState;
+                    _callback = mStateChangeHandler;
+                    _stateChanged = true;
+                }
+                else
+                {
+                    injectErrorCode(rpcResponsePayload, ExecErrc::kAlreadyInState);
+                    return false;
+                }
             }
-            else
+
+            rpcResponsePayload.clear();
+            if (_stateChanged && _callback)
             {
-                injectErrorCode(rpcResponsePayload, ExecErrc::kAlreadyInState);
-                return false;
+                _callback(_id, _executionState);
             }
+
+            return true;
         }
 
         bool ExecutionServer::TryGetExecutionState(
@@ -97,6 +131,13 @@ namespace ara
             {
                 return false;
             }
+        }
+
+        std::map<std::string, ExecutionState>
+        ExecutionServer::GetExecutionStatesSnapshot() const
+        {
+            const std::lock_guard<std::mutex> _executionStatesLock(mMutex);
+            return mExecutionStates;
         }
     }
 }

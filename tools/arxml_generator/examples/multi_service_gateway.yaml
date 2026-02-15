@@ -1,0 +1,111 @@
+# Advanced sample:
+# - Multiple input YAML files can be merged.
+# - Multiple packages in one output ARXML.
+# - Custom AUTOSAR elements via `custom_elements`.
+
+variables:
+  LOCAL_IP: "127.0.0.1"
+  SOMEIP_MCAST: "239.10.0.1"
+
+autosar:
+  packages:
+    - short_name: GatewayCommunicationManifest
+      communication_clusters:
+        - short_name: GatewayCluster
+          protocol_version: 1
+          ethernet_physical_channels:
+            - short_name: GatewayLoopback
+              network_endpoints:
+                - short_name: VSomeIpIngressEP
+                  ipv4_address: "${LOCAL_IP}"
+                - short_name: DdsEgressEP
+                  ipv4_address: "${LOCAL_IP}"
+                - short_name: DiagEP
+                  ipv4_address: "${LOCAL_IP}"
+
+      ethernet_communication_connectors:
+        - short_name: VSomeIpIngressConnector
+          ap_application_endpoints:
+            - short_name: IngressUdp
+              transport: udp
+              port: 30520
+        - short_name: DdsEgressConnector
+          ap_application_endpoints:
+            - short_name: EgressUdp
+              transport: udp
+              port: 30530
+        - short_name: DiagTcpConnector
+          ap_application_endpoints:
+            - short_name: DiagTcp
+              transport: tcp
+              port: 8080
+
+      someip:
+        provided_service_instances:
+          - short_name: GatewayProvidedVehicleStatus
+            service_interface_id: 0x1234
+            major_version: 1
+            minor_version: 0
+            service_instance_id: 2
+            event_groups:
+              - short_name: VehicleStatusGroupProvided
+                event_group_id: 1
+                event_id: 0x8001
+                multicast_udp_port: 30530
+                ipv4_multicast_ip_address: "${SOMEIP_MCAST}"
+            sd_server:
+              initial_delay_min: 30
+              initial_delay_max: 300
+
+        required_service_instances:
+          - short_name: GatewayRequiredVehicleStatus
+            service_interface:
+              id: 0x1234
+              major: 1
+              minor: 0
+            required_event_groups:
+              - short_name: VehicleStatusGroupRequired
+                event_group_id: 1
+                event_id: 0x8001
+            sd_client:
+              initial_delay_min: 20
+              initial_delay_max: 200
+
+      # Flexible extension area for elements not directly modeled by the generator.
+      custom_elements:
+        - tag: DO-IP-INSTANTIATION
+          short_name: DoIpGateway
+          children:
+            - tag: LOGICAL-ADDRESS
+              text: "0x0E00"
+            - tag: EID
+              text: "0x0102030405060708"
+            - tag: GID
+              text: "0x1112131415161718"
+            - tag: NETWORK-INTERFACES
+              children:
+                - tag: DO-IP-NETWORK-CONFIGURATION
+                  children:
+                    - tag: MAX-INITIAL-VEHICLE-ANNOUNCEMENT-TIME
+                      text: 3
+                    - tag: VEHICLE-ANNOUNCEMENT-COUNT
+                      text: 3
+                    - tag: VEHICLE-ANNOUNCEMENT-INTERVAL
+                      text: 1
+
+    - short_name: DiagnosticManifest
+      custom_elements:
+        - tag: DIAGNOSTIC-EVENT-INTERFACE
+          short_name: ExtendedVehicleConnectionEvent
+          children:
+            - tag: DTC-NUMBER
+              text: 1001
+        - tag: DIAGNOSTIC-MONITOR-INTERFACE
+          short_name: ExtendedVehicleConnectionMonitor
+          children:
+            - tag: DIAG-EVENT-DEBOUNCE-TIME-BASED
+              children:
+                - tag: TIME-PASSED-THRESHOLD
+                  text: 5
+                - tag: TIME-FAILED-THRESHOLD
+                  text: 1

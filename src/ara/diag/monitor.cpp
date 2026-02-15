@@ -10,6 +10,7 @@ namespace ara
             std::function<void(InitMonitorReason)> initMonitor) : mSpecifier{specifier},
                                                                   mInitMonitor{initMonitor},
                                                                   mOffered{false},
+                                                                  mDebouncer{nullptr},
                                                                   mEvent{nullptr}
         {
         }
@@ -92,6 +93,17 @@ namespace ara
                     }
                     break;
 
+                case MonitorAction::kFdcThresholdReached:
+                    if (mEvent)
+                    {
+                        const int8_t cFailedFdc{127};
+                        mEvent->SetFaultDetectionCounter(cFailedFdc);
+                        mEvent->SetEventStatusBits(
+                            {{EventStatusBit::kTestFailed, true},
+                             {EventStatusBit::kTestNotCompletedThisOperationCycle, false}});
+                    }
+                    break;
+
                 default:
                     throw std::invalid_argument("Reported monitor action is not supported.");
                 }
@@ -138,6 +150,16 @@ namespace ara
                     mInitMonitor(InitMonitorReason::kDisabled);
                 }
             }
+        }
+
+        bool Monitor::IsOffered() const noexcept
+        {
+            return mOffered;
+        }
+
+        bool Monitor::HasAttachedEvent() const noexcept
+        {
+            return mEvent != nullptr;
         }
 
         Monitor::~Monitor() noexcept

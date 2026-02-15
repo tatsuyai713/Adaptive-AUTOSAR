@@ -8,9 +8,23 @@ namespace ara
 
         StateClient::StateClient(
             std::function<void(const ExecutionErrorEvent &)> undefinedStateCallback,
-            com::someip::rpc::RpcClient *rpcClient) : mUndefinedStateCallback{undefinedStateCallback},
-                                                      mRpcClient{rpcClient}
+            com::someip::rpc::RpcClient *rpcClient) : mRpcClient{rpcClient}
         {
+            // Wrap the user callback to also track error events internally
+            mUndefinedStateCallback = [this, undefinedStateCallback](const ExecutionErrorEvent &event)
+            {
+                if (event.functionGroup)
+                {
+                    const std::string _key{event.functionGroup->GetInstance().ToString()};
+                    const std::lock_guard<std::mutex> _lock{mErrorsMutex};
+                    mExecutionErrors[_key] = event;
+                }
+
+                if (undefinedStateCallback)
+                {
+                    undefinedStateCallback(event);
+                }
+            };
             auto _setStateHandler{
                 std::bind(
                     &StateClient::setStateHandler,
@@ -156,6 +170,19 @@ namespace ara
         core::Result<ExecutionErrorEvent> StateClient::GetExecutionError(
             const FunctionGroup &functionGroup) noexcept
         {
+            const std::string _key{functionGroup.GetInstance().ToString()};
+
+            {
+                const std::lock_guard<std::mutex> _lock{mErrorsMutex};
+                auto _itr{mExecutionErrors.find(_key)};
+                if (_itr != mExecutionErrors.end())
+                {
+                    core::Result<ExecutionErrorEvent> _result{_itr->second};
+                    return _result;
+                }
+            }
+
+            // No execution error tracked for this function group
             const ExecErrc cExecErrc{ExecErrc::kFailed};
             auto _errorValue{static_cast<core::ErrorDomain::CodeType>(cExecErrc)};
             core::ErrorCode _errorCode{_errorValue, cErrorDomain};

@@ -15,6 +15,13 @@ namespace ara
                 {
                 }
 
+                void RpcServer::OnHandlerRegistered(
+                    uint16_t serviceId, uint16_t methodId)
+                {
+                    (void)serviceId;
+                    (void)methodId;
+                }
+
                 SomeIpReturnCode RpcServer::validate(
                     const SomeIpRpcMessage &request) const
                 {
@@ -131,6 +138,7 @@ namespace ara
                     mHandlers[_messageId] = handler;
 
                     mServices.insert(serviceId);
+                    OnHandlerRegistered(serviceId, methodId);
                 }
             }
         }

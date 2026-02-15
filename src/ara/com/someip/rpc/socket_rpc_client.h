@@ -1,10 +1,15 @@
 #ifndef SOCKET_RPC_CLIENT_H
 #define SOCKET_RPC_CLIENT_H
 
-#include <asyncbsdsocket/poller.h>
-#include <asyncbsdsocket/tcp_client.h>
-#include "../../helper/concurrent_queue.h"
+#include <mutex>
+#include <set>
+#include "../vsomeip_application.h"
 #include "./rpc_client.h"
+
+namespace AsyncBsdSocketLib
+{
+    class Poller;
+}
 
 namespace ara
 {
@@ -18,14 +23,19 @@ namespace ara
                 class SocketRpcClient : public RpcClient
                 {
                 private:
-                    static const size_t cBufferSize{256};
+                    static const vsomeip::instance_t cInstanceId{1};
+                    std::shared_ptr<vsomeip::application> mApplication;
+                    std::set<vsomeip::service_t> mRequestedServices;
+                    std::mutex mRequestMutex;
 
-                    helper::ConcurrentQueue<std::vector<uint8_t>> mSendingQueue;
-                    AsyncBsdSocketLib::Poller *const mPoller;
-                    AsyncBsdSocketLib::TcpClient mClient;
+                    static SomeIpReturnCode ConvertReturnCode(
+                        vsomeip::return_code_e returnCode);
 
-                    void onSend();
-                    void onReceive();
+                    static std::vector<uint8_t> ConvertPayload(
+                        const std::shared_ptr<vsomeip::payload> &payload);
+
+                    void onResponse(
+                        const std::shared_ptr<vsomeip::message> &message);
 
                 protected:
                     void Send(const std::vector<uint8_t> &payload) override;

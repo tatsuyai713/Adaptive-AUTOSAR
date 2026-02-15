@@ -2,11 +2,14 @@
 #define STATE_SERVER_H
 
 #include <atomic>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <set>
+#include <string>
+#include <vector>
 #include "../com/someip/rpc/rpc_server.h"
-#include "../sm/trigger.h"
+#include "../core/result.h"
 #include "./exec_exception.h"
 
 namespace ara
@@ -25,7 +28,7 @@ namespace ara
 
             com::someip::rpc::RpcServer *const mRpcServer;
             const std::set<std::pair<std::string, std::string>> mFunctionGroupStates;
-            std::map<std::string, sm::Trigger<std::string> *> mNotifiers;
+            std::map<std::string, std::function<void()>> mNotifiers;
             std::map<std::string, std::string> mCurrentStates;
             std::atomic_bool mInitialized;
             std::mutex mMutex;
@@ -33,7 +36,7 @@ namespace ara
             void injectErrorCode(
                 std::vector<uint8_t> &payload, ExecErrc errorCode);
 
-            void notify(std::string functionGroup, std::string state);
+            void notify(const std::string &functionGroup);
 
             bool handleSetState(
                 const std::vector<uint8_t> &rpcRequestPayload,
@@ -70,12 +73,19 @@ namespace ara
             void SetNotifier(
                 std::string functionGroup, std::function<void()> callback);
 
+            /// @brief Set a notifier at the state changed of a function group.
+            /// @param functionGroup Function group of interest
+            /// @param callback Callback to be invoked at the state change
+            /// @returns Invalid transition on unknown function group, invalid argument on empty callback.
+            core::Result<void> TrySetNotifier(
+                std::string functionGroup, std::function<void()> callback);
+
             /// @brief Indicate whether or not EM has been initialized
             /// @return True if EM is initialized; otherwise false
             /// @remark The function call is atomic.
             bool Initialized() const noexcept;
 
-            ~StateServer();
+            ~StateServer() = default;
         };
     }
 }

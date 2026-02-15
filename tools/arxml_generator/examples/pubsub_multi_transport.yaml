@@ -1,0 +1,106 @@
+# Multi-transport communication manifest sample:
+# - SOME/IP service deployment
+# - DDS topic metadata (standard section)
+# - ZeroCopy channel metadata (extension section)
+#
+# Usage:
+#   python3 tools/arxml_generator/generate_arxml.py \
+#     --input tools/arxml_generator/examples/pubsub_multi_transport.yaml \
+#     --output /tmp/pubsub_multi_transport.arxml \
+#     --allow-extensions \
+#     --print-summary
+
+variables:
+  LOCAL_IP: "127.0.0.1"
+  SOMEIP_MCAST: "239.255.0.1"
+
+autosar:
+  schema_namespace: "http://autosar.org/schema/r4.0"
+  schema_location: "http://autosar.org/schema/r4.0 autosar_00050.xsd"
+  packages:
+    - short_name: AraComPubSubMultiTransportManifest
+      communication_cluster:
+        short_name: LocalCommunicationCluster
+        protocol_version: 1
+        ethernet_physical_channels:
+          - short_name: LoopbackChannel
+            network_endpoints:
+              - short_name: ProviderEndpoint
+                ipv4_address: "${LOCAL_IP}"
+              - short_name: ConsumerEndpoint
+                ipv4_address: "${LOCAL_IP}"
+
+      ethernet_communication_connectors:
+        - short_name: ProviderConnector
+          ap_application_endpoints:
+            - short_name: ProviderUdpEndpoint
+              transport: udp
+              port: 30509
+        - short_name: ConsumerConnector
+          ap_application_endpoints:
+            - short_name: ConsumerUdpEndpoint
+              transport: udp
+              port: 30510
+
+      someip:
+        provided_service_instances:
+          - short_name: VehicleStatusProviderInstance
+            service_interface:
+              id: 0x1234
+              major: 1
+              minor: 0
+            service_instance_id: 1
+            event_groups:
+              - short_name: VehicleStatusEventGroup
+                event_group_id: 1
+                event_id: 0x8001
+                multicast_udp_port: 30509
+                ipv4_multicast_ip_address: "${SOMEIP_MCAST}"
+            sd_server:
+              initial_delay_min: 20
+              initial_delay_max: 200
+
+        required_service_instances:
+          - short_name: VehicleStatusConsumerRequirement
+            service_interface_id: 0x1234
+            major_version: 1
+            minor_version: 0
+            required_event_groups:
+              - short_name: VehicleStatusEventGroupRequirement
+                event_group_id: 1
+                event_id: 0x8001
+            sd_client:
+              initial_delay_min: 20
+              initial_delay_max: 200
+
+      # NOTE:
+# DDS is represented as a standard section in this repository.
+# ZeroCopy remains an implementation extension section.
+      dds:
+        short_name: VehicleStatusDdsBinding
+        domain_id: 0
+        provided_topics:
+          - short_name: VehicleStatusTx
+            topic_name: "adaptive_autosar/sample/ara_com_pubsub/VehicleStatusFrame"
+            type_name: "sample::ara_com_pubsub::VehicleStatusFrame"
+            qos_profile: "reliable_keep_last_10"
+        required_topics:
+          - short_name: VehicleStatusRx
+            topic_name: "adaptive_autosar/sample/ara_com_pubsub/VehicleStatusFrame"
+            type_name: "sample::ara_com_pubsub::VehicleStatusFrame"
+            qos_profile: "reliable_keep_last_10"
+
+      zerocopy:
+        short_name: VehicleStatusZeroCopyBinding
+        runtime: iceoryx
+        enabled: true
+        service_channels:
+          - short_name: VehicleStatusEventChannel
+            service_id: 0x1234
+            instance_id: 1
+            event_id: 0x8001
+            publisher_history: 16
+            subscriber_queue: 16
+            max_sample_size: 512
+            max_publishers: 2
+            max_subscribers: 8
