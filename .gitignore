@@ -8,3 +8,5 @@ build-*/
 
 # Doxygen HTML
 doc/html/
+
+.claude
