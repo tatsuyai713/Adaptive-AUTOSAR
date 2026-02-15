@@ -29,5 +29,32 @@ namespace ara
                     CryptoErrc::kEntropySourceFailure));
             EXPECT_STREQ(_errorCode.Domain().Name(), "Crypto");
         }
+
+        TEST(CryptoErrorDomainTest, InvalidKeySizeMessage)
+        {
+            CryptoErrorDomain _domain;
+            const auto _message =
+                _domain.Message(static_cast<core::ErrorDomain::CodeType>(
+                    CryptoErrc::kInvalidKeySize));
+            EXPECT_STREQ(_message, "Invalid symmetric key length.");
+        }
+
+        TEST(CryptoErrorDomainTest, EncryptionFailureMessage)
+        {
+            CryptoErrorDomain _domain;
+            const auto _message =
+                _domain.Message(static_cast<core::ErrorDomain::CodeType>(
+                    CryptoErrc::kEncryptionFailure));
+            EXPECT_STREQ(_message, "Encryption operation failed.");
+        }
+
+        TEST(CryptoErrorDomainTest, DecryptionFailureMessage)
+        {
+            CryptoErrorDomain _domain;
+            const auto _message =
+                _domain.Message(static_cast<core::ErrorDomain::CodeType>(
+                    CryptoErrc::kDecryptionFailure));
+            EXPECT_STREQ(_message, "Decryption operation or padding error.");
+        }
     }
 }

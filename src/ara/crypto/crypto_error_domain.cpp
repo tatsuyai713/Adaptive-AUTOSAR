@@ -27,6 +27,12 @@ namespace ara
                 return "Entropy source is not available.";
             case CryptoErrc::kCryptoProviderFailure:
                 return "Crypto provider failure.";
+            case CryptoErrc::kInvalidKeySize:
+                return "Invalid symmetric key length.";
+            case CryptoErrc::kEncryptionFailure:
+                return "Encryption operation failed.";
+            case CryptoErrc::kDecryptionFailure:
+                return "Decryption operation or padding error.";
             default:
                 return "Unknown cryptographic error.";
             }

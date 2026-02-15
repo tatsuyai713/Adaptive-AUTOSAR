@@ -14,7 +14,10 @@ namespace ara
             kInvalidArgument = 1,
             kUnsupportedAlgorithm = 2,
             kEntropySourceFailure = 3,
-            kCryptoProviderFailure = 4
+            kCryptoProviderFailure = 4,
+            kInvalidKeySize = 5,        ///< Invalid symmetric key length
+            kEncryptionFailure = 6,     ///< Encryption operation failed
+            kDecryptionFailure = 7      ///< Decryption operation or padding error
         };
 
         /// @brief Error domain for ara::crypto subset implementation.
