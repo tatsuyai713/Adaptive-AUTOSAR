@@ -1,0 +1,15 @@
+[Unit]
+Description=Adaptive AUTOSAR watchdog supervisor daemon
+After=autosar-platform-app.service autosar-exec-manager.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
+Wants=autosar-platform-app.service autosar-exec-manager.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-watchdog
+ExecStart=/usr/local/bin/autosar-watchdog-wrapper.sh
+Restart=always
+RestartSec=1
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

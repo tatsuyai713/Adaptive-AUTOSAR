@@ -1,8 +1,8 @@
 [Unit]
 Description=Adaptive AUTOSAR execution manager bridge (runs user bringup script)
-After=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service
+After=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
 Requires=autosar-iox-roudi.service autosar-platform-app.service
-Wants=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service
+Wants=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-platform-app.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
 
 [Service]
 Type=simple

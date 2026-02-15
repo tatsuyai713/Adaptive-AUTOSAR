@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR persistency guard daemon
+After=local-fs.target
+Wants=local-fs.target
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-persistency-guard
+ExecStart=/usr/local/bin/autosar-persistency-guard-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+

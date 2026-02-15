@@ -1,8 +1,8 @@
 [Unit]
 Description=Adaptive AUTOSAR platform process stack (EM/SM/PHM/Diag/Vehicle)
-After=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service
-Wants=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service
-Before=autosar-exec-manager.service
+After=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
+Wants=network-online.target autosar-iox-roudi.service autosar-vsomeip-routing.service autosar-time-sync.service autosar-persistency-guard.service autosar-iam-policy.service
+Before=autosar-exec-manager.service autosar-watchdog.service
 
 [Service]
 Type=simple

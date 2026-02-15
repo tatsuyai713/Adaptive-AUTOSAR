@@ -120,8 +120,13 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 ユーザーアプリ起動の導線:
 - `/etc/autosar/bringup.sh` (ユーザーが自分の起動コマンドを記述)
 - `autosar-vsomeip-routing.service` (SOME/IP ルーティングマネージャを常駐起動)
+- `autosar-time-sync.service` (時刻同期の常駐サポートデーモン)
+- `autosar-persistency-guard.service` (永続化ストレージ同期の常駐ガードデーモン)
+- `autosar-iam-policy.service` (IAM ポリシー常駐ローダデーモン)
+- `autosar-can-manager.service` (SocketCAN インタフェース常駐管理デーモン)
 - `autosar-platform-app.service` (プラットフォーム側の常駐プロセス群を先に起動)
 - `autosar-exec-manager.service` (`bringup.sh` を起動する常駐サービス)
+- `autosar-watchdog.service` (常駐ウォッチドッグ監視デーモン)
 
 ### Vector/ETAS/EB 向け資産を移植して使う
 本実装は、ベンダ実装で開発した C++ 資産を「ソース互換で再ビルド」して、
@@ -154,7 +159,7 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 | `ara::iam` | 実装あり (一部) | メモリ内 IAM ポリシー判定（subject/resource/action、ワイルドカード）、エラードメイン | ポリシー永続化やプラットフォーム IAM 連携は未実装 |
 | `ara::ucm` | 実装あり (一部) | UCM エラードメイン、更新セッション管理 (`Prepare/Stage/Verify/Activate/Rollback/Cancel`)、SHA-256 検証、状態/進捗コールバック、クラスタ別バージョン管理とダウングレード拒否 | 簡易更新モデル（installer daemon/campaign 管理/secure boot 連携は未実装） |
 | 時刻同期 (`ara::tsync`) | 実装あり (一部) | 参照時刻更新、同期時刻変換、オフセット/状態 API、エラードメイン | NTP/PTP デーモンとの統合は未実装 |
-| Raspberry Pi ECU 配備プロファイル | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
+| Raspberry Pi ECU 配備プロファイル | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`watchdog`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
 
 ## user_apps テンプレート (インストール先: `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:

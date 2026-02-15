@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR IAM policy loader daemon
+After=local-fs.target
+Wants=local-fs.target
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-iam-policy
+ExecStart=/usr/local/bin/autosar-iam-policy-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+

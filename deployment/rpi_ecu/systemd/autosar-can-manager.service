@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR CAN interface manager daemon
+After=network-online.target
+Wants=network-online.target
+Before=autosar-ecu-full-stack.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-can-manager
+ExecStart=/usr/local/bin/autosar-can-manager-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+

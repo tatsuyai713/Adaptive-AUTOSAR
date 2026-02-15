@@ -1,0 +1,4 @@
+# subject,resource,action,decision
+# Wildcard '*' is supported in any of the first 3 columns.
+*,*,*,deny
+

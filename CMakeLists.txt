@@ -897,6 +897,46 @@ if(ARA_COM_USE_VSOMEIP)
   )
 endif()
 
+add_executable(
+  autosar_time_sync_daemon
+  ${source_dir}/main_time_sync_daemon.cpp
+)
+
+target_link_libraries(
+  autosar_time_sync_daemon
+  ara_tsync
+)
+
+add_executable(
+  autosar_persistency_guard
+  ${source_dir}/main_persistency_guard.cpp
+)
+
+target_link_libraries(
+  autosar_persistency_guard
+  ara_per
+)
+
+add_executable(
+  autosar_iam_policy_loader
+  ${source_dir}/main_iam_policy_loader.cpp
+)
+
+target_link_libraries(
+  autosar_iam_policy_loader
+  ara_iam
+)
+
+add_executable(
+  autosar_can_interface_manager
+  ${source_dir}/main_can_interface_manager.cpp
+)
+
+add_executable(
+  autosar_watchdog_supervisor
+  ${source_dir}/main_watchdog_supervisor.cpp
+)
+
 set(has_pubsub_sample_entrypoints OFF)
 if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
    EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
@@ -1494,6 +1534,16 @@ if(TARGET autosar_vsomeip_routing_manager)
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 endif()
+
+install(
+  TARGETS
+    autosar_time_sync_daemon
+    autosar_persistency_guard
+    autosar_iam_policy_loader
+    autosar_can_interface_manager
+    autosar_watchdog_supervisor
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
 install(
   DIRECTORY ${CMAKE_SOURCE_DIR}/src/ara

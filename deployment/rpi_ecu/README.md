@@ -11,8 +11,13 @@ using this repository runtime and user apps.
 - Install `systemd` units for:
   - iceoryx RouDi
   - vSomeIP routing manager
+  - time synchronization daemon
+  - persistency guard daemon
+  - IAM policy loader daemon
+  - CAN interface manager daemon
   - platform application stack (`adaptive_autosar`, EM/SM/PHM/Diag/Vehicle)
   - execution-manager bridge service (runs user bringup script)
+  - watchdog supervisor daemon
   - ECU full-stack app (`CAN + SOME/IP` receive, `DDS` publish)
 - Verify transport and ECU paths with a single script
 
@@ -69,8 +74,14 @@ Edit runtime options in:
 
 - `/etc/default/autosar-ecu-full-stack`
 - `/etc/default/autosar-vsomeip-routing`
+- `/etc/default/autosar-time-sync`
+- `/etc/default/autosar-persistency-guard`
+- `/etc/default/autosar-iam-policy`
+- `/etc/default/autosar-can-manager`
 - `/etc/default/autosar-platform-app`
 - `/etc/default/autosar-exec-manager`
+- `/etc/default/autosar-watchdog`
+- `/etc/autosar/iam_policy.csv`
 
 Edit user startup script in:
 
@@ -82,12 +93,18 @@ Edit user startup script in:
 ```bash
 sudo systemctl start autosar-iox-roudi.service
 sudo systemctl start autosar-vsomeip-routing.service
+sudo systemctl start autosar-time-sync.service
+sudo systemctl start autosar-persistency-guard.service
+sudo systemctl start autosar-iam-policy.service
+sudo systemctl start autosar-can-manager.service
 sudo systemctl start autosar-platform-app.service
 sudo systemctl start autosar-exec-manager.service
+sudo systemctl start autosar-watchdog.service
 sudo systemctl start autosar-ecu-full-stack.service
 sudo systemctl status autosar-vsomeip-routing.service --no-pager
 sudo systemctl status autosar-platform-app.service --no-pager
 sudo systemctl status autosar-exec-manager.service --no-pager
+sudo systemctl status autosar-watchdog.service --no-pager
 ```
 
 If you use only `bringup.sh` to launch your own apps, disable the fixed sample service:
@@ -107,9 +124,12 @@ sudo systemctl disable --now autosar-ecu-full-stack.service
 sudo systemctl restart autosar-exec-manager.service
 ```
 
-`autosar-vsomeip-routing.service` starts and keeps SOME/IP routing resident.
+`autosar-vsomeip-routing.service` keeps SOME/IP routing resident.
+`autosar-time-sync.service`, `autosar-persistency-guard.service`, `autosar-iam-policy.service`, and
+`autosar-can-manager.service` initialize core resident platform support.
 Then `autosar-platform-app.service` starts the built-in platform process stack.
 Then `autosar-exec-manager.service` executes your bringup script.
+`autosar-watchdog.service` supervises the runtime heartbeat.
 This is the recommended way to run user-defined applications on Raspberry Pi.
 
 ## 5) Validate readiness and communication paths

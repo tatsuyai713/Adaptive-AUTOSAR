@@ -121,8 +121,13 @@ Detailed runbook:
 User-app bringup entry points:
 - `/etc/autosar/bringup.sh` (edit this to launch your own applications)
 - `autosar-vsomeip-routing.service` (keeps SOME/IP routing manager resident)
+- `autosar-time-sync.service` (resident time synchronization support daemon)
+- `autosar-persistency-guard.service` (resident persistency sync guard daemon)
+- `autosar-iam-policy.service` (resident IAM policy loader daemon)
+- `autosar-can-manager.service` (resident SocketCAN interface manager daemon)
 - `autosar-platform-app.service` (starts platform-side built-in process stack)
 - `autosar-exec-manager.service` (runs `bringup.sh` after platform service)
+- `autosar-watchdog.service` (resident watchdog supervisor daemon)
 
 ### Porting Vector/ETAS/EB-oriented app assets
 This repository can be used to rebuild vendor-developed C++ app assets at source
@@ -155,7 +160,7 @@ Status meanings:
 | `ara::iam` | Implemented (subset) | In-memory IAM policy engine (subject/resource/action, wildcard rules), error domain | Policy persistence and platform IAM integration are not implemented |
 | `ara::ucm` | Implemented (subset) | UCM error domain and update-session manager (`Prepare/Stage/Verify/Activate/Rollback/Cancel`), SHA-256 payload verification, state/progress callbacks, per-cluster active-version tracking with downgrade rejection | Simplified software update model (no installer daemon, campaign management, secure boot integration) |
 | Time sync (`ara::tsync`) | Implemented (subset) | Time sync client with reference update, synchronized time conversion, offset/state APIs, error domain | No network time protocol daemon integration yet |
-| Raspberry Pi ECU deployment profile | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
+| Raspberry Pi ECU deployment profile | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script, resident daemons (`vsomeip-routing`, `time-sync`, `persistency-guard`, `iam-policy`, `can-manager`, `watchdog`) | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
 
 ## User App Templates (Installed as `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:

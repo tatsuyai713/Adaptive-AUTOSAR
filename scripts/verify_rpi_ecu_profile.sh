@@ -111,6 +111,21 @@ resolve_binary() {
   find "${USER_APP_BUILD_DIR}" -type f -name "${binary_name}" -perm -111 | head -n 1
 }
 
+resolve_runtime_binary() {
+  local binary_name="$1"
+  local candidate
+  for candidate in \
+    "${INSTALL_PREFIX}/bin/${binary_name}" \
+    "${INSTALL_PREFIX}/sbin/${binary_name}" \
+    "${INSTALL_PREFIX}/usr/bin/${binary_name}"; do
+    if [[ -x "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 safe_kill_and_wait() {
   local pid="$1"
   if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
@@ -191,6 +206,12 @@ echo "       user_app_build_dir=${USER_APP_BUILD_DIR}"
 echo "       can_backend=${CAN_BACKEND} can_if=${CAN_IFNAME}"
 echo "       logs=${BASE_LOG_DIR}"
 
+can_run_someip_transport="ON"
+can_run_dds_transport="ON"
+can_run_zerocopy_transport="ON"
+can_run_ecu_flow="ON"
+can_run_ecu_someip_flow="ON"
+
 # Prerequisite checks
 if [[ -f "${INSTALL_PREFIX}/lib/cmake/AdaptiveAutosarAP/AdaptiveAutosarAPConfig.cmake" || \
       -f "${INSTALL_PREFIX}/lib64/cmake/AdaptiveAutosarAP/AdaptiveAutosarAPConfig.cmake" ]]; then
@@ -205,6 +226,52 @@ else
   record_result "User-app build dir" "FAIL" "${USER_APP_BUILD_DIR} does not exist"
 fi
 
+if resolve_runtime_binary adaptive_autosar >/dev/null; then
+  record_result "Platform binary" "PASS" "adaptive_autosar found"
+else
+  record_result "Platform binary" "FAIL" "adaptive_autosar not found under ${INSTALL_PREFIX}"
+fi
+
+if [[ "${RUN_SOMEIP}" == "ON" ]]; then
+  if resolve_runtime_binary autosar_vsomeip_routing_manager >/dev/null; then
+    record_result "SOME/IP routing binary" "PASS" "autosar_vsomeip_routing_manager found"
+  else
+    record_result "SOME/IP routing binary" "FAIL" "autosar_vsomeip_routing_manager not found under ${INSTALL_PREFIX}"
+    can_run_someip_transport="OFF"
+    can_run_ecu_someip_flow="OFF"
+  fi
+fi
+
+if resolve_runtime_binary autosar_time_sync_daemon >/dev/null; then
+  record_result "Time-sync daemon binary" "PASS" "autosar_time_sync_daemon found"
+else
+  record_result "Time-sync daemon binary" "FAIL" "autosar_time_sync_daemon not found under ${INSTALL_PREFIX}"
+fi
+
+if resolve_runtime_binary autosar_persistency_guard >/dev/null; then
+  record_result "Persistency daemon binary" "PASS" "autosar_persistency_guard found"
+else
+  record_result "Persistency daemon binary" "FAIL" "autosar_persistency_guard not found under ${INSTALL_PREFIX}"
+fi
+
+if resolve_runtime_binary autosar_iam_policy_loader >/dev/null; then
+  record_result "IAM daemon binary" "PASS" "autosar_iam_policy_loader found"
+else
+  record_result "IAM daemon binary" "FAIL" "autosar_iam_policy_loader not found under ${INSTALL_PREFIX}"
+fi
+
+if resolve_runtime_binary autosar_can_interface_manager >/dev/null; then
+  record_result "CAN manager binary" "PASS" "autosar_can_interface_manager found"
+else
+  record_result "CAN manager binary" "FAIL" "autosar_can_interface_manager not found under ${INSTALL_PREFIX}"
+fi
+
+if resolve_runtime_binary autosar_watchdog_supervisor >/dev/null; then
+  record_result "Watchdog daemon binary" "PASS" "autosar_watchdog_supervisor found"
+else
+  record_result "Watchdog daemon binary" "FAIL" "autosar_watchdog_supervisor not found under ${INSTALL_PREFIX}"
+fi
+
 SOMEIP_PROVIDER_BIN="$(resolve_binary autosar_user_com_someip_provider_template || true)"
 SOMEIP_CONSUMER_BIN="$(resolve_binary autosar_user_com_someip_consumer_template || true)"
 DDS_PUB_BIN="$(resolve_binary autosar_user_com_dds_pub_template || true)"
@@ -213,12 +280,6 @@ ZC_PUB_BIN="$(resolve_binary autosar_user_com_zerocopy_pub_template || true)"
 ZC_SUB_BIN="$(resolve_binary autosar_user_com_zerocopy_sub_template || true)"
 ECU_BIN="$(resolve_binary autosar_user_tpl_ecu_full_stack || true)"
 ECU_SOMEIP_SOURCE_BIN="$(resolve_binary autosar_user_tpl_ecu_someip_source || true)"
-
-can_run_someip_transport="ON"
-can_run_dds_transport="ON"
-can_run_zerocopy_transport="ON"
-can_run_ecu_flow="ON"
-can_run_ecu_someip_flow="ON"
 
 if [[ "${RUN_SOMEIP}" == "ON" ]]; then
   if [[ -n "${SOMEIP_PROVIDER_BIN}" && -n "${SOMEIP_CONSUMER_BIN}" ]]; then

@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR time synchronization daemon
+After=network-online.target
+Wants=network-online.target
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-time-sync
+ExecStart=/usr/local/bin/autosar-time-sync-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+
