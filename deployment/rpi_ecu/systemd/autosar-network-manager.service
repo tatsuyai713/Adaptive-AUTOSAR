@@ -1,0 +1,16 @@
+[Unit]
+Description=Adaptive AUTOSAR Network Management (NM) daemon
+After=network-online.target autosar-can-manager.service
+Wants=network-online.target autosar-can-manager.service
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-network-manager
+ExecStart=/usr/local/bin/autosar-network-manager-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

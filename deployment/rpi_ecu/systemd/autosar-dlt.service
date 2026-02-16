@@ -1,0 +1,16 @@
+[Unit]
+Description=Adaptive AUTOSAR DLT (Diagnostic Log and Trace) daemon
+After=local-fs.target network-online.target
+Wants=local-fs.target network-online.target
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-dlt
+ExecStart=/usr/local/bin/autosar-dlt-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

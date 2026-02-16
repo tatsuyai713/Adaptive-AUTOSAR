@@ -248,6 +248,9 @@ set(source_ara_tsync_dir
 set(source_ara_ucm_dir
   "${CMAKE_SOURCE_DIR}/src/ara/ucm")
 
+set(source_ara_nm_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/nm")
+
 set(source_ara_phm_supervisors_dir
   "${CMAKE_SOURCE_DIR}/src/ara/phm/supervisors")
 
@@ -405,6 +408,8 @@ add_library(
   ${source_ara_log_sink_dir}/log_sink.cpp
   ${source_ara_log_sink_dir}/network_log_sink.h
   ${source_ara_log_sink_dir}/network_log_sink.cpp
+  ${source_ara_log_sink_dir}/dlt_log_sink.h
+  ${source_ara_log_sink_dir}/dlt_log_sink.cpp
 )
 
 add_library(
@@ -706,6 +711,14 @@ add_library(
   ${source_ara_ucm_dir}/update_manager.cpp
 )
 
+add_library(
+  ara_nm
+  ${source_ara_nm_dir}/nm_error_domain.h
+  ${source_ara_nm_dir}/nm_error_domain.cpp
+  ${source_ara_nm_dir}/network_manager.h
+  ${source_ara_nm_dir}/network_manager.cpp
+)
+
 target_link_libraries(
   ara_per
   ara_core
@@ -736,6 +749,11 @@ target_link_libraries(
   ara_ucm
   ara_core
   ara_crypto
+)
+
+target_link_libraries(
+  ara_nm
+  ara_core
 )
 
 target_link_libraries(
@@ -823,7 +841,7 @@ set(autosar_ap_public_include_roots
   ${CMAKE_SOURCE_DIR}/src
 )
 
-foreach(_autosar_target arxml ara_core ara_log ara_com ara_sm ara_exec ara_diag ara_phm ara_per ara_crypto ara_iam ara_tsync ara_ucm)
+foreach(_autosar_target arxml ara_core ara_log ara_com ara_sm ara_exec ara_diag ara_phm ara_per ara_crypto ara_iam ara_tsync ara_ucm ara_nm)
   if(TARGET ${_autosar_target})
     target_include_directories(
       ${_autosar_target}
@@ -999,6 +1017,32 @@ add_executable(
 target_link_libraries(
   autosar_ptp_time_provider
   ara_tsync
+)
+
+add_executable(
+  autosar_network_manager
+  ${source_dir}/main_network_manager.cpp
+)
+
+target_link_libraries(
+  autosar_network_manager
+  ara_nm
+)
+
+add_executable(
+  autosar_ucm_daemon
+  ${source_dir}/main_ucm_daemon.cpp
+)
+
+target_link_libraries(
+  autosar_ucm_daemon
+  ara_ucm
+  ara_crypto
+)
+
+add_executable(
+  autosar_dlt_daemon
+  ${source_dir}/main_dlt_daemon.cpp
 )
 
 set(has_pubsub_sample_entrypoints OFF)
@@ -1585,6 +1629,7 @@ set(autosar_ap_install_targets
   ara_iam
   ara_tsync
   ara_ucm
+  ara_nm
 )
 
 if(TARGET async_bsd_socket_lib)
@@ -1624,6 +1669,9 @@ install(
     autosar_sm_state_daemon
     autosar_ntp_time_provider
     autosar_ptp_time_provider
+    autosar_network_manager
+    autosar_ucm_daemon
+    autosar_dlt_daemon
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 

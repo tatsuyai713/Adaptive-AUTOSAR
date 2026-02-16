@@ -1,0 +1,16 @@
+[Unit]
+Description=Adaptive AUTOSAR UCM (Update & Configuration Management) daemon
+After=local-fs.target network-online.target autosar-platform-app.service
+Wants=local-fs.target network-online.target
+Before=autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-ucm
+ExecStart=/usr/local/bin/autosar-ucm-wrapper.sh
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
