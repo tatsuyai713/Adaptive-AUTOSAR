@@ -66,7 +66,7 @@ echo "       cyclonedds=${USE_CYCLONEDDS} (${CYCLONEDDS_PREFIX})"
 echo "       install_base_deps=${INSTALL_BASE_DEPS}"
 
 if [[ "${INSTALL_BASE_DEPS}" == "ON" ]]; then
-  "${SCRIPT_DIR}/install_dependemcy.sh"
+  "${SCRIPT_DIR}/install_dependency.sh"
 fi
 
 common_args=()
