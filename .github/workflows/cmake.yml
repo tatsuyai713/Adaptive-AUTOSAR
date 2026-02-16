@@ -26,7 +26,7 @@ jobs:
     - name: Install system dependencies (repo script)
       run: |
         set -euxo pipefail
-        ./scripts/install_dependemcy.sh
+        ./scripts/install_dependency.sh
 
     - name: Build and install middleware dependencies (repo scripts)
       env:
