@@ -27,6 +27,12 @@ namespace ara
                 return "Time base is not synchronized.";
             case TsyncErrc::kInvalidArgument:
                 return "Invalid time synchronization argument.";
+            case TsyncErrc::kProviderUnavailable:
+                return "Time source provider is unavailable.";
+            case TsyncErrc::kDeviceOpenFailed:
+                return "Failed to open time source device.";
+            case TsyncErrc::kQueryFailed:
+                return "Failed to query time source.";
             default:
                 return "Unknown time synchronization error.";
             }

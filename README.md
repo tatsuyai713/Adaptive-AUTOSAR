@@ -34,10 +34,6 @@ sudo ./scripts/install_dependency.sh
 sudo ./scripts/install_middleware_stack.sh
 ```
 
-Compatibility aliases are also available:
-- `./scripts/install_dependemcy.sh`
-- `./scripts/install_dependencies.sh`
-
 Or run everything from one command:
 
 ```bash

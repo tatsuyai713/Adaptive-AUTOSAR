@@ -530,11 +530,14 @@ add_library(
   ${source_ara_sm_dir}/trigger_in.h
   ${source_ara_sm_dir}/trigger_out.h
   ${source_ara_sm_dir}/trigger_inout.h
-)
-
-set_target_properties(
-  ara_sm
-  PROPERTIES LINKER_LANGUAGE CXX
+  ${source_ara_sm_dir}/sm_error_domain.h
+  ${source_ara_sm_dir}/sm_error_domain.cpp
+  ${source_ara_sm_dir}/network_handle.h
+  ${source_ara_sm_dir}/network_handle.cpp
+  ${source_ara_sm_dir}/machine_state_client.h
+  ${source_ara_sm_dir}/machine_state_client.cpp
+  ${source_ara_sm_dir}/state_transition_handler.h
+  ${source_ara_sm_dir}/state_transition_handler.cpp
 )
 
 add_library(
@@ -688,6 +691,11 @@ add_library(
   ${source_ara_tsync_dir}/tsync_error_domain.cpp
   ${source_ara_tsync_dir}/time_sync_client.h
   ${source_ara_tsync_dir}/time_sync_client.cpp
+  ${source_ara_tsync_dir}/synchronized_time_base_provider.h
+  ${source_ara_tsync_dir}/ptp_time_base_provider.h
+  ${source_ara_tsync_dir}/ptp_time_base_provider.cpp
+  ${source_ara_tsync_dir}/ntp_time_base_provider.h
+  ${source_ara_tsync_dir}/ntp_time_base_provider.cpp
 )
 
 add_library(
@@ -711,6 +719,11 @@ target_link_libraries(
 
 target_link_libraries(
   ara_iam
+  ara_core
+)
+
+target_link_libraries(
+  ara_sm
   ara_core
 )
 
@@ -1376,6 +1389,10 @@ if(build_tests)
     ${test_ara_sm_dir}/trigger_out_test.cpp
     ${test_ara_sm_dir}/trigger_inout_test.cpp
     ${test_ara_sm_dir}/power_mode_test.cpp
+    ${test_ara_sm_dir}/sm_error_domain_test.cpp
+    ${test_ara_sm_dir}/network_handle_test.cpp
+    ${test_ara_sm_dir}/machine_state_client_test.cpp
+    ${test_ara_sm_dir}/state_transition_handler_test.cpp
     ${test_ara_com_e2e_dir}/profile11_test.cpp
     ${test_ara_com_entry_dir}/eventgroup_entry_test.cpp
     ${test_ara_com_entry_dir}/service_entry_test.cpp
@@ -1474,6 +1491,8 @@ if(build_tests)
     ${test_ara_iam_dir}/access_control_test.cpp
     ${test_ara_tsync_dir}/tsync_error_domain_test.cpp
     ${test_ara_tsync_dir}/time_sync_client_test.cpp
+    ${test_ara_tsync_dir}/ptp_time_base_provider_test.cpp
+    ${test_ara_tsync_dir}/ntp_time_base_provider_test.cpp
     ${test_ara_ucm_dir}/ucm_error_domain_test.cpp
     ${test_ara_ucm_dir}/update_manager_test.cpp
   )

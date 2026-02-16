@@ -34,10 +34,6 @@ sudo ./scripts/install_dependency.sh
 sudo ./scripts/install_middleware_stack.sh
 ```
 
-互換エイリアスとして次も利用できます:
-- `./scripts/install_dependemcy.sh`
-- `./scripts/install_dependencies.sh`
-
 1 コマンドでまとめて導入する場合:
 
 ```bash

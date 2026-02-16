@@ -16,7 +16,10 @@ namespace ara
         enum class TsyncErrc : ara::core::ErrorDomain::CodeType
         {
             kNotSynchronized = 1,
-            kInvalidArgument = 2
+            kInvalidArgument = 2,
+            kProviderUnavailable = 3, ///< Time source provider is unavailable.
+            kDeviceOpenFailed = 4,    ///< Failed to open time source device.
+            kQueryFailed = 5          ///< Failed to query time source.
         };
 
         /// @brief Error domain for ara::tsync subset implementation.
