@@ -26,8 +26,7 @@ The following commands were validated in Docker on **2026-02-15**.
   - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
 ### 0) Install dependencies and middleware (Linux / Raspberry Pi)
-These scripts are based on the installation flow used in:
-`https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
+Use the bundled scripts in this repository:
 
 ```bash
 sudo ./scripts/install_dependency.sh
@@ -39,6 +38,11 @@ Or run everything from one command:
 ```bash
 sudo ./scripts/install_middleware_stack.sh --install-base-deps
 ```
+
+### QNX800 cross-build
+For QNX SDP 8.0 cross-compilation flow, see:
+- `qnx/README.md`
+- `qnx/env/qnx800.env.example`
 
 ### 1) Build and install AUTOSAR AP runtime libraries
 Use `/tmp` first (no root privilege required):

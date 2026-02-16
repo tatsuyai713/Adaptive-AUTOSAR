@@ -26,8 +26,7 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
   - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
 ### 0) 依存ライブラリとミドルウェアを導入 (Linux / Raspberry Pi)
-以下は次のリポジトリの導入フローをベースに本リポジトリへ取り込んだスクリプトです:
-`https://github.com/tatsuyai713/lwrcl/tree/main/scripts`
+以下の同梱スクリプトを利用します:
 
 ```bash
 sudo ./scripts/install_dependency.sh
@@ -39,6 +38,11 @@ sudo ./scripts/install_middleware_stack.sh
 ```bash
 sudo ./scripts/install_middleware_stack.sh --install-base-deps
 ```
+
+### QNX800 クロスビルド
+QNX SDP 8.0 向けクロスコンパイル手順は以下を参照してください:
+- `qnx/README.md`
+- `qnx/env/qnx800.env.example`
 
 ### 1) AUTOSAR AP ランタイムをビルドしてインストール
 まずは root 権限不要な `/tmp` 例:
