@@ -1,0 +1,16 @@
+[Unit]
+Description=Adaptive AUTOSAR PTP/gPTP time synchronization provider
+After=network-online.target
+Wants=network-online.target
+Before=autosar-platform-app.service autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-ptp-time-provider
+ExecStart=/usr/local/bin/autosar-ptp-time-provider-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

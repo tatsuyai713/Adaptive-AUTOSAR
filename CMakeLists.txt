@@ -971,6 +971,36 @@ target_link_libraries(
   ara_phm
 )
 
+add_executable(
+  autosar_sm_state_daemon
+  ${source_dir}/main_sm_state_daemon.cpp
+)
+
+target_link_libraries(
+  autosar_sm_state_daemon
+  ara_sm
+)
+
+add_executable(
+  autosar_ntp_time_provider
+  ${source_dir}/main_ntp_time_provider.cpp
+)
+
+target_link_libraries(
+  autosar_ntp_time_provider
+  ara_tsync
+)
+
+add_executable(
+  autosar_ptp_time_provider
+  ${source_dir}/main_ptp_time_provider.cpp
+)
+
+target_link_libraries(
+  autosar_ptp_time_provider
+  ara_tsync
+)
+
 set(has_pubsub_sample_entrypoints OFF)
 if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
    EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
@@ -1591,6 +1621,9 @@ install(
     autosar_can_interface_manager
     autosar_watchdog_supervisor
     autosar_user_app_monitor
+    autosar_sm_state_daemon
+    autosar_ntp_time_provider
+    autosar_ptp_time_provider
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 

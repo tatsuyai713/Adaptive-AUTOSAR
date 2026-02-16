@@ -134,6 +134,9 @@ User-app bringup entry points:
 - `autosar-exec-manager.service` (runs `bringup.sh` after platform service)
 - `autosar-user-app-monitor.service` (tracks registered user apps, heartbeat freshness, and `ara::phm::HealthChannel` status; triggers restart recovery with startup-grace/backoff/deactivated-stop controls)
 - `autosar-watchdog.service` (resident watchdog supervisor daemon)
+- `autosar-sm-state.service` (resident SM machine state / network mode management daemon)
+- `autosar-ntp-time-provider.service` (resident NTP time synchronization provider daemon — chrony/ntpd auto-detect)
+- `autosar-ptp-time-provider.service` (resident PTP/gPTP time synchronization provider daemon — ptp4l PHC integration)
 - runtime registry file: `/run/autosar/user_apps_registry.csv`
 - runtime monitor status file: `/run/autosar/user_app_monitor.status`
 - runtime PHM health files: `/run/autosar/phm/health/*.status`
@@ -174,13 +177,13 @@ Conformance policy in this repository:
 | `ara::diag` | ~70 % | Implemented (subset) | `Monitor` (with debouncing, FDC query, current status query), `Event`, `Conversation`, `DTCInformation`, `Condition`, `OperationCycle`, `GenericUDSService`, `SecurityAccess`, `GenericRoutine`, `DataTransfer` (Upload/Download), routing framework with counter/timer-based debouncing | Full Diagnostic Manager orchestration, all UDS sub-functions |
 | `ara::phm` | ~50 % | Implemented (subset) | `SupervisedEntity`, `HealthChannel` (with `Offer`/`StopOffer` lifecycle), `RecoveryAction`, `CheckpointCommunicator`, supervision helpers | `AliveSupervision`/`DeadlineSupervision`/`LogicalSupervision` detailed SWS APIs |
 | `ara::per` | ~65 % | Implemented (subset) | `KeyValueStorage`, `FileStorage`, `ReadAccessor` (with `Seek`/`GetCurrentPosition`), `ReadWriteAccessor` (with `Seek`/`GetCurrentPosition`) | `SharedHandle`/`UniqueHandle` standard wrappers, redundancy/recovery policies |
-| `ara::sm` | ~25 % | Implemented (subset) | `TriggerIn`/`TriggerOut`/`TriggerInOut`, `Notifier` | Full state-manager mode management, network/diagnostic state handling |
+| `ara::sm` | ~55 % | Implemented (subset) | `TriggerIn`/`TriggerOut`/`TriggerInOut`, `Notifier`, `SmErrorDomain`, `MachineStateClient` (lifecycle state management), `NetworkHandle` (communication mode control), `StateTransitionHandler` (function-group transition callbacks), resident SM state daemon | Full EM-coordinated state-manager orchestration, diagnostic state coupling |
 | ARXML tooling | — | Implemented (subset) | YAML -> ARXML, ARXML -> ara::com binding header generator | Supports repository scope and extensions, not full ARXML universe |
 | `ara::crypto` | ~15 % | Implemented (subset) | Error domain, SHA-256 digest, HMAC, AES encryption, key generation, random-byte API | Key management/PKI stack, `CryptoProvider`, X.509, SecOC |
 | `ara::iam` | ~20 % | Implemented (subset) | In-memory IAM policy engine (subject/resource/action, wildcard rules), error domain | Policy persistence, platform IAM integration, grant management |
 | `ara::ucm` | ~40 % | Implemented (subset) | UCM error domain, update-session manager (`Prepare`/`Stage`/`Verify`/`Activate`/`Rollback`/`Cancel`), Transfer API (`TransferStart`/`TransferData`/`TransferExit`), SHA-256 payload verification, state/progress callbacks, per-cluster active-version tracking with downgrade rejection | Campaign management, installer daemon, secure boot integration |
-| `ara::tsync` | ~30 % | Implemented (subset) | `TimeSyncClient` (reference update, synchronized time conversion, offset/state query, state-change notification callback), error domain | `TimeSyncServer`, network time protocol (PTP/gPTP) daemon integration, rate correction |
-| Raspberry Pi ECU profile | — | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script, resident daemons (`vsomeip-routing`, `time-sync`, `persistency-guard`, `iam-policy`, `can-manager`, `user-app-monitor`, `watchdog`) | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
+| `ara::tsync` | ~50 % | Implemented (subset) | `TimeSyncClient` (reference update, synchronized time conversion, offset/state query, state-change notification callback), `SynchronizedTimeBaseProvider` abstract interface, `PtpTimeBaseProvider` (ptp4l/gPTP PHC integration via `/dev/ptpN`), `NtpTimeBaseProvider` (chrony/ntpd auto-detect integration), error domain, resident PTP and NTP provider daemons | `TimeSyncServer`, rate correction, full TSP SWS profile coverage |
+| Raspberry Pi ECU profile | — | Implemented (subset) | Build/install wrapper, SocketCAN setup script, systemd deployment templates, integrated readiness/transport verification script, resident daemons (`vsomeip-routing`, `time-sync`, `persistency-guard`, `iam-policy`, `can-manager`, `user-app-monitor`, `watchdog`, `sm-state`, `ntp-time-provider`, `ptp-time-provider`) | Prototype ECU operation on Linux is covered; production safety/security hardening remains system-level integration work |
 
 ## User App Templates (Installed as `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:

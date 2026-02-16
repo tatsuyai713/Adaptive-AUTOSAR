@@ -133,6 +133,9 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 - `autosar-exec-manager.service` (`bringup.sh` を起動する常駐サービス)
 - `autosar-user-app-monitor.service` (登録済みユーザーアプリ/ハートビート/`ara::phm::HealthChannel` 状態を常時監視し、起動猶予・バックオフ・Deactivated停止制御付きで再起動リカバリを実行)
 - `autosar-watchdog.service` (常駐ウォッチドッグ監視デーモン)
+- `autosar-sm-state.service` (SM マシン状態/ネットワーク通信モード管理の常駐デーモン)
+- `autosar-ntp-time-provider.service` (NTP 時刻同期プロバイダ常駐デーモン — chrony/ntpd 自動検出)
+- `autosar-ptp-time-provider.service` (PTP/gPTP 時刻同期プロバイダ常駐デーモン — ptp4l PHC 統合)
 - 登録台帳ファイル: `/run/autosar/user_apps_registry.csv`
 - 監視ステータスファイル: `/run/autosar/user_app_monitor.status`
 - PHM ヘルスファイル: `/run/autosar/phm/health/*.status`
@@ -173,13 +176,13 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 | `ara::diag` | ~70 % | 実装あり (一部) | `Monitor`（デバウンス・FDC 照会・現在ステータス照会）、`Event`、`Conversation`、`DTCInformation`、`Condition`、`OperationCycle`、`GenericUDSService`、`SecurityAccess`、`GenericRoutine`、`DataTransfer` (Upload/Download)、カウンタ/タイマー方式デバウンス付き routing | Diagnostic Manager フルオーケストレーション、全 UDS サブファンクション |
 | `ara::phm` | ~50 % | 実装あり (一部) | `SupervisedEntity`、`HealthChannel`（`Offer`/`StopOffer` ライフサイクル）、`RecoveryAction`、`CheckpointCommunicator`、supervision helper | `AliveSupervision`/`DeadlineSupervision`/`LogicalSupervision` 詳細 SWS API |
 | `ara::per` | ~65 % | 実装あり (一部) | `KeyValueStorage`、`FileStorage`、`ReadAccessor`（`Seek`/`GetCurrentPosition`）、`ReadWriteAccessor`（`Seek`/`GetCurrentPosition`） | `SharedHandle`/`UniqueHandle` 標準ラッパー、冗長化/リカバリポリシー |
-| `ara::sm` | ~25 % | 実装あり (一部) | `TriggerIn`/`TriggerOut`/`TriggerInOut`、`Notifier` | 状態マネージャ全モード管理、ネットワーク/診断状態ハンドリング |
+| `ara::sm` | ~55 % | 実装あり (一部) | `TriggerIn`/`TriggerOut`/`TriggerInOut`、`Notifier`、`SmErrorDomain`、`MachineStateClient`（ライフサイクル状態管理）、`NetworkHandle`（通信モード制御）、`StateTransitionHandler`（ファンクショングループ遷移コールバック）、SM 状態常駐デーモン | EM 連携の状態マネージャフルオーケストレーション、診断状態連動 |
 | ARXML ツール | — | 実装あり (一部) | YAML -> ARXML、ARXML -> ara::com binding 生成 | リポジトリ対象スコープ中心で全 ARXML 網羅ではない |
 | `ara::crypto` | ~15 % | 実装あり (一部) | エラードメイン、SHA-256 ダイジェスト、HMAC、AES 暗号化、鍵生成、乱数バイト生成 | 鍵管理/PKI スタック、`CryptoProvider`、X.509、SecOC |
 | `ara::iam` | ~20 % | 実装あり (一部) | メモリ内 IAM ポリシー判定（subject/resource/action、ワイルドカード）、エラードメイン | ポリシー永続化、プラットフォーム IAM 連携、グラント管理 |
 | `ara::ucm` | ~40 % | 実装あり (一部) | UCM エラードメイン、更新セッション管理 (`Prepare`/`Stage`/`Verify`/`Activate`/`Rollback`/`Cancel`)、Transfer API (`TransferStart`/`TransferData`/`TransferExit`)、SHA-256 検証、状態/進捗コールバック、クラスタ別バージョン管理とダウングレード拒否 | campaign 管理、installer daemon、secure boot 連携 |
-| 時刻同期 (`ara::tsync`) | ~30 % | 実装あり (一部) | `TimeSyncClient`（参照時刻更新、同期時刻変換、オフセット/状態照会、状態変更通知コールバック）、エラードメイン | `TimeSyncServer`、NTP/PTP (gPTP) デーモン統合、レート補正 |
-| Raspberry Pi ECU 配備プロファイル | — | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`user-app-monitor`/`watchdog`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
+| 時刻同期 (`ara::tsync`) | ~50 % | 実装あり (一部) | `TimeSyncClient`（参照時刻更新、同期時刻変換、オフセット/状態照会、状態変更通知コールバック）、`SynchronizedTimeBaseProvider` 抽象インタフェース、`PtpTimeBaseProvider`（ptp4l/gPTP PHC 統合、`/dev/ptpN`）、`NtpTimeBaseProvider`（chrony/ntpd 自動検出統合）、エラードメイン、PTP/NTP プロバイダ常駐デーモン | `TimeSyncServer`、レート補正、TSP SWS 全プロファイル対応 |
+| Raspberry Pi ECU 配備プロファイル | — | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`user-app-monitor`/`watchdog`/`sm-state`/`ntp-time-provider`/`ptp-time-provider`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
 
 ## user_apps テンプレート (インストール先: `/opt|/tmp/autosar_ap/user_apps`)
 - Basic:
