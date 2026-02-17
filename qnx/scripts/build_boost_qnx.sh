@@ -15,7 +15,7 @@ OUT_ROOT="$(qnx_default_out_root)"
 JOBS="$(qnx_default_jobs)"
 
 BOOST_VERSION="1.86.0"
-BOOST_LIBRARIES="system,thread,filesystem,program_options,chrono,atomic,date_time,log"
+BOOST_LIBRARIES="system,thread,filesystem,program_options,chrono,atomic,date_time"
 INSTALL_PREFIX="${OUT_ROOT}/third_party"
 WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/boost/${ARCH}"
 
