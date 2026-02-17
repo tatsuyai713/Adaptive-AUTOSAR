@@ -124,9 +124,7 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DENABLE_SOURCE_SPECIFIC_MULTICAST=OFF
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
-if [[ "${ACTION}" == "install" ]]; then
-  cmake --install "${BUILD_DIR}"
-fi
+cmake --install "${BUILD_DIR}"
 
 qnx_clone_or_update "https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git" "${CYCLONEDDS_CXX_TAG}" "${SOURCE_CXX_DIR}"
 
@@ -143,9 +141,7 @@ cmake -S "${SOURCE_CXX_DIR}" -B "${BUILD_CXX_DIR}" \
   -DBUILD_SHARED_LIBS=ON
 
 cmake --build "${BUILD_CXX_DIR}" -j"${JOBS}"
-if [[ "${ACTION}" == "install" ]]; then
-  cmake --install "${BUILD_CXX_DIR}"
-fi
+cmake --install "${BUILD_CXX_DIR}"
 
 qnx_info "cyclonedds QNX build complete (action=${ACTION})"
 qnx_info "  install_prefix=${INSTALL_PREFIX}"

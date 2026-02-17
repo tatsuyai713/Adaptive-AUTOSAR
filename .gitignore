@@ -5,6 +5,7 @@
 # CMake build
 build/
 build-*/
+out/
 
 # Doxygen HTML
 docs/api/

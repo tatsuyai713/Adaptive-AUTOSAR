@@ -50,7 +50,7 @@ function qnx_default_out_root() {
   if [[ -n "${AUTOSAR_QNX_OUT_ROOT:-}" ]]; then
     echo "${AUTOSAR_QNX_OUT_ROOT}"
   else
-    echo "${REPO_ROOT}/out/qnx"
+    echo "/opt/qnx"
   fi
 }
 
