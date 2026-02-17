@@ -2,7 +2,6 @@
 set -euo pipefail
 
 # QNX cross-build entrypoint for middleware libraries.
-# Style is aligned with lwrcl's "build_libraries_qnx.sh <target> <action>".
 #
 # Usage examples:
 #   ./qnx/scripts/build_libraries_qnx.sh all install
@@ -29,8 +28,8 @@ OUT_ROOT="$(qnx_default_out_root)"
 JOBS="$(qnx_default_jobs)"
 ENABLE_SHM="OFF"
 
-THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
-MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
+THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
+MW_ROOT="${OUT_ROOT}"
 BOOST_PREFIX="${THIRD_PARTY_PREFIX}"
 ICEORYX_PREFIX="${MW_ROOT}/iceoryx"
 CYCLONEDDS_PREFIX="${MW_ROOT}/cyclonedds"
@@ -102,10 +101,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${THIRD_PARTY_PREFIX_EXPLICIT}" != "ON" ]]; then
-  THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+  THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 fi
 if [[ "${MW_ROOT_EXPLICIT}" != "ON" ]]; then
-  MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
+  MW_ROOT="${OUT_ROOT}"
 fi
 if [[ "${BOOST_PREFIX_EXPLICIT}" != "ON" ]]; then
   BOOST_PREFIX="${THIRD_PARTY_PREFIX}"
@@ -131,7 +130,7 @@ run_boost() {
   "${SCRIPT_DIR}/build_boost_qnx.sh" "${ACTION}" \
     --arch "${ARCH}" \
     --prefix "${BOOST_PREFIX}" \
-    --work-dir "${OUT_ROOT}/work/boost/${ARCH}" \
+    --work-dir "${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/boost/${ARCH}" \
     --jobs "${JOBS}"
 }
 
@@ -139,7 +138,7 @@ run_iceoryx() {
   "${SCRIPT_DIR}/build_iceoryx_qnx.sh" "${ACTION}" \
     --arch "${ARCH}" \
     --prefix "${ICEORYX_PREFIX}" \
-    --work-dir "${OUT_ROOT}/work/iceoryx/${ARCH}" \
+    --work-dir "${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/iceoryx/${ARCH}" \
     --third-party-prefix "${THIRD_PARTY_PREFIX}" \
     --jobs "${JOBS}"
 }
@@ -153,7 +152,7 @@ run_cyclonedds() {
   "${SCRIPT_DIR}/build_cyclonedds_qnx.sh" "${ACTION}" \
     --arch "${ARCH}" \
     --prefix "${CYCLONEDDS_PREFIX}" \
-    --work-dir "${OUT_ROOT}/work/cyclonedds/${ARCH}" \
+    --work-dir "${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/cyclonedds/${ARCH}" \
     --iceoryx-prefix "${ICEORYX_PREFIX}" \
     "${shm_opt}" \
     --jobs "${JOBS}"
@@ -163,7 +162,7 @@ run_vsomeip() {
   "${SCRIPT_DIR}/build_vsomeip_qnx.sh" "${ACTION}" \
     --arch "${ARCH}" \
     --prefix "${VSOMEIP_PREFIX}" \
-    --work-dir "${OUT_ROOT}/work/vsomeip/${ARCH}" \
+    --work-dir "${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/vsomeip/${ARCH}" \
     --boost-prefix "${BOOST_PREFIX}" \
     --jobs "${JOBS}"
 }

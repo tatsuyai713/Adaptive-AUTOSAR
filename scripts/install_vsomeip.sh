@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Based on lwrcl install flow, adapted for this repository.
-
 VSOMEIP_TAG="3.4.10"
 INSTALL_PREFIX="/opt/vsomeip"
 BUILD_DIR="${HOME}/build-vsomeip"

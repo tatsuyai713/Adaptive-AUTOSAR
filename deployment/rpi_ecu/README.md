@@ -32,7 +32,7 @@ using this repository runtime and user apps.
   - `/opt/cyclonedds`
 - `systemd` available
 
-Install prerequisites and middleware (based on lwrcl install flow):
+Install prerequisites and middleware:
 
 ```bash
 sudo ./scripts/install_middleware_stack.sh --install-base-deps

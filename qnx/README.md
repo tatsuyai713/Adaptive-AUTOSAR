@@ -7,7 +7,44 @@
 - ターゲット: QNX 8.0 (`aarch64le` / `x86_64`)
 - 前提: `QNX_HOST` と `QNX_TARGET` が設定済み
 
-## 1. 環境設定
+---
+
+## ビルド 
+
+QNX ビルドを実行する場合の簡易手順：
+
+**注意**: ビルドされたライブラリは `/opt/qnx` にシステムワイドでインストールされます。
+
+```bash
+# プロジェクトルートへ移動
+cd ~/Adaptive-AUTOSAR
+
+# ヘルパースクリプトでビルド
+./qnx/docker_build_qnx.sh cyclonedds    # CycloneDDS のみ
+./qnx/docker_build_qnx.sh iceoryx       # iceoryx のみ
+./qnx/docker_build_qnx.sh all           # 全ミドルウェア
+./qnx/docker_build_qnx.sh autosar       # AUTOSAR AP
+```
+
+アーキテクチャを指定する場合：
+
+```bash
+./qnx/docker_build_qnx.sh cyclonedds aarch64le   # ARM64 (Raspberry Pi等)
+./qnx/docker_build_qnx.sh all x86_64             # x86_64
+```
+
+### メモリ不足エラーが出る場合
+
+メモリを 6GB 以上に増やすか、並列数を制限：
+
+```bash
+export AUTOSAR_QNX_JOBS=2
+./qnx/docker_build_qnx.sh cyclonedds
+```
+
+---
+
+## 1. 環境設定 (手動セットアップの場合)
 
 ```bash
 source /path/to/qnxsdp-env.sh

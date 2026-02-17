@@ -16,8 +16,8 @@ JOBS="$(qnx_default_jobs)"
 
 BOOST_VERSION="1.86.0"
 BOOST_LIBRARIES="system,thread,filesystem,program_options,chrono,atomic,date_time,log"
-INSTALL_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
-WORK_DIR="${OUT_ROOT}/work/boost/${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/third_party"
+WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/boost/${ARCH}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -72,7 +72,9 @@ if [[ "${ACTION}" == "clean" ]]; then
   exit 0
 fi
 
-mkdir -p "${WORK_DIR}" "${INSTALL_PREFIX}"
+mkdir -p "${WORK_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 qnx_info "Build Boost for QNX"
 qnx_info "  version=${BOOST_VERSION} arch=${ARCH} variant=${QCC_VARIANT}"

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # QNX SDP 8.0 cross-compilation toolchain for Adaptive-AUTOSAR.
-# This file follows the qcc/q++ cross style used in lwrcl QNX scripts.
+# This file follows the qcc/q++ cross style used in QNX scripts.
 #
 # Usage:
 #   cmake -S . -B build-qnx \
@@ -57,6 +57,11 @@ set(CMAKE_CXX_EXTENSIONS ON)
 add_compile_definitions(_QNX_SOURCE)
 add_compile_definitions(_POSIX_C_SOURCE=200112L)
 add_compile_definitions(_FILE_OFFSET_BITS=64)
+
+# Define missing interface media constants for CycloneDDS ifaddrs.c
+add_compile_definitions(IFM_TOKEN=0x00000040)
+add_compile_definitions(IFM_FDDI=0x00000060)
+
 if(QNX_ARCH STREQUAL "aarch64le")
   add_compile_definitions(__AARCH64_QNX__)
 endif()

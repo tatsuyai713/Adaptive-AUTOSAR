@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Based on lwrcl install flow, adapted for this repository.
-
 ICEORYX_TAG="v2.0.5"
 INSTALL_PREFIX="/opt/iceoryx"
 BUILD_DIR="${HOME}/build-iceoryx"

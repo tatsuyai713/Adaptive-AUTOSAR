@@ -17,12 +17,12 @@ TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 BUILD_TYPE="Release"
 
 SOURCE_DIR="${REPO_ROOT}/user_apps"
-AUTOSAR_AP_PREFIX="${OUT_ROOT}/install/autosar_ap/${ARCH}"
-BUILD_DIR="${OUT_ROOT}/build/user_apps-${ARCH}"
-INSTALL_PREFIX="${OUT_ROOT}/install/user_apps/${ARCH}"
+AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
+BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/user_apps-${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/user_apps/${ARCH}"
 
-MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
-THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+MW_ROOT="${OUT_ROOT}"
+THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 SOURCE_DIR_EXPLICIT="OFF"
 AUTOSAR_AP_PREFIX_EXPLICIT="OFF"
 BUILD_DIR_EXPLICIT="OFF"
@@ -105,19 +105,19 @@ if [[ "${SOURCE_DIR_EXPLICIT}" != "ON" ]]; then
   SOURCE_DIR="${REPO_ROOT}/user_apps"
 fi
 if [[ "${AUTOSAR_AP_PREFIX_EXPLICIT}" != "ON" ]]; then
-  AUTOSAR_AP_PREFIX="${OUT_ROOT}/install/autosar_ap/${ARCH}"
+  AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
 fi
 if [[ "${BUILD_DIR_EXPLICIT}" != "ON" ]]; then
-  BUILD_DIR="${OUT_ROOT}/build/user_apps-${ARCH}"
+  BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/user_apps-${ARCH}"
 fi
 if [[ "${INSTALL_PREFIX_EXPLICIT}" != "ON" ]]; then
-  INSTALL_PREFIX="${OUT_ROOT}/install/user_apps/${ARCH}"
+  INSTALL_PREFIX="${OUT_ROOT}/user_apps/${ARCH}"
 fi
 if [[ "${MW_ROOT_EXPLICIT}" != "ON" ]]; then
-  MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
+  MW_ROOT="${OUT_ROOT}"
 fi
 if [[ "${THIRD_PARTY_PREFIX_EXPLICIT}" != "ON" ]]; then
-  THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+  THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 fi
 
 qnx_setup_env
@@ -132,6 +132,10 @@ if [[ "${ACTION}" == "clean" ]]; then
   qnx_info "Cleaned ${BUILD_DIR}"
   exit 0
 fi
+
+mkdir -p "${BUILD_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 CMAKE_PREFIX_PATH_VALUE="${AUTOSAR_AP_PREFIX};${MW_ROOT}/cyclonedds;${MW_ROOT}/iceoryx;${MW_ROOT}/vsomeip;${THIRD_PARTY_PREFIX}"
 

@@ -15,9 +15,9 @@ OUT_ROOT="$(qnx_default_out_root)"
 JOBS="$(qnx_default_jobs)"
 ICEORYX_TAG="v2.0.5"
 
-INSTALL_PREFIX="${OUT_ROOT}/install/middleware/${ARCH}/iceoryx"
-WORK_DIR="${OUT_ROOT}/work/iceoryx/${ARCH}"
-THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/iceoryx"
+WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/iceoryx/${ARCH}"
+THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 
 while [[ $# -gt 0 ]]; do
@@ -69,7 +69,9 @@ fi
 SOURCE_DIR="${WORK_DIR}/iceoryx"
 BUILD_DIR="${WORK_DIR}/build-qnx"
 
-mkdir -p "${WORK_DIR}" "${INSTALL_PREFIX}"
+mkdir -p "${WORK_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 qnx_clone_or_update "https://github.com/eclipse-iceoryx/iceoryx.git" "${ICEORYX_TAG}" "${SOURCE_DIR}"
 

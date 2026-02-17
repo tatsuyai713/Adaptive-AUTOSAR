@@ -35,7 +35,14 @@ function qnx_default_jobs() {
   if [[ -n "${AUTOSAR_QNX_JOBS:-}" ]]; then
     echo "${AUTOSAR_QNX_JOBS}"
   else
-    qnx_nproc
+    local _nproc=$(qnx_nproc)
+    # Cap jobs by available memory (~1.5 GB per compiler job) to avoid OOM kills
+    local _mem_kb=$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
+    local _mem_jobs=$(( _mem_kb / 1572864 ))
+    [[ "${_mem_jobs}" -lt 1 ]] && _mem_jobs=1
+    local jobs=$(( _nproc < _mem_jobs ? _nproc : _mem_jobs ))
+    [[ "${jobs}" -lt 1 ]] && jobs=1
+    echo "${jobs}"
   fi
 }
 

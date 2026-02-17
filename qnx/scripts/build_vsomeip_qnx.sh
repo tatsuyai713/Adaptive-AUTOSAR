@@ -16,9 +16,9 @@ JOBS="$(qnx_default_jobs)"
 TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 VSOMEIP_TAG="3.4.10"
 
-INSTALL_PREFIX="${OUT_ROOT}/install/middleware/${ARCH}/vsomeip"
-WORK_DIR="${OUT_ROOT}/work/vsomeip/${ARCH}"
-BOOST_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/vsomeip"
+WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/vsomeip/${ARCH}"
+BOOST_PREFIX="${OUT_ROOT}/third_party"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -70,7 +70,9 @@ SOURCE_DIR="${WORK_DIR}/vsomeip"
 BUILD_DIR="${WORK_DIR}/build-qnx"
 BOOST_LIBDIR="${BOOST_PREFIX}/$(qnx_detect_libdir "${BOOST_PREFIX}")"
 
-mkdir -p "${WORK_DIR}" "${INSTALL_PREFIX}"
+mkdir -p "${WORK_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 qnx_clone_or_update "https://github.com/COVESA/vsomeip.git" "${VSOMEIP_TAG}" "${SOURCE_DIR}"
 

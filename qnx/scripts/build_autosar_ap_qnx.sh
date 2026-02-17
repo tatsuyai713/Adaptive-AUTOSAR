@@ -22,11 +22,11 @@ TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 BUILD_TYPE="Release"
 SOURCE_DIR="${REPO_ROOT}"
 
-INSTALL_PREFIX="${OUT_ROOT}/install/autosar_ap/${ARCH}"
-BUILD_DIR="${OUT_ROOT}/build/autosar_ap-${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
+BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar_ap-${ARCH}"
 
-THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
-MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
+THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
+MW_ROOT="${OUT_ROOT}"
 VSOMEIP_PREFIX="${MW_ROOT}/vsomeip"
 ICEORYX_PREFIX="${MW_ROOT}/iceoryx"
 CYCLONEDDS_PREFIX="${MW_ROOT}/cyclonedds"
@@ -139,16 +139,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${INSTALL_PREFIX_EXPLICIT}" != "ON" ]]; then
-  INSTALL_PREFIX="${OUT_ROOT}/install/autosar_ap/${ARCH}"
+  INSTALL_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
 fi
 if [[ "${BUILD_DIR_EXPLICIT}" != "ON" ]]; then
-  BUILD_DIR="${OUT_ROOT}/build/autosar_ap-${ARCH}"
+  BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar_ap-${ARCH}"
 fi
 if [[ "${THIRD_PARTY_PREFIX_EXPLICIT}" != "ON" ]]; then
-  THIRD_PARTY_PREFIX="${OUT_ROOT}/install/third_party/${ARCH}"
+  THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 fi
 if [[ "${MW_ROOT_EXPLICIT}" != "ON" ]]; then
-  MW_ROOT="${OUT_ROOT}/install/middleware/${ARCH}"
+  MW_ROOT="${OUT_ROOT}"
 fi
 if [[ "${VSOMEIP_PREFIX_EXPLICIT}" != "ON" ]]; then
   VSOMEIP_PREFIX="${MW_ROOT}/vsomeip"
@@ -172,6 +172,10 @@ if [[ "${ACTION}" == "clean" ]]; then
   qnx_info "Cleaned ${BUILD_DIR}"
   exit 0
 fi
+
+mkdir -p "${BUILD_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 OPENSSL_ROOT_DIR="${QNX_TARGET}/${ARCH}/usr"
 if [[ ! -d "${OPENSSL_ROOT_DIR}" ]]; then

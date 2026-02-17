@@ -20,9 +20,9 @@ CYCLONEDDS_CXX_TAG="0.10.5"
 ENABLE_SHM="OFF"
 PATCH_THREADS_FOR_QNX="ON"
 
-INSTALL_PREFIX="${OUT_ROOT}/install/middleware/${ARCH}/cyclonedds"
-WORK_DIR="${OUT_ROOT}/work/cyclonedds/${ARCH}"
-ICEORYX_PREFIX="${OUT_ROOT}/install/middleware/${ARCH}/iceoryx"
+INSTALL_PREFIX="${OUT_ROOT}/cyclonedds"
+WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/cyclonedds/${ARCH}"
+ICEORYX_PREFIX="${OUT_ROOT}/iceoryx"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -92,7 +92,9 @@ BUILD_DIR="${WORK_DIR}/build-qnx"
 SOURCE_CXX_DIR="${WORK_DIR}/cyclonedds-cxx"
 BUILD_CXX_DIR="${WORK_DIR}/build-qnx-cxx"
 
-mkdir -p "${WORK_DIR}" "${INSTALL_PREFIX}"
+mkdir -p "${WORK_DIR}"
+sudo mkdir -p "${INSTALL_PREFIX}"
+sudo chmod 777 "${INSTALL_PREFIX}"
 
 qnx_clone_or_update "https://github.com/eclipse-cyclonedds/cyclonedds.git" "${CYCLONEDDS_TAG}" "${SOURCE_DIR}"
 

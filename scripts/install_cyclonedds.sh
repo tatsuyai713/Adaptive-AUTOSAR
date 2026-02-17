@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Based on lwrcl install flow, adapted for this repository.
-
 CYCLONEDDS_TAG="0.10.5"
 CYCLONEDDS_CXX_TAG="0.10.5"
 INSTALL_PREFIX="/opt/cyclonedds"
