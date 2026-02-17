@@ -37,6 +37,22 @@ namespace ara
                 return "Encryption operation failed.";
             case CryptoErrc::kDecryptionFailure:
                 return "Decryption operation or padding error.";
+            case CryptoErrc::kSignatureFailure:
+                return "Digital signature operation failed.";
+            case CryptoErrc::kVerificationFailure:
+                return "Signature or certificate verification failed.";
+            case CryptoErrc::kKeyGenerationFailure:
+                return "Asymmetric key generation failed.";
+            case CryptoErrc::kInvalidKeyFormat:
+                return "Key material is malformed or unsupported.";
+            case CryptoErrc::kCertificateParseError:
+                return "X.509 certificate parsing failed.";
+            case CryptoErrc::kCertificateVerifyError:
+                return "X.509 certificate chain verification failed.";
+            case CryptoErrc::kSlotNotFound:
+                return "Requested key slot does not exist.";
+            case CryptoErrc::kSlotAlreadyExists:
+                return "Key slot with the given ID already exists.";
             default:
                 return "Unknown cryptographic error.";
             }

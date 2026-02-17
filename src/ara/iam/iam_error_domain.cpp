@@ -29,6 +29,16 @@ namespace ara
                 return "IAM policy store failure.";
             case IamErrc::kPolicyFileParseError:
                 return "Policy file format is invalid.";
+            case IamErrc::kGrantNotFound:
+                return "Requested grant does not exist.";
+            case IamErrc::kGrantExpired:
+                return "Grant has expired.";
+            case IamErrc::kGrantRevoked:
+                return "Grant has been revoked.";
+            case IamErrc::kVersionNotFound:
+                return "Requested policy version does not exist.";
+            case IamErrc::kSnapshotError:
+                return "Policy snapshot operation failed.";
             default:
                 return "Unknown IAM error.";
             }

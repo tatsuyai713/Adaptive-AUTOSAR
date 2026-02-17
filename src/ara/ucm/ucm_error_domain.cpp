@@ -44,6 +44,14 @@ namespace ara
                 return "Software package transfer failed.";
             case UcmErrc::kTransferSizeMismatch:
                 return "Transferred data size does not match expected size.";
+            case UcmErrc::kCampaignNotFound:
+                return "Requested campaign does not exist.";
+            case UcmErrc::kCampaignAlreadyExists:
+                return "Campaign with the given ID already exists.";
+            case UcmErrc::kCampaignInvalidState:
+                return "Campaign is in an invalid state for the operation.";
+            case UcmErrc::kHistoryError:
+                return "Update history I/O error.";
             default:
                 return "Unknown update and configuration management error.";
             }

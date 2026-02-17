@@ -17,7 +17,12 @@ namespace ara
         {
             kInvalidArgument = 1,
             kPolicyStoreError = 2,
-            kPolicyFileParseError = 3   ///< Policy file format is invalid
+            kPolicyFileParseError = 3,  ///< Policy file format is invalid
+            kGrantNotFound = 4,        ///< Requested grant does not exist
+            kGrantExpired = 5,         ///< Grant has expired
+            kGrantRevoked = 6,         ///< Grant has been revoked
+            kVersionNotFound = 7,      ///< Requested policy version does not exist
+            kSnapshotError = 8         ///< Policy snapshot operation failed
         };
 
         /// @brief Error domain for ara::iam subset implementation.

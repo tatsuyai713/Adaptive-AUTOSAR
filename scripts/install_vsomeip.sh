@@ -6,7 +6,12 @@ set -euo pipefail
 VSOMEIP_TAG="3.4.10"
 INSTALL_PREFIX="/opt/vsomeip"
 BUILD_DIR="${HOME}/build-vsomeip"
-JOBS="$(nproc 2>/dev/null || echo 4)"
+_nproc="$(nproc 2>/dev/null || echo 4)"
+_mem_kb="$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+_mem_jobs=$(( _mem_kb / 1572864 ))
+[[ "${_mem_jobs}" -lt 1 ]] && _mem_jobs=1
+JOBS=$(( _nproc < _mem_jobs ? _nproc : _mem_jobs ))
+[[ "${JOBS}" -lt 1 ]] && JOBS=1
 SKIP_SYSTEM_DEPS="OFF"
 FORCE_REINSTALL="OFF"
 

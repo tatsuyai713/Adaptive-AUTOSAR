@@ -29,7 +29,8 @@ namespace ara
         {
             kRemote = 0x01,     ///< Remote network logging sink
             kFile = 0x02,       ///< File logging sink for debugging
-            kConsole = 0x04     ///< Console logging sink for debugging
+            kConsole = 0x04,    ///< Console logging sink for debugging
+            kDlt = 0x08         ///< DLT (Diagnostic Log and Trace) UDP sink — compatible with dlt-viewer
         };
 
         /// @brief Logging client connection state

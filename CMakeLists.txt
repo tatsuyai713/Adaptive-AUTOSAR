@@ -358,6 +358,9 @@ set(test_ara_tsync_dir
 set(test_ara_ucm_dir
   "${CMAKE_SOURCE_DIR}/test/ara/ucm")
 
+set(test_ara_nm_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/nm")
+
 set(test_ara_phm_supervisors_dir
   "${CMAKE_SOURCE_DIR}/test/ara/phm/supervisors")
 
@@ -680,6 +683,16 @@ add_library(
   ${source_ara_crypto_dir}/crypto_error_domain.cpp
   ${source_ara_crypto_dir}/crypto_provider.h
   ${source_ara_crypto_dir}/crypto_provider.cpp
+  ${source_ara_crypto_dir}/key_slot.h
+  ${source_ara_crypto_dir}/key_slot.cpp
+  ${source_ara_crypto_dir}/key_storage_provider.h
+  ${source_ara_crypto_dir}/key_storage_provider.cpp
+  ${source_ara_crypto_dir}/rsa_provider.h
+  ${source_ara_crypto_dir}/rsa_provider.cpp
+  ${source_ara_crypto_dir}/ecdsa_provider.h
+  ${source_ara_crypto_dir}/ecdsa_provider.cpp
+  ${source_ara_crypto_dir}/x509_provider.h
+  ${source_ara_crypto_dir}/x509_provider.cpp
 )
 
 add_library(
@@ -688,6 +701,12 @@ add_library(
   ${source_ara_iam_dir}/iam_error_domain.cpp
   ${source_ara_iam_dir}/access_control.h
   ${source_ara_iam_dir}/access_control.cpp
+  ${source_ara_iam_dir}/grant.h
+  ${source_ara_iam_dir}/grant.cpp
+  ${source_ara_iam_dir}/grant_manager.h
+  ${source_ara_iam_dir}/grant_manager.cpp
+  ${source_ara_iam_dir}/policy_version.h
+  ${source_ara_iam_dir}/policy_version.cpp
 )
 
 add_library(
@@ -709,6 +728,10 @@ add_library(
   ${source_ara_ucm_dir}/ucm_error_domain.cpp
   ${source_ara_ucm_dir}/update_manager.h
   ${source_ara_ucm_dir}/update_manager.cpp
+  ${source_ara_ucm_dir}/campaign_manager.h
+  ${source_ara_ucm_dir}/campaign_manager.cpp
+  ${source_ara_ucm_dir}/update_history.h
+  ${source_ara_ucm_dir}/update_history.cpp
 )
 
 add_library(
@@ -717,6 +740,9 @@ add_library(
   ${source_ara_nm_dir}/nm_error_domain.cpp
   ${source_ara_nm_dir}/network_manager.h
   ${source_ara_nm_dir}/network_manager.cpp
+  ${source_ara_nm_dir}/nm_transport_adapter.h
+  ${source_ara_nm_dir}/nm_coordinator.h
+  ${source_ara_nm_dir}/nm_coordinator.cpp
 )
 
 target_link_libraries(
@@ -1569,6 +1595,18 @@ if(build_tests)
     ${test_ara_tsync_dir}/ntp_time_base_provider_test.cpp
     ${test_ara_ucm_dir}/ucm_error_domain_test.cpp
     ${test_ara_ucm_dir}/update_manager_test.cpp
+    ${test_ara_ucm_dir}/campaign_manager_test.cpp
+    ${test_ara_ucm_dir}/update_history_test.cpp
+    ${test_ara_crypto_dir}/key_slot_test.cpp
+    ${test_ara_crypto_dir}/key_storage_provider_test.cpp
+    ${test_ara_crypto_dir}/rsa_provider_test.cpp
+    ${test_ara_crypto_dir}/ecdsa_provider_test.cpp
+    ${test_ara_crypto_dir}/x509_provider_test.cpp
+    ${test_ara_iam_dir}/grant_test.cpp
+    ${test_ara_iam_dir}/grant_manager_test.cpp
+    ${test_ara_iam_dir}/policy_version_test.cpp
+    ${test_ara_nm_dir}/nm_coordinator_test.cpp
+    ${test_ara_nm_dir}/nm_transport_adapter_test.cpp
   )
 
   target_link_libraries(
@@ -1591,6 +1629,7 @@ if(build_tests)
     ara_iam
     ara_tsync
     ara_ucm
+    ara_nm
   )
 
   if(ARA_COM_USE_VSOMEIP)

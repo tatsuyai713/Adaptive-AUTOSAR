@@ -21,7 +21,10 @@ namespace ara
             kAlreadyStarted = 3,
             kNotStarted = 4,
             kInvalidState = 5,
-            kTimeout = 6
+            kTimeout = 6,
+            kCoordinatorError = 7,
+            kTransportError = 8,
+            kChannelBusy = 9
         };
 
         class NmErrorDomain final : public core::ErrorDomain
@@ -56,6 +59,12 @@ namespace ara
                     return "Invalid state";
                 case NmErrc::kTimeout:
                     return "Timeout";
+                case NmErrc::kCoordinatorError:
+                    return "Coordinator operation failed";
+                case NmErrc::kTransportError:
+                    return "NM transport I/O error";
+                case NmErrc::kChannelBusy:
+                    return "Channel is busy";
                 default:
                     return "Unknown NM error";
                 }

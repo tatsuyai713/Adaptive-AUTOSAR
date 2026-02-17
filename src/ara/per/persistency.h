@@ -38,6 +38,27 @@ namespace ara
         /// @returns Void Result on success
         core::Result<void> ResetKeyValueStorage(
             const core::InstanceSpecifier &specifier);
+
+        /// @brief Recover a file storage from backup (SWS_PER_00116)
+        /// @param specifier Instance specifier identifying the storage
+        /// @returns Void Result on success
+        core::Result<void> RecoverFileStorage(
+            const core::InstanceSpecifier &specifier);
+
+        /// @brief Reset (delete all files in) a file storage (SWS_PER_00117)
+        /// @param specifier Instance specifier identifying the storage
+        /// @returns Void Result on success
+        core::Result<void> ResetFileStorage(
+            const core::InstanceSpecifier &specifier);
+
+        /// @brief Update persistency after software update activation (SWS_PER_00456)
+        /// @details Called by UCM after software update to migrate storage data to
+        ///          the new schema version. Implementations should handle schema
+        ///          versioning and data migration here.
+        /// @param specifier Instance specifier identifying the storage
+        /// @returns Void Result on success
+        core::Result<void> UpdatePersistency(
+            const core::InstanceSpecifier &specifier);
     }
 }
 

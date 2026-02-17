@@ -86,5 +86,59 @@ namespace ara
             std::remove(filePath.c_str());
             return core::Result<void>::FromValue();
         }
+
+        core::Result<void> RecoverFileStorage(
+            const core::InstanceSpecifier &specifier)
+        {
+            // In this simplified implementation, recovery checks that the
+            // file storage directory exists and is accessible.
+            // A production implementation would restore from a redundant copy.
+            std::string basePath = SpecifierToPath(specifier);
+            std::string filesDir = basePath + "/files";
+            struct stat st;
+            if (::stat(filesDir.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
+            {
+                // Attempt to recreate the directory
+                EnsureDirectoryExists(basePath);
+                ::mkdir(filesDir.c_str(), 0755);
+                if (::stat(filesDir.c_str(), &st) != 0)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+                }
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> ResetFileStorage(
+            const core::InstanceSpecifier &specifier)
+        {
+            // Remove all files in the storage directory.
+            // Uses system() for simplicity; a production implementation would
+            // iterate the directory and remove files individually.
+            std::string basePath = SpecifierToPath(specifier);
+            std::string filesDir = basePath + "/files";
+            struct stat st;
+            if (::stat(filesDir.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+            {
+                // Remove all regular files in the directory
+                std::string cmd = "find " + filesDir + " -maxdepth 1 -type f -delete 2>/dev/null";
+                std::system(cmd.c_str()); // NOLINT: simplified for educational use
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> UpdatePersistency(
+            const core::InstanceSpecifier &specifier)
+        {
+            // Schema migration stub: in a production system this would:
+            // 1. Read the stored schema version from the storage
+            // 2. Apply migration steps to reach the current schema version
+            // 3. Update the stored schema version
+            // This implementation is a no-op placeholder.
+            std::string basePath = SpecifierToPath(specifier);
+            EnsureDirectoryExists(basePath);
+            return core::Result<void>::FromValue();
+        }
     }
 }

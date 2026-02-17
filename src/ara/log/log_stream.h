@@ -5,6 +5,7 @@
 #ifndef LOG_STREAM_H
 #define LOG_STREAM_H
 
+#include <cstdint>
 #include <vector>
 #include <utility>
 #include "../core/error_code.h"
@@ -50,20 +51,39 @@ namespace ara
             /// @returns Reference to the current log stream
             LogStream &operator<<(bool value);
 
-            /// @brief Byte insertion operator
-            /// @param value A byte value
-            /// @returns Reference to the current log stream
+            /// @brief Signed 8-bit integer insertion operator
+            LogStream &operator<<(int8_t value);
+
+            /// @brief Unsigned 8-bit integer insertion operator
             LogStream &operator<<(uint8_t value);
 
-            /// @brief Unsigned integer insertion operator
-            /// @param value An unsigned integer value
-            /// @returns Reference to the current log stream
+            /// @brief Signed 16-bit integer insertion operator
+            LogStream &operator<<(int16_t value);
+
+            /// @brief Unsigned 16-bit integer insertion operator
+            LogStream &operator<<(uint16_t value);
+
+            /// @brief Signed 32-bit integer insertion operator
+            LogStream &operator<<(int32_t value);
+
+            /// @brief Unsigned 32-bit integer insertion operator
             LogStream &operator<<(uint32_t value);
+
+            /// @brief Signed 64-bit integer insertion operator
+            LogStream &operator<<(int64_t value);
+
+            /// @brief Unsigned 64-bit integer insertion operator
+            LogStream &operator<<(uint64_t value);
 
             /// @brief Float insertion operator
             /// @param value A float value
             /// @returns Reference to the current log stream
             LogStream &operator<<(float value);
+
+            /// @brief Double-precision float insertion operator
+            /// @param value A double value
+            /// @returns Reference to the current log stream
+            LogStream &operator<<(double value);
 
             /// @brief String insertion operator
             /// @param value A string

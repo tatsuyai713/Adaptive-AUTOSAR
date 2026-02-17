@@ -46,11 +46,38 @@ namespace ara
             return *this;
         }
 
+        LogStream &LogStream::operator<<(int8_t value)
+        {
+            std::string _valueString = std::to_string(static_cast<int>(value));
+            concat(std::move(_valueString));
+            return *this;
+        }
+
         LogStream &LogStream::operator<<(uint8_t value)
+        {
+            std::string _valueString = std::to_string(static_cast<unsigned>(value));
+            concat(std::move(_valueString));
+            return *this;
+        }
+
+        LogStream &LogStream::operator<<(int16_t value)
         {
             std::string _valueString = std::to_string(value);
             concat(std::move(_valueString));
+            return *this;
+        }
 
+        LogStream &LogStream::operator<<(uint16_t value)
+        {
+            std::string _valueString = std::to_string(value);
+            concat(std::move(_valueString));
+            return *this;
+        }
+
+        LogStream &LogStream::operator<<(int32_t value)
+        {
+            std::string _valueString = std::to_string(value);
+            concat(std::move(_valueString));
             return *this;
         }
 
@@ -58,7 +85,20 @@ namespace ara
         {
             std::string _valueString = std::to_string(value);
             concat(std::move(_valueString));
+            return *this;
+        }
 
+        LogStream &LogStream::operator<<(int64_t value)
+        {
+            std::string _valueString = std::to_string(value);
+            concat(std::move(_valueString));
+            return *this;
+        }
+
+        LogStream &LogStream::operator<<(uint64_t value)
+        {
+            std::string _valueString = std::to_string(value);
+            concat(std::move(_valueString));
             return *this;
         }
 
@@ -66,7 +106,13 @@ namespace ara
         {
             std::string _valueString = std::to_string(value);
             concat(std::move(_valueString));
+            return *this;
+        }
 
+        LogStream &LogStream::operator<<(double value)
+        {
+            std::string _valueString = std::to_string(value);
+            concat(std::move(_valueString));
             return *this;
         }
 

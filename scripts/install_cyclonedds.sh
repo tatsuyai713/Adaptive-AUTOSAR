@@ -8,7 +8,13 @@ CYCLONEDDS_CXX_TAG="0.10.5"
 INSTALL_PREFIX="/opt/cyclonedds"
 ICEORYX_PREFIX="/opt/iceoryx"
 BUILD_DIR="${HOME}/build-cyclonedds"
-JOBS="$(nproc 2>/dev/null || echo 4)"
+_nproc="$(nproc 2>/dev/null || echo 4)"
+# Cap jobs by available memory (~1.5 GB per compiler job) to avoid OOM kills
+_mem_kb="$(grep -i MemAvailable /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)"
+_mem_jobs=$(( _mem_kb / 1572864 ))
+[[ "${_mem_jobs}" -lt 1 ]] && _mem_jobs=1
+JOBS=$(( _nproc < _mem_jobs ? _nproc : _mem_jobs ))
+[[ "${JOBS}" -lt 1 ]] && JOBS=1
 ENABLE_SHM="AUTO" # AUTO | ON | OFF
 SKIP_SYSTEM_DEPS="OFF"
 FORCE_REINSTALL="OFF"
@@ -108,6 +114,7 @@ fi
 cmake -S "${BUILD_DIR}/cyclonedds" -B "${BUILD_DIR}/cyclonedds-build" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+  -DENABLE_LTO=OFF \
   -DBUILD_SHARED_LIBS=ON \
   -DBUILD_IDLC=ON \
   -DENABLE_SOURCE_SPECIFIC_MULTICAST=ON \

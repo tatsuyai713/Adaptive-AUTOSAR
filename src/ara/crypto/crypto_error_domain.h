@@ -21,7 +21,15 @@ namespace ara
             kCryptoProviderFailure = 4,
             kInvalidKeySize = 5,        ///< Invalid symmetric key length
             kEncryptionFailure = 6,     ///< Encryption operation failed
-            kDecryptionFailure = 7      ///< Decryption operation or padding error
+            kDecryptionFailure = 7,     ///< Decryption operation or padding error
+            kSignatureFailure = 8,      ///< Digital signature operation failed
+            kVerificationFailure = 9,   ///< Signature or certificate verification failed
+            kKeyGenerationFailure = 10, ///< Asymmetric key generation failed
+            kInvalidKeyFormat = 11,     ///< Key material is malformed or unsupported
+            kCertificateParseError = 12,///< X.509 certificate parsing failed
+            kCertificateVerifyError = 13,///< X.509 certificate chain verification failed
+            kSlotNotFound = 14,         ///< Requested key slot does not exist
+            kSlotAlreadyExists = 15     ///< Key slot with the given ID already exists
         };
 
         /// @brief Error domain for ara::crypto subset implementation.

@@ -24,7 +24,11 @@ namespace ara
             kDowngradeNotAllowed = 7,
             kClusterNotFound = 8,
             kTransferError = 9,
-            kTransferSizeMismatch = 10
+            kTransferSizeMismatch = 10,
+            kCampaignNotFound = 11,     ///< Requested campaign does not exist
+            kCampaignAlreadyExists = 12,///< Campaign with the given ID already exists
+            kCampaignInvalidState = 13, ///< Campaign is in an invalid state for the operation
+            kHistoryError = 14          ///< Update history I/O error
         };
 
         /// @brief Error domain for ara::ucm subset implementation.

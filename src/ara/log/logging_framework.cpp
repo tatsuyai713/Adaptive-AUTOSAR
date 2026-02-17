@@ -87,6 +87,19 @@ namespace ara
 
                 return _result;
             }
+            else if (logMode == LogMode::kDlt)
+            {
+                // DLT sink: sends DLT-protocol UDP datagrams to dlt-daemon or dlt-viewer.
+                // Default target: localhost:3490 (standard DLT port).
+                // To change host/port, construct DltLogSink manually and use
+                // the lower-level LoggingFramework constructor.
+                sink::LogSink *_logSink =
+                    new sink::DltLogSink(appId, appDescription);
+                LoggingFramework *_result =
+                    new LoggingFramework(_logSink, logLevel);
+
+                return _result;
+            }
             else
             {
                 throw std::invalid_argument(
