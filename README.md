@@ -269,7 +269,33 @@ Current CI verifies:
 8. GitHub Pages publish for generated docs on push to `main`/`master`
 
 ## Documentation
-- GitHub Pages API docs: `https://tatsuyai713.github.io/Adaptive-AUTOSAR/`
-- Local/API docs generation: `./scripts/generate_doxygen_docs.sh` -> `docs/index.html` (`docs/api/index.html`)
-- Project Wiki: https://github.com/langroodi/Adaptive-AUTOSAR/wiki
-- Contributing guide: `CONTRIBUTING.md`
+
+Full documentation index: [`docs/README.md`](docs/README.md) | [`docs/README.ja.md`](docs/README.ja.md) (Japanese)
+
+### By topic
+
+| Topic | Document |
+| --- | --- |
+| Project overview (this file) | `README.md` / `README.ja.md` |
+| **Deployment** | |
+| Raspberry Pi ECU deployment | `deployment/rpi_ecu/README.md` |
+| Raspberry Pi gPTP setup (Japanese) | `deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md` |
+| QNX 8.0 cross-compilation | `qnx/README.md` |
+| **User apps & tutorials** | |
+| User app build system | `user_apps/README.md` |
+| Tutorial index | `user_apps/tutorials/README.md` |
+| Tutorial index (Japanese) | `user_apps/tutorials/README.ja.md` |
+| **Tools** | |
+| ARXML generator guide | `tools/arxml_generator/README.md` |
+| ARXML YAML spec (Japanese) | `tools/arxml_generator/YAML_MANUAL.ja.md` |
+| Host DoIP/UDS tester | `tools/host_tools/doip_diag_tester/README.md` |
+| **API reference** | |
+| Online (GitHub Pages) | <https://tatsuyai713.github.io/Adaptive-AUTOSAR/> |
+| Local generation | `./scripts/generate_doxygen_docs.sh` |
+| **Other** | |
+| Project Wiki | <https://github.com/langroodi/Adaptive-AUTOSAR/wiki> |
+| Contributing guide | `CONTRIBUTING.md` |
+
+### Project layout
+
+See [`docs/README.md`](docs/README.md#project-layout) for the annotated directory tree.
