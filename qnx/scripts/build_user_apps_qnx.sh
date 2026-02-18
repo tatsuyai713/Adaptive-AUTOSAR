@@ -134,10 +134,34 @@ if [[ "${ACTION}" == "clean" ]]; then
 fi
 
 mkdir -p "${BUILD_DIR}"
-sudo mkdir -p "${INSTALL_PREFIX}"
-sudo chmod 777 "${INSTALL_PREFIX}"
+mkdir -p "${INSTALL_PREFIX}"
+chmod 777 "${INSTALL_PREFIX}"
 
 CMAKE_PREFIX_PATH_VALUE="${AUTOSAR_AP_PREFIX};${MW_ROOT}/cyclonedds;${MW_ROOT}/iceoryx;${MW_ROOT}/vsomeip;${THIRD_PARTY_PREFIX}"
+
+# iceoryx installs headers into a versioned subdir (include/iceoryx/v<X>/),
+# so we must add that path explicitly so CycloneDDS's SHM transport header
+# can #include "iceoryx_binding_c/chunk.h" etc.
+ICEORYX_PREFIX="${MW_ROOT}/iceoryx"
+ICEORYX_VERSIONED_INCLUDE=""
+for _d in "${ICEORYX_PREFIX}/include/iceoryx"/*/; do
+  if [[ -d "${_d}iceoryx_binding_c" ]]; then
+    ICEORYX_VERSIONED_INCLUDE="${_d%/}"
+    break
+  fi
+done
+
+# CycloneDDS DDSCXX include: user_apps/CMakeLists.txt has hardcoded HINTS for
+# /opt/cyclonedds (Linux path). Override to the QNX install via cmake variables.
+CYCLONEDDS_QNX_PREFIX="${MW_ROOT}/cyclonedds"
+USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR="${CYCLONEDDS_QNX_PREFIX}/include/ddscxx"
+USER_APPS_CYCLONEDDS_INCLUDE_DIR="${CYCLONEDDS_QNX_PREFIX}/include"
+
+EXTRA_CXX_FLAGS=""
+if [[ -n "${ICEORYX_VERSIONED_INCLUDE}" ]]; then
+  EXTRA_CXX_FLAGS="-I${ICEORYX_VERSIONED_INCLUDE}"
+  qnx_info "Adding iceoryx versioned include: ${ICEORYX_VERSIONED_INCLUDE}"
+fi
 
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
@@ -146,6 +170,9 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
   -DAUTOSAR_AP_PREFIX="${AUTOSAR_AP_PREFIX}" \
   -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH_VALUE}" \
+  -DCMAKE_CXX_FLAGS="${EXTRA_CXX_FLAGS}" \
+  -DUSER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR="${USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR}" \
+  -DUSER_APPS_CYCLONEDDS_INCLUDE_DIR="${USER_APPS_CYCLONEDDS_INCLUDE_DIR}" \
   -DUSER_APPS_BUILD_APPS_BASIC="${BUILD_BASIC}" \
   -DUSER_APPS_BUILD_APPS_COMMUNICATION="${BUILD_COMMUNICATION}" \
   -DUSER_APPS_BUILD_APPS_FEATURE="${BUILD_FEATURE}"

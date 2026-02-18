@@ -167,6 +167,21 @@ if [[ ! -f "${SOURCE_DIR}/CMakeLists.txt" ]]; then
   qnx_die "CMakeLists.txt not found under source dir: ${SOURCE_DIR}"
 fi
 
+# QNX 8.0: pthread is part of libc — there is no separate libpthread.
+# Create an empty stub so that -lpthread in third-party cmake configs succeeds.
+_QNX_ARCH_LIBDIR="${QNX_TARGET}/${ARCH}/lib"
+if [[ ! -f "${_QNX_ARCH_LIBDIR}/libpthread.a" ]]; then
+  qnx_info "Creating empty libpthread.a stub in ${_QNX_ARCH_LIBDIR}"
+  _STUB_C="$(mktemp /tmp/empty_pthread_XXXXXX.c)"
+  echo "/* pthread is in libc on QNX 8.0 */" > "${_STUB_C}"
+  # Derive compiler name: strip trailing "le"/"be" variant suffix
+  _NTO_ARCH="${ARCH%le}"; _NTO_ARCH="${_NTO_ARCH%be}"
+  nto${_NTO_ARCH}-gcc -c "${_STUB_C}" -o "${_STUB_C%.c}.o"
+  nto${_NTO_ARCH}-ar rcs "${_QNX_ARCH_LIBDIR}/libpthread.a" "${_STUB_C%.c}.o"
+  rm -f "${_STUB_C}" "${_STUB_C%.c}.o"
+fi
+unset _QNX_ARCH_LIBDIR _STUB_C _NTO_ARCH
+
 if [[ "${ACTION}" == "clean" ]]; then
   rm -rf "${BUILD_DIR}"
   qnx_info "Cleaned ${BUILD_DIR}"
@@ -174,8 +189,8 @@ if [[ "${ACTION}" == "clean" ]]; then
 fi
 
 mkdir -p "${BUILD_DIR}"
-sudo mkdir -p "${INSTALL_PREFIX}"
-sudo chmod 777 "${INSTALL_PREFIX}"
+mkdir -p "${INSTALL_PREFIX}"
+chmod 777 "${INSTALL_PREFIX}"
 
 OPENSSL_ROOT_DIR="${QNX_TARGET}/${ARCH}/usr"
 if [[ ! -d "${OPENSSL_ROOT_DIR}" ]]; then
@@ -209,6 +224,21 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DVSOMEIP_PREFIX="${VSOMEIP_PREFIX}" \
   -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
   -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
+
+# Apply QNX-specific source patches to FetchContent dependencies.
+# async-bsd-socket-lib uses Linux epoll; replace with POSIX poll().
+ASYNC_BSD_SRC="${BUILD_DIR}/_deps/async-bsd-socket-lib-src"
+if [[ -d "${ASYNC_BSD_SRC}" ]]; then
+  qnx_info "Applying QNX poll() patch to async-bsd-socket-lib"
+  python3 "${QNX_ROOT}/patches/apply_async_bsd_socket_qnx_support.py" "${ASYNC_BSD_SRC}"
+fi
+
+# OBD-II-Emulator uses BSD-style u_int32_t which is absent from QNX sys/types.h.
+OBD_EMULATOR_SRC="${BUILD_DIR}/_deps/obd-ii-emulator-src"
+if [[ -d "${OBD_EMULATOR_SRC}" ]]; then
+  qnx_info "Applying QNX uint*_t patch to OBD-II-Emulator"
+  python3 "${QNX_ROOT}/patches/apply_obd_emulator_qnx_support.py" "${OBD_EMULATOR_SRC}"
+fi
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
 if [[ "${ACTION}" == "install" ]]; then

@@ -88,8 +88,8 @@ BUILD_DIR="${WORK_DIR}/build-qnx"
 BOOST_LIBDIR="${BOOST_PREFIX}/lib"
 
 mkdir -p "${WORK_DIR}"
-sudo mkdir -p "${INSTALL_PREFIX}"
-sudo chmod 777 "${INSTALL_PREFIX}"
+mkdir -p "${INSTALL_PREFIX}"
+chmod 777 "${INSTALL_PREFIX}"
 
 qnx_info "Build vsomeip for QNX"
 qnx_info "  tag=${VSOMEIP_TAG} arch=${ARCH}"
@@ -114,8 +114,8 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DBUILD_SHARED_LIBS=OFF \
   -DENABLE_SIGNAL_HANDLING=OFF \
   -DDISABLE_DLT=ON \
-  -DENABLE_MULTIPLE_ROUTING_MANAGERS=ON \
-  -DCMAKE_EXE_LINKER_FLAGS="-lsocket"
+  -DCMAKE_EXE_LINKER_FLAGS="-lsocket" \
+  -DCMAKE_CXX_FLAGS="-DSA_RESTART=0x0040"
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
 

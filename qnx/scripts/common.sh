@@ -139,6 +139,24 @@ function qnx_prepare_dir() {
   mkdir -p "${path}"
 }
 
+# Create an install directory, using sudo only when the directory is not
+# writable by the current user.  When AUTOSAR_QNX_NO_SUDO=1, sudo is never
+# used and the caller must ensure the directory is writable in advance.
+function qnx_ensure_install_dir() {
+  local path="$1"
+  if mkdir -p "${path}" 2>/dev/null; then
+    return 0
+  fi
+
+  if [[ "${AUTOSAR_QNX_NO_SUDO:-0}" == "1" ]]; then
+    qnx_die "Cannot create install directory '${path}'. Set AUTOSAR_QNX_NO_SUDO=0 or create it manually."
+  fi
+
+  qnx_info "Creating install directory with sudo: ${path}"
+  sudo mkdir -p "${path}"
+  sudo chmod 777 "${path}"
+}
+
 function qnx_detect_libdir() {
   local prefix="$1"
   if [[ -d "${prefix}/lib64" ]]; then

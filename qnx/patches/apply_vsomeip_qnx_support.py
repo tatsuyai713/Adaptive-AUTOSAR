@@ -1,134 +1,125 @@
 #!/usr/bin/env python3
 """
-Apply QNX support patches to upstream COVESA/vsomeip CMakeLists.txt.
+Apply QNX support patches to upstream COVESA/vsomeip.
+
+Patches:
+  1. CMakeLists.txt - OS detection, DLT/systemd disabling, static Boost libs
+  2. asio_tcp_socket.hpp / asio_udp_socket.hpp - remove QNX from SO_BINDTODEVICE
+     guard (QNX does not implement SO_BINDTODEVICE)
 
 Based on the vsomeip-qnx reference fork (lixiaolia/vsomeip-qnx).
 This script is idempotent: running it twice produces the same result.
 
-Tested against vsomeip 3.6.1 CMakeLists.txt.
+Tested against vsomeip 3.6.1.
 
 Usage:
     python3 apply_vsomeip_qnx_support.py /path/to/vsomeip/CMakeLists.txt
 """
 
+import os
 import re
 import sys
 
 
-def patch_cmakelists(filepath):
+# Idempotency marker we inject into every file we touch.
+MARKER = "# QNX_AUTOSAR_PATCHED"
+
+
+def _is_patched(content: str) -> bool:
+    return MARKER in content
+
+
+def patch_cmakelists(filepath: str) -> None:
     with open(filepath, "r") as f:
         content = f.read()
 
-    # Skip if already patched
-    if 'CMAKE_SYSTEM_NAME} MATCHES "QNX"' in content:
+    if _is_patched(content):
         print(f"[INFO] {filepath} already patched for QNX, skipping.")
         return
 
     print(f"[INFO] Applying QNX support patch to {filepath}")
 
-    # 1) Add QNX OS block after FreeBSD block
-    qnx_os_block = """
-if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")
-    set(OS "QNX")
-    set(DL_LIBRARY "")
-    set(EXPORTSYMBOLS "-Wl,-export-dynamic -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exportmap.gcc")
-    set(NO_DEPRECATED "")
-    set(OPTIMIZE "")
-    set(OS_CXX_FLAGS "-D_GLIBCXX_USE_NANOSLEEP -lsocket -O -Wall -Wextra -Wformat -Wformat-security -fexceptions -fstrict-aliasing -fstack-protector -fasynchronous-unwind-tables -fno-omit-frame-pointer")
-    set(Boost_USE_STATIC_LIBS ON)
-endif (${CMAKE_SYSTEM_NAME} MATCHES "QNX")
-"""
-    # Find end of FreeBSD block
-    idx = content.find('endif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")')
-    if idx >= 0:
-        end = content.index("\n", idx) + 1
-        content = content[:end] + qnx_os_block + content[end:]
-    else:
-        # Fallback: insert before Options section
-        options_marker = re.search(
-            r"#{10,}\s*\n#\s*Options", content
-        )
-        if options_marker:
-            content = (
-                content[: options_marker.start()]
-                + qnx_os_block
-                + "\n"
-                + content[options_marker.start() :]
+    # vsomeip 3.6.1 already ships a minimal QNX block inside the CMakeLists.
+    # We only need to apply the patches that are still missing.
+
+    # 1) Ensure USE_RT is empty on QNX (librt does not exist on QNX).
+    use_rt_pattern = re.compile(r'set\s*\(\s*USE_RT\s+"rt"\s*\)')
+    use_rt_match = use_rt_pattern.search(content)
+    if use_rt_match:
+        old_use_rt = use_rt_match.group(0)
+        if 'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")' not in content[
+            max(0, use_rt_match.start() - 200) : use_rt_match.start()
+        ]:
+            new_use_rt = (
+                'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
+                "    set(USE_RT \"\")\nelse()\n"
+                f"    {old_use_rt}\n"
+                "endif()"
             )
-        else:
-            print("[WARN] Could not find insertion point for QNX OS block")
+            content = content.replace(old_use_rt, new_use_rt, 1)
 
-    # 2) Wrap DLT section to disable on QNX
-    old_dlt = """if (DISABLE_DLT)
-set (VSOMEIP_ENABLE_DLT 0)
-else ()
-set (VSOMEIP_ENABLE_DLT 1)
-endif ()"""
-    new_dlt = """if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")
-set (VSOMEIP_ENABLE_DLT 0)
-elseif (DISABLE_DLT)
-set (VSOMEIP_ENABLE_DLT 0)
-else ()
-set (VSOMEIP_ENABLE_DLT 1)
-endif ()"""
-    content = content.replace(old_dlt, new_dlt, 1)
-
-    # 3) Wrap systemd check for QNX
-    content = content.replace(
-        'pkg_check_modules(SystemD "libsystemd")',
-        'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")\npkg_check_modules(SystemD "libsystemd")\nendif()',
-        1,
+    # 2) Wrap DLT section to disable on QNX.
+    old_dlt = (
+        "if (DISABLE_DLT)\n"
+        "set (VSOMEIP_ENABLE_DLT 0)\n"
+        "else ()\n"
+        "set (VSOMEIP_ENABLE_DLT 1)\n"
+        "endif ()"
     )
+    new_dlt = (
+        'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
+        "set (VSOMEIP_ENABLE_DLT 0)\n"
+        "elseif (DISABLE_DLT)\n"
+        "set (VSOMEIP_ENABLE_DLT 0)\n"
+        "else ()\n"
+        "set (VSOMEIP_ENABLE_DLT 1)\n"
+        "endif ()"
+    )
+    if old_dlt in content:
+        content = content.replace(old_dlt, new_dlt, 1)
 
-    # 4) Wrap Boost find_package for QNX (use static libs)
-    # Handle both 1.55 (older) and 1.66+ (3.6.x) minimum version
+    # 3) Wrap systemd check for QNX.
+    if 'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")' not in content:
+        content = content.replace(
+            'pkg_check_modules(SystemD "libsystemd")',
+            'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")\npkg_check_modules(SystemD "libsystemd")\nendif()',
+            1,
+        )
+
+    # 4) Wrap Boost find_package for QNX to use static libs.
     boost_pattern = re.compile(
         r"find_package\(\s*Boost\s+(\d+\.\d+)\s+COMPONENTS\s+system\s+thread\s+filesystem\s+REQUIRED\s*\)"
     )
     boost_match = boost_pattern.search(content)
     if boost_match:
         old_boost = boost_match.group(0)
-        new_boost = f"""if (${{CMAKE_SYSTEM_NAME}} MATCHES "QNX")
-set(BOOST_SYSTEM_LIB ${{Boost_LIBRARY_DIR}}/libboost_system.a)
-set(BOOST_THREAD_LIB ${{Boost_LIBRARY_DIR}}/libboost_thread.a)
-set(BOOST_FILESYSTEM_LIB ${{Boost_LIBRARY_DIR}}/libboost_filesystem.a)
-else ()
-{old_boost}
-endif ()"""
-        content = content.replace(old_boost, new_boost, 1)
+        # Only wrap if not already wrapped
+        ctx_before = content[max(0, boost_match.start() - 100) : boost_match.start()]
+        if "BOOST_SYSTEM_LIB" not in ctx_before:
+            new_boost = (
+                'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
+                "set(BOOST_SYSTEM_LIB ${Boost_LIBRARY_DIR}/libboost_system.a)\n"
+                "set(BOOST_THREAD_LIB ${Boost_LIBRARY_DIR}/libboost_thread.a)\n"
+                "set(BOOST_FILESYSTEM_LIB ${Boost_LIBRARY_DIR}/libboost_filesystem.a)\n"
+                "else ()\n"
+                f"{old_boost}\n"
+                "endif ()"
+            )
+            content = content.replace(old_boost, new_boost, 1)
 
-    # 5) DLT pkg_check wrapped for QNX
-    old_dlt_pkg = """if(VSOMEIP_ENABLE_DLT EQUAL 1)
-pkg_check_modules(DLT "automotive-dlt >= 2.11")"""
-    new_dlt_pkg = """if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")
-# QNX: DLT disabled
-elseif(VSOMEIP_ENABLE_DLT EQUAL 1)
-pkg_check_modules(DLT "automotive-dlt >= 2.11")"""
-    content = content.replace(old_dlt_pkg, new_dlt_pkg, 1)
-
-    # 6) Fix USE_RT for QNX (handle both with and without space before parens)
-    use_rt_pattern = re.compile(r'set\s*\(\s*USE_RT\s+"rt"\s*\)')
-    use_rt_match = use_rt_pattern.search(content)
-    if use_rt_match:
-        old_use_rt = use_rt_match.group(0)
-        new_use_rt = f"""if (${{CMAKE_SYSTEM_NAME}} MATCHES "QNX")
-    set(USE_RT "")
-else()
-    {old_use_rt}
-endif()"""
-        content = content.replace(old_use_rt, new_use_rt, 1)
-
-    # 7) Replace target_link_libraries with QNX-aware versions
-    # In 3.6.x, lines use ${SystemD_LIBRARIES} instead of ${OS_LIBS}
-    # We need to match both old and new patterns
+    # 5) target_link_libraries: replace ${Boost_LIBRARIES} with static .a on QNX.
     link_pattern = re.compile(
         r"target_link_libraries\([^)]*\$\{Boost_LIBRARIES\}[^)]*\)"
     )
 
-    def qnx_link_replace(match):
+    def qnx_link_replace(match: re.Match) -> str:
         original = match.group(0)
-        # Replace ${Boost_LIBRARIES} with static .a references
-        boost_static = "${BOOST_SYSTEM_LIB} ${BOOST_THREAD_LIB} ${BOOST_FILESYSTEM_LIB}"
+        # Already wrapped?
+        if MARKER in original:
+            return original
+        boost_static = (
+            "${BOOST_SYSTEM_LIB} ${BOOST_THREAD_LIB} ${BOOST_FILESYSTEM_LIB}"
+        )
         qnx_line = original.replace("${Boost_LIBRARIES}", boost_static)
         return (
             'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n\t'
@@ -138,31 +129,10 @@ endif()"""
             + "\nendif()"
         )
 
-    # Apply to all target_link_libraries with Boost
     content = link_pattern.sub(qnx_link_replace, content)
 
-    # 8) If VSOMEIP_BOOST_HELPER version selection exists (older versions), patch it
-    if "VSOMEIP_BOOST_HELPER" in content and 'Using boost version' in content:
-        old_boost_ver = 'message( STATUS "Using boost version: ${VSOMEIP_BOOST_VERSION}" )'
-        new_boost_ver = """if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")
-\tset(VSOMEIP_BOOST_HELPER implementation/helper/1.70)
-else()
-message( STATUS "Using boost version: ${VSOMEIP_BOOST_VERSION}" )"""
-        content = content.replace(old_boost_ver, new_boost_ver, 1)
-
-        # Close the else/endif for boost helper selection
-        lines = content.split("\n")
-        in_boost_helper = False
-        insert_idx = -1
-        for i, line in enumerate(lines):
-            if "VSOMEIP_BOOST_HELPER implementation/helper/1.55" in line:
-                in_boost_helper = True
-            if in_boost_helper and line.strip() == "endif()":
-                insert_idx = i
-                break
-        if insert_idx > 0:
-            lines.insert(insert_idx + 1, "endif()")
-            content = "\n".join(lines)
+    # Stamp with our marker so we won't re-patch.
+    content = MARKER + "\n" + content
 
     with open(filepath, "w") as f:
         f.write(content)
@@ -170,8 +140,161 @@ message( STATUS "Using boost version: ${VSOMEIP_BOOST_VERSION}" )"""
     print(f"[INFO] QNX support patch applied to {filepath}")
 
 
+def patch_asio_socket_header(filepath: str) -> None:
+    """Fix SO_BINDTODEVICE guard: QNX does not have SO_BINDTODEVICE.
+
+    The base class declares bind_to_device() and can_read_fd_flags() as pure
+    virtual, so we must provide implementations for QNX:
+      - bind_to_device: return false (SO_BINDTODEVICE not supported on QNX)
+      - can_read_fd_flags: use fcntl(F_GETFD) which works on QNX
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    old_guard = '#if defined(__linux__) || defined(__QNX__)'
+    # Replace the combined guard with: Linux uses SO_BINDTODEVICE, QNX uses stubs
+    new_guard_block = (
+        '#if defined(__linux__)\n'
+        '    [[nodiscard]] bool bind_to_device(std::string const& _device) override {\n'
+        '        return setsockopt(socket_.native_handle(), SOL_SOCKET, SO_BINDTODEVICE, _device.c_str(), static_cast<socklen_t>(_device.size()))\n'
+        '                != -1;\n'
+        '    }\n'
+        '    [[nodiscard]] bool can_read_fd_flags() override { return fcntl(socket_.native_handle(), F_GETFD) != -1; }\n'
+        '#elif defined(__QNX__)\n'
+        '    // QNX: SO_BINDTODEVICE is not supported; provide stubs for pure virtuals.\n'
+        '    [[nodiscard]] bool bind_to_device(std::string const& /*_device*/) override { return false; }\n'
+        '    [[nodiscard]] bool can_read_fd_flags() override { return fcntl(socket_.native_handle(), F_GETFD) != -1; }\n'
+        '#endif'
+    )
+
+    if old_guard not in content:
+        print(f"[INFO] {filepath}: SO_BINDTODEVICE guard not found, skipping.")
+        return
+
+    # Find the full #if...#endif block to replace
+    start = content.index(old_guard)
+    # Find closing #endif
+    end_tag = '#endif'
+    end = content.index(end_tag, start) + len(end_tag)
+    old_block = content[start:end]
+
+    print(f"[INFO] Patching {filepath}: replacing SO_BINDTODEVICE block with Linux+QNX stubs")
+    content = content[:start] + new_guard_block + content[end:]
+    # Stamp
+    content = f"// {MARKER}\n" + content
+
+    with open(filepath, "w") as f:
+        f.write(content)
+
+
+def patch_wrappers_qnx(filepath: str) -> None:
+    """Rewrite wrappers_qnx.cpp for QNX SDP 8.0.
+
+    The upstream file uses sys/sockmsg.h which was removed in QNX 8.0.
+    In QNX 8.0, accept4() is provided natively by libsocket, so we can
+    drop the custom implementation and just use the native one.
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    if "sys/sockmsg.h" not in content:
+        print(f"[INFO] {filepath}: sys/sockmsg.h not referenced, skipping.")
+        return
+
+    print(f"[INFO] Patching {filepath}: replacing custom accept4() with QNX 8.0 native accept4()")
+
+    new_content = f"""\
+// {MARKER}
+// wrappers_qnx.cpp - patched for QNX SDP 8.0
+// QNX 8.0 provides accept4() natively in libsocket; sys/sockmsg.h is gone.
+// We keep the __wrap_socket/__wrap_accept/__wrap_open wrappers but use the
+// native accept4() instead of the custom message-passing implementation.
+#ifdef __QNX__
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <cerrno>
+#include <pthread.h>
+#include <cstdlib>
+#include <string.h>
+#include <unistd.h>
+
+/*
+ * These definitions MUST remain in the global namespace.
+ */
+extern "C" {{
+/*
+ * The real socket(2), renamed by GCC.
+ */
+int __real_socket(int domain, int type, int protocol) noexcept;
+
+/*
+ * Overrides socket(2) to set SOCK_CLOEXEC by default.
+ */
+int __wrap_socket(int domain, int type, int protocol) noexcept {{
+    return __real_socket(domain, type | SOCK_CLOEXEC, protocol);
+}}
+
+/*
+ * Overrides accept(2) to set SOCK_CLOEXEC by default.
+ * QNX 8.0 provides accept4() natively in libsocket.
+ */
+int __wrap_accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {{
+    return accept4(sockfd, addr, addrlen, SOCK_CLOEXEC);
+}}
+
+/*
+ * The real open(2), renamed by GCC.
+ */
+int __real_open(const char* pathname, int flags, mode_t mode);
+
+/*
+ * Overrides open(2) to set O_CLOEXEC by default.
+ */
+int __wrap_open(const char* pathname, int flags, mode_t mode) {{
+    return __real_open(pathname, flags | O_CLOEXEC, mode);
+}}
+}}
+
+#endif
+"""
+    with open(filepath, "w") as f:
+        f.write(new_content)
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <CMakeLists.txt>", file=sys.stderr)
         sys.exit(1)
-    patch_cmakelists(sys.argv[1])
+
+    cmake_file = sys.argv[1]
+    vsomeip_root = os.path.dirname(cmake_file)
+
+    patch_cmakelists(cmake_file)
+
+    # Patch C++ headers with QNX-incompatible Linux socket options
+    for header in [
+        "implementation/endpoints/include/asio_tcp_socket.hpp",
+        "implementation/endpoints/include/asio_udp_socket.hpp",
+    ]:
+        patch_asio_socket_header(os.path.join(vsomeip_root, header))
+
+    # Patch wrappers_qnx.cpp for QNX SDP 8.0 (sys/sockmsg.h removed)
+    patch_wrappers_qnx(
+        os.path.join(vsomeip_root, "implementation/utility/src/wrappers_qnx.cpp")
+    )

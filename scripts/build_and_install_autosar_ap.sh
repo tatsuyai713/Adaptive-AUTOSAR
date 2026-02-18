@@ -150,6 +150,18 @@ cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
 
 cmake --build "${REPO_ROOT}/${BUILD_DIR}" -j"$(nproc)"
+
+# Create install prefix if it doesn't exist (may need sudo for /opt).
+if [[ ! -d "${INSTALL_PREFIX}" ]]; then
+  if mkdir -p "${INSTALL_PREFIX}" 2>/dev/null; then
+    : # created without sudo
+  else
+    echo "[INFO] Creating ${INSTALL_PREFIX} with sudo"
+    sudo mkdir -p "${INSTALL_PREFIX}"
+    sudo chmod 777 "${INSTALL_PREFIX}"
+  fi
+fi
+
 cmake --install "${REPO_ROOT}/${BUILD_DIR}"
 
 echo "[OK] Installed AUTOSAR AP runtime into: ${INSTALL_PREFIX}"

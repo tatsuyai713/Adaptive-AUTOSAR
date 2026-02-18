@@ -144,30 +144,60 @@ find_path(
     /opt/vsomeip/include
 )
 
-unset(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR CACHE)
-unset(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR)
-find_path(
-  USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR
-  NAMES dds/dds.hpp
-  HINTS
-    /opt/cyclonedds/include/ddscxx
-)
-
-unset(USER_APPS_CYCLONEDDS_INCLUDE_DIR CACHE)
-unset(USER_APPS_CYCLONEDDS_INCLUDE_DIR)
-find_path(
-  USER_APPS_CYCLONEDDS_INCLUDE_DIR
-  NAMES dds/ddsi/ddsi_serdata.h
-  HINTS
-    /opt/cyclonedds/include
-)
-
-set(USER_APPS_CYCLONEDDS_INCLUDE_DIRS "")
-if(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR)
-  list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS "${USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR}")
+# Import CycloneDDS targets explicitly so we can query their include directories.
+# This ensures we pick up the correct (cross-compilation) CycloneDDS paths even
+# when host-installed headers exist at /opt/cyclonedds.
+if(NOT TARGET CycloneDDS::ddsc)
+  find_package(CycloneDDS QUIET)
 endif()
-if(USER_APPS_CYCLONEDDS_INCLUDE_DIR)
-  list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS "${USER_APPS_CYCLONEDDS_INCLUDE_DIR}")
+if(NOT TARGET CycloneDDS-CXX::ddscxx)
+  find_package(CycloneDDS-CXX QUIET NAMES CycloneDDS-CXX)
+  if(NOT TARGET CycloneDDS-CXX::ddscxx)
+    find_package(CycloneDDS-CXX QUIET)
+  endif()
+endif()
+
+# Prefer include paths from CycloneDDS cmake imported targets when available.
+# This avoids picking up host-installed CycloneDDS headers when cross-compiling.
+set(USER_APPS_CYCLONEDDS_INCLUDE_DIRS "")
+if(TARGET CycloneDDS-CXX::ddscxx)
+  get_target_property(_ddscxx_incs CycloneDDS-CXX::ddscxx INTERFACE_INCLUDE_DIRECTORIES)
+  if(_ddscxx_incs)
+    list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS ${_ddscxx_incs})
+  endif()
+endif()
+if(TARGET CycloneDDS::ddsc)
+  get_target_property(_ddsc_incs CycloneDDS::ddsc INTERFACE_INCLUDE_DIRECTORIES)
+  if(_ddsc_incs)
+    list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS ${_ddsc_incs})
+  endif()
+endif()
+# Fallback to find_path when targets are not yet imported (native builds).
+if(NOT USER_APPS_CYCLONEDDS_INCLUDE_DIRS)
+  unset(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR CACHE)
+  unset(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR)
+  find_path(
+    USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR
+    NAMES dds/dds.hpp
+    HINTS
+      /opt/cyclonedds/include/ddscxx
+  )
+
+  unset(USER_APPS_CYCLONEDDS_INCLUDE_DIR CACHE)
+  unset(USER_APPS_CYCLONEDDS_INCLUDE_DIR)
+  find_path(
+    USER_APPS_CYCLONEDDS_INCLUDE_DIR
+    NAMES dds/ddsi/ddsi_serdata.h
+    HINTS
+      /opt/cyclonedds/include
+  )
+
+  if(USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR)
+    list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS "${USER_APPS_CYCLONEDDS_DDSCXX_INCLUDE_DIR}")
+  endif()
+  if(USER_APPS_CYCLONEDDS_INCLUDE_DIR)
+    list(APPEND USER_APPS_CYCLONEDDS_INCLUDE_DIRS "${USER_APPS_CYCLONEDDS_INCLUDE_DIR}")
+  endif()
 endif()
 
 # Optional DDS IDL-to-C++ generation for communication DDS apps.

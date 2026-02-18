@@ -49,6 +49,7 @@ namespace ara
 
         core::Result<void> ServiceSkeletonBase::OfferService()
         {
+#ifdef ARA_COM_USE_VSOMEIP
             if (!mOffered)
             {
                 auto app = someip::VsomeipApplication::GetServerApplication();
@@ -59,7 +60,9 @@ namespace ara
                     static_cast<vsomeip::minor_version_t>(mMinorVersion));
                 mOffered = true;
             }
-
+#else
+            mOffered = true;
+#endif
             return core::Result<void>::FromValue();
         }
 
@@ -67,6 +70,7 @@ namespace ara
         {
             if (mOffered)
             {
+#ifdef ARA_COM_USE_VSOMEIP
                 auto app = someip::VsomeipApplication::GetServerApplication();
 
                 std::vector<std::uint16_t> eventGroups;
@@ -89,6 +93,12 @@ namespace ara
                     mInstanceId,
                     static_cast<vsomeip::major_version_t>(mMajorVersion),
                     static_cast<vsomeip::minor_version_t>(mMinorVersion));
+#else
+                {
+                    std::lock_guard<std::mutex> lock(mSubscriptionMutex);
+                    mRegisteredEventGroups.clear();
+                }
+#endif
                 mOffered = false;
             }
         }
@@ -122,6 +132,7 @@ namespace ara
                 }
             }
 
+#ifdef ARA_COM_USE_VSOMEIP
             auto app = someip::VsomeipApplication::GetServerApplication();
             app->register_subscription_handler(
                 mServiceId,
@@ -137,6 +148,9 @@ namespace ara
                         static_cast<std::uint16_t>(client),
                         subscribed);
                 });
+#else
+            (void)handler;
+#endif
 
             {
                 std::lock_guard<std::mutex> lock(mSubscriptionMutex);
@@ -168,11 +182,13 @@ namespace ara
                 return;
             }
 
+#ifdef ARA_COM_USE_VSOMEIP
             auto app = someip::VsomeipApplication::GetServerApplication();
             app->unregister_subscription_handler(
                 mServiceId,
                 mInstanceId,
                 static_cast<vsomeip::eventgroup_t>(eventGroupId));
+#endif
         }
 
         bool ServiceSkeletonBase::IsOffered() const noexcept

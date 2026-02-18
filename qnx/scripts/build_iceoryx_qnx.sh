@@ -76,8 +76,8 @@ SOURCE_DIR="${WORK_DIR}/iceoryx"
 BUILD_DIR="${WORK_DIR}/build-qnx"
 
 mkdir -p "${WORK_DIR}"
-sudo mkdir -p "${INSTALL_PREFIX}"
-sudo chmod 777 "${INSTALL_PREFIX}"
+mkdir -p "${INSTALL_PREFIX}"
+chmod 777 "${INSTALL_PREFIX}"
 
 qnx_info "Build iceoryx for QNX"
 qnx_info "  tag=${ICEORYX_TAG} arch=${ARCH}"

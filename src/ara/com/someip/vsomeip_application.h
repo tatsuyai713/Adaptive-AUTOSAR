@@ -6,7 +6,10 @@
 #define VSOMEIP_APPLICATION_H
 
 #include <memory>
+
+#ifdef ARA_COM_USE_VSOMEIP
 #include <vsomeip/vsomeip.hpp>
+#endif
 
 namespace ara
 {
@@ -14,6 +17,7 @@ namespace ara
     {
         namespace someip
         {
+#ifdef ARA_COM_USE_VSOMEIP
             /// @brief Shared vsomeip application accessors for client/server roles.
             class VsomeipApplication
             {
@@ -22,6 +26,7 @@ namespace ara
                 static std::shared_ptr<vsomeip::application> GetClientApplication();
                 static void StopAll() noexcept;
             };
+#endif
         }
     }
 }

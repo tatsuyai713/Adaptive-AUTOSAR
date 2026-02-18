@@ -23,6 +23,8 @@ ENABLE_SHM="OFF"
 BUILD_LIBS="ON"
 BUILD_RUNTIME="ON"
 BUILD_USER_APPS="ON"
+CREATE_DEPLOY_IMAGE="OFF"
+TARGET_IP=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,6 +60,15 @@ while [[ $# -gt 0 ]]; do
       BUILD_USER_APPS="OFF"
       shift
       ;;
+    --create-deploy-image)
+      CREATE_DEPLOY_IMAGE="ON"
+      shift
+      ;;
+    --target-ip)
+      TARGET_IP="$2"
+      CREATE_DEPLOY_IMAGE="ON"
+      shift 2
+      ;;
     *)
       qnx_error "Unknown argument: $1"
       exit 1
@@ -91,6 +102,12 @@ if [[ "${BUILD_USER_APPS}" == "ON" ]]; then
     --arch "${ARCH}" \
     --out-root "${OUT_ROOT}" \
     --jobs "${JOBS}"
+fi
+
+if [[ "${CREATE_DEPLOY_IMAGE}" == "ON" ]]; then
+  deploy_args=(--arch "${ARCH}" --out-root "${OUT_ROOT}")
+  [[ -n "${TARGET_IP}" ]] && deploy_args+=(--target-ip "${TARGET_IP}")
+  "${SCRIPT_DIR}/create_qnx_deploy_image.sh" "${deploy_args[@]}"
 fi
 
 qnx_info "QNX full build pipeline complete."

@@ -62,7 +62,11 @@ namespace
 
     void EnsureRunDirectory()
     {
+#if defined(__QNX__)
+        ::mkdir("/tmp/autosar", 0755);
+#else
         ::mkdir("/run/autosar", 0755);
+#endif
     }
 
     void WriteStatusFile(
@@ -116,7 +120,12 @@ int main()
     const std::string statusFile{
         GetEnvOrDefault(
             "AUTOSAR_PTP_STATUS_FILE",
-            "/run/autosar/ptp_time_provider.status")};
+#if defined(__QNX__)
+            "/tmp/autosar/ptp_time_provider.status"
+#else
+            "/run/autosar/ptp_time_provider.status"
+#endif
+        )};
     const std::string ptpDevice{
         GetEnvOrDefault("AUTOSAR_PTP_DEVICE", "/dev/ptp0")};
 

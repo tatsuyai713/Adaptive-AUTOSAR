@@ -102,8 +102,8 @@ SOURCE_CXX_DIR="${WORK_DIR}/cyclonedds-cxx"
 BUILD_CXX_DIR="${WORK_DIR}/build-qnx-cxx"
 
 mkdir -p "${WORK_DIR}"
-sudo mkdir -p "${INSTALL_PREFIX}"
-sudo chmod 777 "${INSTALL_PREFIX}"
+mkdir -p "${INSTALL_PREFIX}"
+chmod 777 "${INSTALL_PREFIX}"
 
 qnx_info "Build CycloneDDS for QNX"
 qnx_info "  tags: C=${CYCLONEDDS_TAG} C++=${CYCLONEDDS_CXX_TAG} arch=${ARCH}"

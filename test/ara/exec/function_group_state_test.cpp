@@ -79,7 +79,7 @@ namespace ara
         {
             const std::string cShortnamePath{"MachineFG"};
             const std::string cState{"stateXYZ"};
-            const std::vector<u_int8_t> cExpectedResult(
+            const std::vector<uint8_t> cExpectedResult(
                 {0, 0, 0, 9,
                  77, 97, 99, 104, 105, 110, 101, 70, 71,
                  0, 0, 0, 8,
