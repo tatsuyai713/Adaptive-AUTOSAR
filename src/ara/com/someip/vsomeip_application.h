@@ -25,6 +25,7 @@ namespace ara
                 static std::shared_ptr<vsomeip::application> GetServerApplication();
                 static std::shared_ptr<vsomeip::application> GetClientApplication();
                 static void StopAll() noexcept;
+                static void StopServerApplication() noexcept;
             };
 #endif
         }

@@ -89,6 +89,9 @@ namespace ara
                         mOffered = false;
                     }
 
+                    mApplication = nullptr;
+                    VsomeipApplication::StopServerApplication();
+
                     if (mOwnOfferedIpEnv)
                     {
                         unsetenv("ADAPTIVE_AUTOSAR_SD_OFFERED_IP");

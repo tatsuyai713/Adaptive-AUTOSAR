@@ -230,7 +230,12 @@ namespace ara
 
             void VsomeipApplication::StopAll() noexcept
             {
+                GetServerContext().Stop();
                 GetClientContext().Stop();
+            }
+
+            void VsomeipApplication::StopServerApplication() noexcept
+            {
                 GetServerContext().Stop();
             }
         }
