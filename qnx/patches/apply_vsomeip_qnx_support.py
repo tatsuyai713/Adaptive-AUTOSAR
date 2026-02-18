@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """
-Apply QNX support patches to upstream COVESA/vsomeip.
+Apply QNX SDP 8.0 support patches to upstream COVESA/vsomeip 3.6.x.
 
-Patches:
-  1. CMakeLists.txt - OS detection, DLT/systemd disabling, static Boost libs
-  2. asio_tcp_socket.hpp / asio_udp_socket.hpp - remove QNX from SO_BINDTODEVICE
-     guard (QNX does not implement SO_BINDTODEVICE)
+vsomeip 3.6.1 already ships native QNX support (USE_RT, socket linking,
+CLOEXEC wrappers, QNX base path). This patcher only adds what is still
+missing for a static-Boost cross-build on QNX SDP 8.0:
 
-Based on the vsomeip-qnx reference fork (lixiaolia/vsomeip-qnx).
+  CMakeLists.txt:
+    - Wrap Boost find_package to use static .a libraries on QNX
+    - Replace ${Boost_LIBRARIES} in target_link_libraries with static .a
+    - Wrap systemd pkg_check_modules (pkg-config may not exist on QNX)
+    - Guard vsomeip3-cfg socket linking (cfg is conditional)
+
+  C++ sources:
+    - asio_tcp_socket.hpp / asio_udp_socket.hpp: split SO_BINDTODEVICE
+      guard so QNX gets stubs (QNX lacks SO_BINDTODEVICE)
+    - wrappers_qnx.cpp: rewrite for QNX SDP 8.0 (sys/sockmsg.h removed,
+      accept4() provided natively by libsocket)
+
 This script is idempotent: running it twice produces the same result.
-
-Tested against vsomeip 3.6.1.
 
 Usage:
     python3 apply_vsomeip_qnx_support.py /path/to/vsomeip/CMakeLists.txt
@@ -39,61 +47,30 @@ def patch_cmakelists(filepath: str) -> None:
 
     print(f"[INFO] Applying QNX support patch to {filepath}")
 
-    # vsomeip 3.6.1 already ships a minimal QNX block inside the CMakeLists.
-    # We only need to apply the patches that are still missing.
-
-    # 1) Ensure USE_RT is empty on QNX (librt does not exist on QNX).
-    use_rt_pattern = re.compile(r'set\s*\(\s*USE_RT\s+"rt"\s*\)')
-    use_rt_match = use_rt_pattern.search(content)
-    if use_rt_match:
-        old_use_rt = use_rt_match.group(0)
-        if 'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")' not in content[
-            max(0, use_rt_match.start() - 200) : use_rt_match.start()
-        ]:
-            new_use_rt = (
-                'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
-                "    set(USE_RT \"\")\nelse()\n"
-                f"    {old_use_rt}\n"
-                "endif()"
-            )
-            content = content.replace(old_use_rt, new_use_rt, 1)
-
-    # 2) Wrap DLT section to disable on QNX.
-    old_dlt = (
-        "if (DISABLE_DLT)\n"
-        "set (VSOMEIP_ENABLE_DLT 0)\n"
-        "else ()\n"
-        "set (VSOMEIP_ENABLE_DLT 1)\n"
-        "endif ()"
-    )
-    new_dlt = (
-        'if (${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
-        "set (VSOMEIP_ENABLE_DLT 0)\n"
-        "elseif (DISABLE_DLT)\n"
-        "set (VSOMEIP_ENABLE_DLT 0)\n"
-        "else ()\n"
-        "set (VSOMEIP_ENABLE_DLT 1)\n"
-        "endif ()"
-    )
-    if old_dlt in content:
-        content = content.replace(old_dlt, new_dlt, 1)
-
-    # 3) Wrap systemd check for QNX.
+    # ---------------------------------------------------------------
+    # 1) Wrap systemd check for QNX (pkg-config may not be available)
+    # ---------------------------------------------------------------
     if 'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")' not in content:
         content = content.replace(
             'pkg_check_modules(SystemD "libsystemd")',
-            'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")\npkg_check_modules(SystemD "libsystemd")\nendif()',
+            'if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "QNX")\n'
+            'pkg_check_modules(SystemD "libsystemd")\n'
+            'endif()',
             1,
         )
 
-    # 4) Wrap Boost find_package for QNX to use static libs.
+    # ---------------------------------------------------------------
+    # 2) Wrap Boost find_package for QNX to use pre-built static libs.
+    #    The build script passes -DBoost_FOUND=TRUE and sets paths manually,
+    #    but we still need the static lib variables defined.
+    # ---------------------------------------------------------------
     boost_pattern = re.compile(
-        r"find_package\(\s*Boost\s+(\d+\.\d+)\s+COMPONENTS\s+system\s+thread\s+filesystem\s+REQUIRED\s*\)"
+        r"find_package\(\s*Boost\s+(\d+\.\d+)\s+COMPONENTS\s+"
+        r"system\s+thread\s+filesystem\s+REQUIRED\s*\)"
     )
     boost_match = boost_pattern.search(content)
     if boost_match:
         old_boost = boost_match.group(0)
-        # Only wrap if not already wrapped
         ctx_before = content[max(0, boost_match.start() - 100) : boost_match.start()]
         if "BOOST_SYSTEM_LIB" not in ctx_before:
             new_boost = (
@@ -107,16 +84,16 @@ def patch_cmakelists(filepath: str) -> None:
             )
             content = content.replace(old_boost, new_boost, 1)
 
-    # 5) target_link_libraries: replace ${Boost_LIBRARIES} with static .a on QNX.
+    # ---------------------------------------------------------------
+    # 3) Replace ${Boost_LIBRARIES} in target_link_libraries with
+    #    static .a references on QNX.
+    # ---------------------------------------------------------------
     link_pattern = re.compile(
         r"target_link_libraries\([^)]*\$\{Boost_LIBRARIES\}[^)]*\)"
     )
 
     def qnx_link_replace(match: re.Match) -> str:
         original = match.group(0)
-        # Already wrapped?
-        if MARKER in original:
-            return original
         boost_static = (
             "${BOOST_SYSTEM_LIB} ${BOOST_THREAD_LIB} ${BOOST_FILESYSTEM_LIB}"
         )
@@ -130,6 +107,19 @@ def patch_cmakelists(filepath: str) -> None:
         )
 
     content = link_pattern.sub(qnx_link_replace, content)
+
+    # ---------------------------------------------------------------
+    # 4) Fix vsomeip 3.6.1 bug: the native QNX socket-linking block
+    #    references vsomeip3-cfg unconditionally, but cfg is only built
+    #    when VSOMEIP_ENABLE_MULTIPLE_ROUTING_MANAGERS == 0.
+    # ---------------------------------------------------------------
+    content = content.replace(
+        "    target_link_libraries(${VSOMEIP_NAME}-cfg socket)\n",
+        "    if (VSOMEIP_ENABLE_MULTIPLE_ROUTING_MANAGERS EQUAL 0)\n"
+        "        target_link_libraries(${VSOMEIP_NAME}-cfg socket)\n"
+        "    endif()\n",
+        1,
+    )
 
     # Stamp with our marker so we won't re-patch.
     content = MARKER + "\n" + content
@@ -159,7 +149,6 @@ def patch_asio_socket_header(filepath: str) -> None:
         return
 
     old_guard = '#if defined(__linux__) || defined(__QNX__)'
-    # Replace the combined guard with: Linux uses SO_BINDTODEVICE, QNX uses stubs
     new_guard_block = (
         '#if defined(__linux__)\n'
         '    [[nodiscard]] bool bind_to_device(std::string const& _device) override {\n'
@@ -180,14 +169,11 @@ def patch_asio_socket_header(filepath: str) -> None:
 
     # Find the full #if...#endif block to replace
     start = content.index(old_guard)
-    # Find closing #endif
     end_tag = '#endif'
     end = content.index(end_tag, start) + len(end_tag)
-    old_block = content[start:end]
 
     print(f"[INFO] Patching {filepath}: replacing SO_BINDTODEVICE block with Linux+QNX stubs")
     content = content[:start] + new_guard_block + content[end:]
-    # Stamp
     content = f"// {MARKER}\n" + content
 
     with open(filepath, "w") as f:
