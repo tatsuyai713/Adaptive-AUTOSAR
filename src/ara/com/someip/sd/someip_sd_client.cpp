@@ -63,6 +63,24 @@ namespace ara
                             std::placeholders::_1,
                             std::placeholders::_2,
                             std::placeholders::_3));
+
+                    mApplication->register_state_handler(
+                        [this](vsomeip::state_type_e state)
+                        {
+                            if (state == vsomeip::state_type_e::ST_DEREGISTERED)
+                            {
+                                std::lock_guard<std::mutex> _stateLock(mStateEventMutex);
+                                if (mServiceOffered)
+                                {
+                                    mServiceOffered = false;
+                                    SetState(
+                                        mServiceRequested
+                                            ? helper::SdClientState::Stopped
+                                            : helper::SdClientState::ServiceNotSeen);
+                                    mStopOfferingConditionVariable.notify_all();
+                                }
+                            }
+                        });
                 }
 
                 void SomeIpSdClient::onAvailability(
