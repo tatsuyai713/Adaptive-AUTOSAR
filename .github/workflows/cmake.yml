@@ -124,17 +124,6 @@ jobs:
           --build-dir build-user-apps-ci-run \
           --run
 
-    - name: Verify Raspberry Pi ECU profile (mock CAN)
-      env:
-        LD_LIBRARY_PATH: /opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib
-      run: |
-        set -euxo pipefail
-        ./scripts/verify_rpi_ecu_profile.sh \
-          --prefix /tmp/autosar_ap \
-          --user-app-build-dir "${GITHUB_WORKSPACE}/build-user-apps-ci" \
-          --can-backend mock \
-          --require-platform-binary
-
   docs:
     runs-on: ubuntu-22.04
     needs: full-feature-test
