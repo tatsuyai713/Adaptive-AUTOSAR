@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# QNX vsomeip cross-build script.
+#
+# Uses upstream COVESA/vsomeip and applies a QNX support patch via
+# qnx/patches/apply_vsomeip_qnx_support.py (based on the vsomeip-qnx
+# reference fork by lixiaolia).
+#
+# Key QNX adaptations applied by the patcher:
+#   - Adds -lsocket to OS_CXX_FLAGS
+#   - Disables DLT / systemd
+#   - Uses static Boost libraries
+#   - Removes rt library dependency
+#
+# Usage:
+#   ./qnx/scripts/build_vsomeip_qnx.sh install --arch aarch64le
+#   ./qnx/scripts/build_vsomeip_qnx.sh clean
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
@@ -14,7 +30,7 @@ ARCH="$(qnx_default_arch)"
 OUT_ROOT="$(qnx_default_out_root)"
 JOBS="$(qnx_default_jobs)"
 TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
-VSOMEIP_TAG="3.4.10"
+VSOMEIP_TAG="3.6.1"
 
 INSTALL_PREFIX="${OUT_ROOT}/vsomeip"
 WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/vsomeip/${ARCH}"
@@ -59,6 +75,7 @@ done
 
 qnx_setup_env
 qnx_require_cmd "cmake"
+qnx_require_cmd "python3"
 
 if [[ "${ACTION}" == "clean" ]]; then
   rm -rf "${WORK_DIR}"
@@ -68,33 +85,47 @@ fi
 
 SOURCE_DIR="${WORK_DIR}/vsomeip"
 BUILD_DIR="${WORK_DIR}/build-qnx"
-BOOST_LIBDIR="${BOOST_PREFIX}/$(qnx_detect_libdir "${BOOST_PREFIX}")"
+BOOST_LIBDIR="${BOOST_PREFIX}/lib"
 
 mkdir -p "${WORK_DIR}"
 sudo mkdir -p "${INSTALL_PREFIX}"
 sudo chmod 777 "${INSTALL_PREFIX}"
 
+qnx_info "Build vsomeip for QNX"
+qnx_info "  tag=${VSOMEIP_TAG} arch=${ARCH}"
+qnx_info "  prefix=${INSTALL_PREFIX} boost=${BOOST_PREFIX}"
+
 qnx_clone_or_update "https://github.com/COVESA/vsomeip.git" "${VSOMEIP_TAG}" "${SOURCE_DIR}"
+
+# Apply QNX support patch (idempotent)
+python3 "${QNX_ROOT}/patches/apply_vsomeip_qnx_support.py" "${SOURCE_DIR}/CMakeLists.txt"
 
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
-  -DBoost_NO_BOOST_CMAKE=ON \
-  -DBOOST_ROOT="${BOOST_PREFIX}" \
-  -DBOOST_INCLUDEDIR="${BOOST_PREFIX}/include" \
+  -DBoost_FOUND=TRUE \
+  -DBoost_DIR="${BOOST_PREFIX}" \
+  -DBoost_INCLUDE_DIR="${BOOST_PREFIX}/include" \
+  -DBoost_LIBRARY_DIR="${BOOST_LIBDIR}" \
   -DBOOST_LIBRARYDIR="${BOOST_LIBDIR}" \
-  -DBUILD_SHARED_LIBS=ON \
-  -DENABLE_SIGNAL_HANDLING=0 \
-  -DENABLE_MULTIPLE_ROUTING_MANAGERS=1
+  -DCONFIG_DIR="${SOURCE_DIR}" \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DENABLE_SIGNAL_HANDLING=OFF \
+  -DDISABLE_DLT=ON \
+  -DENABLE_MULTIPLE_ROUTING_MANAGERS=ON \
+  -DCMAKE_EXE_LINKER_FLAGS="-lsocket"
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
+
 if [[ "${ACTION}" == "install" ]]; then
   cmake --install "${BUILD_DIR}"
+fi
 
-  mkdir -p "${INSTALL_PREFIX}/etc"
-  cat > "${INSTALL_PREFIX}/etc/vsomeip-autosar-qnx.json" <<CFG
+# Install default QNX config
+mkdir -p "${INSTALL_PREFIX}/etc"
+cat > "${INSTALL_PREFIX}/etc/vsomeip-autosar-qnx.json" <<CFG
 {
   "unicast": "127.0.0.1",
   "logging": {
@@ -121,7 +152,6 @@ if [[ "${ACTION}" == "install" ]]; then
   }
 }
 CFG
-fi
 
 qnx_info "vsomeip QNX build complete (action=${ACTION})"
 qnx_info "  install_prefix=${INSTALL_PREFIX}"

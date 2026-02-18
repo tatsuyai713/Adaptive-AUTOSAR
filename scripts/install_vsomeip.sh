@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VSOMEIP_TAG="3.4.10"
+VSOMEIP_TAG="3.6.1"
 INSTALL_PREFIX="/opt/vsomeip"
 BUILD_DIR="${HOME}/build-vsomeip"
 _nproc="$(nproc 2>/dev/null || echo 4)"

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# QNX iceoryx cross-build script.
+#
+# Usage:
+#   ./qnx/scripts/build_iceoryx_qnx.sh install --arch aarch64le
+#   ./qnx/scripts/build_iceoryx_qnx.sh clean
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
@@ -13,7 +19,7 @@ fi
 ARCH="$(qnx_default_arch)"
 OUT_ROOT="$(qnx_default_out_root)"
 JOBS="$(qnx_default_jobs)"
-ICEORYX_TAG="v2.0.5"
+ICEORYX_TAG="v2.0.6"
 
 INSTALL_PREFIX="${OUT_ROOT}/iceoryx"
 WORK_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/iceoryx/${ARCH}"
@@ -73,6 +79,10 @@ mkdir -p "${WORK_DIR}"
 sudo mkdir -p "${INSTALL_PREFIX}"
 sudo chmod 777 "${INSTALL_PREFIX}"
 
+qnx_info "Build iceoryx for QNX"
+qnx_info "  tag=${ICEORYX_TAG} arch=${ARCH}"
+qnx_info "  prefix=${INSTALL_PREFIX} work_dir=${WORK_DIR}"
+
 qnx_clone_or_update "https://github.com/eclipse-iceoryx/iceoryx.git" "${ICEORYX_TAG}" "${SOURCE_DIR}"
 
 CMAKE_PREFIX_PATH_VALUE="${THIRD_PARTY_PREFIX};${THIRD_PARTY_PREFIX}/lib/cmake;${THIRD_PARTY_PREFIX}/lib64/cmake"
@@ -90,6 +100,7 @@ cmake -S "${SOURCE_DIR}/iceoryx_meta" -B "${BUILD_DIR}" \
   -DEXAMPLES=OFF
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
+
 if [[ "${ACTION}" == "install" ]]; then
   cmake --install "${BUILD_DIR}"
 fi

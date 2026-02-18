@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ICEORYX_TAG="v2.0.5"
+ICEORYX_TAG="v2.0.6"
 INSTALL_PREFIX="/opt/iceoryx"
 BUILD_DIR="${HOME}/build-iceoryx"
 _nproc="$(nproc 2>/dev/null || echo 4)"

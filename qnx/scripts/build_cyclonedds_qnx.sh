@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# QNX CycloneDDS cross-build script (C library + C++ binding).
+#
+# The Threads patch comments out find_package(Threads) and
+# target_link_libraries(ddsrt INTERFACE Threads::Threads) which are
+# problematic under QNX cross-compilation.
+#
+# Usage:
+#   ./qnx/scripts/build_cyclonedds_qnx.sh install --arch aarch64le
+#   ./qnx/scripts/build_cyclonedds_qnx.sh clean
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
@@ -79,7 +89,6 @@ done
 
 qnx_setup_env
 qnx_require_cmd "cmake"
-qnx_require_cmd "sed"
 
 if [[ "${ACTION}" == "clean" ]]; then
   rm -rf "${WORK_DIR}"
@@ -96,13 +105,24 @@ mkdir -p "${WORK_DIR}"
 sudo mkdir -p "${INSTALL_PREFIX}"
 sudo chmod 777 "${INSTALL_PREFIX}"
 
+qnx_info "Build CycloneDDS for QNX"
+qnx_info "  tags: C=${CYCLONEDDS_TAG} C++=${CYCLONEDDS_CXX_TAG} arch=${ARCH}"
+qnx_info "  prefix=${INSTALL_PREFIX} shm=${ENABLE_SHM}"
+
+# --- CycloneDDS C library ---
 qnx_clone_or_update "https://github.com/eclipse-cyclonedds/cyclonedds.git" "${CYCLONEDDS_TAG}" "${SOURCE_DIR}"
 
+# Patch: comment out Threads that break QNX cross-compilation
 if [[ "${PATCH_THREADS_FOR_QNX}" == "ON" ]]; then
-  if [[ -f "${SOURCE_DIR}/src/ddsrt/CMakeLists.txt" ]]; then
-    sed -i.bak -E \
-      's/^[[:space:]]*(find_package\(Threads REQUIRED\)|target_link_libraries\(ddsrt INTERFACE Threads::Threads\))/# &/' \
-      "${SOURCE_DIR}/src/ddsrt/CMakeLists.txt"
+  DDSRT_CMAKE="${SOURCE_DIR}/src/ddsrt/CMakeLists.txt"
+  if [[ -f "${DDSRT_CMAKE}" ]]; then
+    if grep -qE '^\s*find_package\(Threads REQUIRED\)' "${DDSRT_CMAKE}"; then
+      qnx_info "Patching ddsrt CMakeLists.txt: commenting out Threads"
+      sed -i.bak -E \
+        's/^([[:space:]]*)(find_package\(Threads REQUIRED\)|target_link_libraries\(ddsrt INTERFACE Threads::Threads\))/\1# \2/' \
+        "${DDSRT_CMAKE}"
+      rm -f "${DDSRT_CMAKE}.bak"
+    fi
   fi
 fi
 
@@ -124,8 +144,10 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
   -DENABLE_SOURCE_SPECIFIC_MULTICAST=OFF
 
 cmake --build "${BUILD_DIR}" -j"${JOBS}"
+# C library must always be installed so C++ binding can find it
 cmake --install "${BUILD_DIR}"
 
+# --- CycloneDDS C++ binding ---
 qnx_clone_or_update "https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git" "${CYCLONEDDS_CXX_TAG}" "${SOURCE_CXX_DIR}"
 
 cmake -S "${SOURCE_CXX_DIR}" -B "${BUILD_CXX_DIR}" \
@@ -141,7 +163,10 @@ cmake -S "${SOURCE_CXX_DIR}" -B "${BUILD_CXX_DIR}" \
   -DBUILD_SHARED_LIBS=ON
 
 cmake --build "${BUILD_CXX_DIR}" -j"${JOBS}"
-cmake --install "${BUILD_CXX_DIR}"
 
-qnx_info "cyclonedds QNX build complete (action=${ACTION})"
+if [[ "${ACTION}" == "install" ]]; then
+  cmake --install "${BUILD_CXX_DIR}"
+fi
+
+qnx_info "CycloneDDS QNX build complete (action=${ACTION})"
 qnx_info "  install_prefix=${INSTALL_PREFIX}"

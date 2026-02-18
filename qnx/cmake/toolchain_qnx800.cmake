@@ -73,6 +73,13 @@ if(EXISTS "$ENV{QNX_TARGET}/${QNX_ARCH}")
   list(APPEND CMAKE_FIND_ROOT_PATH "$ENV{QNX_TARGET}/${QNX_ARCH}")
 endif()
 
+# Include /opt/qnx install tree so find_package() works for cross-built libs
+if(DEFINED ENV{AUTOSAR_QNX_OUT_ROOT})
+  list(APPEND CMAKE_FIND_ROOT_PATH "$ENV{AUTOSAR_QNX_OUT_ROOT}")
+elseif(EXISTS "/opt/qnx")
+  list(APPEND CMAKE_FIND_ROOT_PATH "/opt/qnx")
+endif()
+
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
