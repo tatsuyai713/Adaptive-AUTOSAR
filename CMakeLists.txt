@@ -40,7 +40,7 @@ FetchContent_Declare(
 )
 
 # Force include <cstdint> for all C++ compilations to fix uint8_t issues in dependencies
-add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include cstdint>)
+add_compile_options(-include cstdint)
 
 FetchContent_MakeAvailable(
   googletest
