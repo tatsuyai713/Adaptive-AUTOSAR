@@ -46,6 +46,24 @@ FetchContent_MakeAvailable(
   Doip-Lib
 )
 
+# Force include <cstdint> globally for all fetched dependencies to fix uint8_t issues
+# This must be done after FetchContent_MakeAvailable
+if(TARGET async_bsd_socket_lib)
+  target_compile_options(async_bsd_socket_lib PRIVATE -include cstdint)
+endif()
+if(TARGET doip_lib)
+  target_compile_options(doip_lib PRIVATE -include cstdint)
+endif()
+if(TARGET doip_lib_test)
+  target_compile_options(doip_lib_test PRIVATE -include cstdint)
+endif()
+if(TARGET obd_ii_emulator)
+  target_compile_options(obd_ii_emulator PRIVATE -include cstdint)
+endif()
+if(TARGET obd_ii_emulator_test)
+  target_compile_options(obd_ii_emulator_test PRIVATE -include cstdint)
+endif()
+
 # Normalize Async-BSD-Socket-Lib include usage so exported install targets
 # do not keep build-tree absolute include paths.
 FetchContent_GetProperties(
@@ -56,8 +74,6 @@ if(TARGET async_bsd_socket_lib)
     TARGET async_bsd_socket_lib
     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
       "$<BUILD_INTERFACE:${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
-  # Force include <cstdint> to fix uint8_t declaration issues
-  target_compile_options(async_bsd_socket_lib PRIVATE -include cstdint)
 endif()
 
 ########################################################################
