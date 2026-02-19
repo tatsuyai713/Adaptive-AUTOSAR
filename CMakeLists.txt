@@ -39,8 +39,8 @@ FetchContent_Declare(
   URL https://github.com/langroodi/Doip-Lib/archive/5acfd483eb3dc90429a98dbe4b70de8b1db68af6.zip
 )
 
-# Force include <cstdint> for all C++ compilations to fix uint8_t issues in dependencies
-add_compile_options(-include cstdint)
+# Force include <cstdint> and <array> for all C++ compilations to fix uint8_t and std::array issues in dependencies
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cstdint -include array")
 
 FetchContent_MakeAvailable(
   googletest
@@ -48,24 +48,6 @@ FetchContent_MakeAvailable(
   OBD-II-Emulator
   Doip-Lib
 )
-
-# Force include <cstdint> globally for all fetched dependencies to fix uint8_t issues
-# This must be done after FetchContent_MakeAvailable
-if(TARGET async_bsd_socket_lib)
-  target_compile_options(async_bsd_socket_lib PRIVATE -include cstdint)
-endif()
-if(TARGET doip_lib)
-  target_compile_options(doip_lib PRIVATE -include cstdint)
-endif()
-if(TARGET doip_lib_test)
-  target_compile_options(doip_lib_test PRIVATE -include cstdint)
-endif()
-if(TARGET obd_ii_emulator)
-  target_compile_options(obd_ii_emulator PRIVATE -include cstdint)
-endif()
-if(TARGET obd_ii_emulator_test)
-  target_compile_options(obd_ii_emulator_test PRIVATE -include cstdint)
-endif()
 
 # Normalize Async-BSD-Socket-Lib include usage so exported install targets
 # do not keep build-tree absolute include paths.
