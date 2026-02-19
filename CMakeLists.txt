@@ -56,6 +56,8 @@ if(TARGET async_bsd_socket_lib)
     TARGET async_bsd_socket_lib
     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
       "$<BUILD_INTERFACE:${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+  # Force include <cstdint> to fix uint8_t declaration issues
+  target_compile_options(async_bsd_socket_lib PRIVATE -include cstdint)
 endif()
 
 ########################################################################
