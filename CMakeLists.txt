@@ -39,6 +39,9 @@ FetchContent_Declare(
   URL https://github.com/langroodi/Doip-Lib/archive/5acfd483eb3dc90429a98dbe4b70de8b1db68af6.zip
 )
 
+# Force include <cstdint> for all C++ compilations to fix uint8_t issues in dependencies
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include cstdint>)
+
 FetchContent_MakeAvailable(
   googletest
   Async-BSD-Socket-Lib
