@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable 'rdyamic' switch to export the executable's symbols for debugging
 set(CMAKE_ENABLE_EXPORTS 1)
 
+# Build all targets (libraries and executables) with Position Independent Code (-fPIC/-fPIE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include(FetchContent)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
