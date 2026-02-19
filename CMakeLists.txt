@@ -42,11 +42,22 @@ FetchContent_Declare(
 # Force include <cstdint> and <array> for all C++ compilations to fix uint8_t and std::array issues in dependencies
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cstdint -include array")
 
+# Temporarily disable tests for external dependencies to avoid flaky network tests
+set(build_tests_BACKUP ${build_tests})
+set(build_tests OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(
-  googletest
   Async-BSD-Socket-Lib
   OBD-II-Emulator
   Doip-Lib
+)
+
+# Restore build_tests for this project
+set(build_tests ${build_tests_BACKUP} CACHE BOOL "" FORCE)
+
+# GoogleTest is needed for this project's tests
+FetchContent_MakeAvailable(
+  googletest
 )
 
 # Normalize Async-BSD-Socket-Lib include usage so exported install targets
