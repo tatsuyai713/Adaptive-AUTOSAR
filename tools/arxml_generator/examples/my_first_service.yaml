@@ -1,0 +1,153 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  My First Pub/Sub Service Definition (SOME/IP)
+#  my_first_service.yaml
+#
+#  Edit this file to define your own service.
+#  Comments explain the purpose of each field.
+#
+#  Generate ARXML:
+#    python3 tools/arxml_generator/generate_arxml.py \
+#      --input  tools/arxml_generator/examples/my_first_service.yaml \
+#      --output /tmp/my_first_service.arxml \
+#      --overwrite --print-summary
+# ════════════════════════════════════════════════════════════════════════════
+
+# ────────────────────────────────────────────────────────────────
+#  Variables (manage shared values in one place)
+# ────────────────────────────────────────────────────────────────
+variables:
+  # Loopback IP for same-machine testing
+  PROVIDER_IP: "127.0.0.1"
+  CONSUMER_IP: "127.0.0.1"
+
+  # Multicast IP for event delivery (239.0.0.0/8 recommended)
+  MULTICAST_IP: "239.255.0.1"
+
+# ────────────────────────────────────────────────────────────────
+#  AUTOSAR configuration (usually no need to change)
+# ────────────────────────────────────────────────────────────────
+autosar:
+  schema_namespace: "http://autosar.org/schema/r4.0"
+  schema_location: "http://autosar.org/schema/r4.0 autosar_00050.xsd"
+
+  packages:
+    # ─── Package name: identifier for this ARXML file ────────────────────
+    - short_name: MyFirstServiceManifest
+
+      # ──────────────────────────────────────────────────────────────
+      #  1. Network layer: IP address bindings
+      # ──────────────────────────────────────────────────────────────
+      communication_cluster:
+        short_name: MyServiceCluster
+        protocol_version: 1    # SOME/IP protocol version (usually 1)
+        ethernet_physical_channels:
+          - short_name: MyServiceChannel
+            network_endpoints:
+              # Provider (sender) IP address
+              - short_name: ProviderEndpoint
+                ipv4_address: "${PROVIDER_IP}"   # references the variable above
+
+              # Consumer (receiver) IP address
+              - short_name: ConsumerEndpoint
+                ipv4_address: "${CONSUMER_IP}"
+
+      # ──────────────────────────────────────────────────────────────
+      #  2. Transport layer: UDP port numbers
+      # ──────────────────────────────────────────────────────────────
+      ethernet_communication_connectors:
+        # Provider port
+        - short_name: ProviderConnector
+          ap_application_endpoints:
+            - short_name: ProviderUdpEndpoint
+              transport: udp
+              port: 30509    # change to your service's port (1024–65535)
+
+        # Consumer port
+        - short_name: ConsumerConnector
+          ap_application_endpoints:
+            - short_name: ConsumerUdpEndpoint
+              transport: udp
+              port: 30510    # must differ from the provider port
+
+      # ──────────────────────────────────────────────────────────────
+      #  3. SOME/IP application layer: service instance definitions
+      # ──────────────────────────────────────────────────────────────
+      someip:
+
+        # ── Provider (Publisher/Server) ──────────────────────────────
+        provided_service_instances:
+          - short_name: MyServiceProviderInstance
+
+            # Service interface ID (0x0001–0xFFFE, must be project-unique)
+            # Tip: use pubsub_designer_gui.py "Auto-generate ID" to get one
+            service_interface:
+              id: 0x1234      # ★ change to your service ID
+              major: 1        # version major
+              minor: 0        # version minor
+
+            service_instance_id: 1   # instance number (increment for multiple instances)
+
+            # Event group definitions (one per logical data channel)
+            event_groups:
+              - short_name: SensorDataEventGroup
+                event_group_id: 1       # group ID (start from 1)
+                event_id: 0x8001        # event ID (0x8000+ recommended) ★
+                multicast_udp_port: 30509
+                ipv4_multicast_ip_address: "${MULTICAST_IP}"
+
+              # Add more events if needed:
+              # - short_name: AlertEventGroup
+              #   event_group_id: 2
+              #   event_id: 0x8002
+              #   multicast_udp_port: 30509
+              #   ipv4_multicast_ip_address: "${MULTICAST_IP}"
+
+            # SOME/IP Service Discovery timing
+            sd_server:
+              initial_delay_min: 20    # ms — minimum delay before advertising
+              initial_delay_max: 200   # ms — maximum delay before advertising
+
+        # ── Consumer (Subscriber/Client) ─────────────────────────────
+        required_service_instances:
+          - short_name: MyServiceConsumerRequirement
+
+            # Must match the provider's service ID
+            service_interface_id: 0x1234   # ★ must equal provided id above
+            major_version: 1
+            minor_version: 0
+
+            # Events to subscribe to
+            required_event_groups:
+              - short_name: SensorDataEventGroupRequirement
+                event_group_id: 1       # must equal provided event_group_id
+                event_id: 0x8001        # must equal provided event_id
+
+              # Subscribe to additional events:
+              # - short_name: AlertEventGroupRequirement
+              #   event_group_id: 2
+              #   event_id: 0x8002
+
+            sd_client:
+              initial_delay_min: 20
+              initial_delay_max: 200
+
+# ════════════════════════════════════════════════════════════════════════════
+#  Fields to customize (marked with ★):
+#
+#  1. service_interface.id  (e.g. 0x1234)
+#     - Must be unique within the project
+#     - Use pubsub_designer_gui.py to auto-generate from service name
+#
+#  2. event_id  (e.g. 0x8001)
+#     - SOME/IP convention: use 0x8000 and above for events
+#     - For multiple events use 0x8001, 0x8002, ...
+#
+#  3. Port numbers  (30509, 30510)
+#     - Choose ports not used by other services
+#     - Open in firewall if communicating across hosts
+#
+#  4. IP addresses
+#     - Same machine:    127.0.0.1
+#     - Cross-ECU:       actual IP addresses of each ECU
+#     - Multicast range: 239.0.0.0/8 (local network scope)
+# ════════════════════════════════════════════════════════════════════════════

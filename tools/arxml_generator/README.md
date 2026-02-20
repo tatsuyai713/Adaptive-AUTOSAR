@@ -1,127 +1,126 @@
-# ARXML Generator (YAML -> ARXML)
+# ARXML Generator (YAML → ARXML)
 
-このディレクトリには、**既存ファイルを編集せず**に ARXML を生成するためのツールを追加しています。
+Tools for generating AUTOSAR ARXML manifests and C++ binding code
+without modifying any existing repository files.
 
-## 1. 何ができるか
+## 1. What it does
 
-`generate_arxml.py` は YAML から AUTOSAR 形式の ARXML を生成します。
+`generate_arxml.py` generates AUTOSAR-format ARXML from YAML definitions.
 
-主な機能:
-- 複数 YAML 入力のマージ (`--input` を複数指定)
-- 通信要素の生成
+Key features:
+
+- Merge multiple YAML inputs (`--input` repeated)
+- Generate communication elements:
   - `COMMUNICATION-CLUSTER`
   - `ETHERNET-COMMUNICATION-CONNECTOR`
   - `PROVIDED-SOMEIP-SERVICE-INSTANCE`
   - `REQUIRED-SOMEIP-SERVICE-INSTANCE`
-- DDS要素の生成
-  - `DDS-BINDING`
-  - `DDS-PROVIDED-TOPIC`
-  - `DDS-REQUIRED-TOPIC`
-- 拡張要素の生成 (`--allow-extensions` 指定時のみ)
-  - `EXT-ZEROCOPY-BINDING` (ZeroCopy実装メタデータ)
-- 16進数/10進数 ID (`0x1234` など) の解釈
-- IPv4/port バリデーション
-- 変数展開 (`variables` + 環境変数 `${...}`)
-- 未知キー検出 (`--strict`)
-- `custom_elements` による拡張タグ挿入
+- Generate DDS elements:
+  - `DDS-BINDING`, `DDS-PROVIDED-TOPIC`, `DDS-REQUIRED-TOPIC`
+- Generate extension elements (only with `--allow-extensions`):
+  - `EXT-ZEROCOPY-BINDING` (zero-copy implementation metadata)
+- Parse hex/decimal IDs (`0x1234`, etc.)
+- Validate IPv4 addresses and port ranges
+- Variable substitution (`variables:` section + `${ENV_VAR}`)
+- Unknown-key detection (`--strict`)
+- Arbitrary tag insertion via `custom_elements`
 
-重要:
-- デフォルトでは **AUTOSAR標準要素 + DDS設定** を許可します。
-  - `zerocopy` / `custom_elements` は `--allow-extensions` 指定時のみ有効です。
-- `generate_ara_com_binding.py` が現在コード生成で参照するのは SOME/IP 要素です。
-- DDSは標準設定セクションとして出力し、ZeroCopyは実装依存拡張として扱います。
+> By default only **AUTOSAR-standard elements + DDS** are allowed.
+> `zerocopy` / `custom_elements` require `--allow-extensions`.
 
-## 2. ファイル構成
+## 2. File Layout
 
-- `tools/arxml_generator/generate_arxml.py` : CLI ジェネレータ本体
-- `tools/arxml_generator/generate_ara_com_binding.py` : ARXML から ara::com 向け C++ 定数ヘッダを生成
-- `tools/arxml_generator/arxml_generator_gui.py` : 簡易 GUI (Tkinter)
-- `tools/arxml_generator/examples/pubsub_vsomeip.yaml` : Pub/Sub 基本サンプル
-- `tools/arxml_generator/examples/pubsub_multi_transport.yaml` : SOME/IP + DDS + ZeroCopy 拡張サンプル
-- `tools/arxml_generator/examples/multi_service_gateway.yaml` : 高機能サンプル
-- `tools/arxml_generator/examples/overlay_override.yaml` : マージ用サンプル
-- `tools/arxml_generator/YAML_MANUAL.ja.md` : YAML 記述マニュアル
+| File | Purpose |
+| ---- | ------- |
+| `generate_arxml.py` | CLI generator: YAML → ARXML |
+| `generate_ara_com_binding.py` | Codegen: ARXML → C++ ara::com constants header |
+| `pubsub_designer_gui.py` | **Service Designer GUI** (recommended for beginners) |
+| `arxml_generator_gui.py` | Simple YAML-to-ARXML conversion GUI |
+| `examples/my_first_service.yaml` | Beginner-friendly YAML template |
+| `examples/pubsub_vsomeip.yaml` | Basic Pub/Sub SOME/IP example |
+| `examples/pubsub_multi_transport.yaml` | SOME/IP + DDS + ZeroCopy example |
+| `examples/multi_service_gateway.yaml` | Multi-service example |
+| `examples/overlay_override.yaml` | YAML merge example |
+| `YAML_MANUAL.ja.md` | Detailed YAML syntax reference (Japanese) |
 
-## 3. 使い方 (CLI)
+## 3. CLI Usage
 
-### 3.1 単一 YAML から生成
+### 3.1 Generate from a single YAML
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
-  --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+  --input  tools/arxml_generator/examples/pubsub_vsomeip.yaml \
   --output /tmp/pubsub_generated.arxml \
   --print-summary
 ```
 
-SOME/IP + DDS + ZeroCopy拡張込みの例:
+With SOME/IP + DDS + ZeroCopy extensions:
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
-  --input tools/arxml_generator/examples/pubsub_multi_transport.yaml \
+  --input  tools/arxml_generator/examples/pubsub_multi_transport.yaml \
   --output /tmp/pubsub_multi_transport.arxml \
   --allow-extensions \
   --print-summary
 ```
 
-### 3.2 複数 YAML をマージして生成
+### 3.2 Merge multiple YAML files
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
-  --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
-  --input tools/arxml_generator/examples/overlay_override.yaml \
+  --input  tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+  --input  tools/arxml_generator/examples/overlay_override.yaml \
   --output /tmp/merged_generated.arxml \
   --overwrite \
   --print-summary
 ```
 
-### 3.3 バリデーションのみ
+### 3.3 Validate only (no output written)
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
-  --input tools/arxml_generator/examples/multi_service_gateway.yaml \
+  --input  tools/arxml_generator/examples/multi_service_gateway.yaml \
   --validate-only \
   --strict \
   --allow-extensions \
   --print-summary
 ```
 
-### 3.4 ARXML -> C++ バインディングコード生成
+### 3.4 Generate C++ binding header from ARXML
 
-`generate_ara_com_binding.py` は ARXML から、ビルドで使用する
-`SERVICE-ID`/`INSTANCE-ID`/`EVENT-ID` などの C++ ヘッダを自動生成します。
+`generate_ara_com_binding.py` reads an ARXML manifest and emits a C++ header
+containing `SERVICE-ID`, `INSTANCE-ID`, `EVENT-ID`, etc. as `constexpr` constants.
 
 ```bash
 python3 tools/arxml_generator/generate_ara_com_binding.py \
-  --input configuration/pubsub_sample_manifest.arxml \
-  --output /tmp/vehicle_status_manifest_binding.h \
+  --input   configuration/pubsub_sample_manifest.arxml \
+  --output  /tmp/vehicle_status_manifest_binding.h \
   --namespace sample::vehicle_status::generated \
   --provided-service-short-name VehicleStatusProviderInstance \
   --provided-event-group-short-name VehicleStatusEventGroup
 ```
 
-### 3.5 CMake への組み込み (自動生成 -> 自動ビルド)
+### 3.5 CMake integration (auto-generate → auto-build)
 
-このリポジトリでは `ARA_COM_ENABLE_ARXML_CODEGEN=ON` のとき、
-`cmake --build` 時に以下を自動実行します。
+When `ARA_COM_ENABLE_ARXML_CODEGEN=ON`, `cmake --build` automatically:
 
-1. `configuration/pubsub_sample_manifest.arxml` を入力に
-2. `tools/arxml_generator/generate_ara_com_binding.py` を実行し
-3. `build/generated/ara_com_generated/vehicle_status_manifest_binding.h` を生成
-4. 生成ヘッダをサンプルターゲットの include に自動追加
+1. Reads `configuration/pubsub_sample_manifest.arxml`
+2. Runs `generate_ara_com_binding.py`
+3. Writes `build/generated/ara_com_generated/vehicle_status_manifest_binding.h`
+4. Adds the generated header to the sample target's include path
 
-主な CMake キャッシュ変数:
-- `ARA_COM_ENABLE_ARXML_CODEGEN` : `ON/OFF`
-- `ARA_COM_CODEGEN_INPUT_ARXML` : 入力 ARXML パス
-- `ARA_COM_CODEGEN_PROVIDED_SERVICE_SHORT_NAME` : 対象 `PROVIDED-SOMEIP-SERVICE-INSTANCE`
-- `ARA_COM_CODEGEN_PROVIDED_EVENT_GROUP_SHORT_NAME` : 対象 `SOMEIP-PROVIDED-EVENT-GROUP`
+Key CMake cache variables:
 
-### 3.6 End-to-End: YAML -> ARXML -> C++ codegen -> build
+- `ARA_COM_ENABLE_ARXML_CODEGEN` — `ON`/`OFF`
+- `ARA_COM_CODEGEN_INPUT_ARXML` — path to input ARXML
+- `ARA_COM_CODEGEN_PROVIDED_SERVICE_SHORT_NAME` — target `PROVIDED-SOMEIP-SERVICE-INSTANCE`
+- `ARA_COM_CODEGEN_PROVIDED_EVENT_GROUP_SHORT_NAME` — target `SOMEIP-PROVIDED-EVENT-GROUP`
 
-以下で、サンプルYAMLから生成したARXMLをそのままビルドに使えます。
+### 3.6 End-to-End: YAML → ARXML → C++ codegen → build
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
-  --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
+  --input  tools/arxml_generator/examples/pubsub_vsomeip.yaml \
   --output configuration/pubsub_sample_manifest.generated.arxml \
   --overwrite \
   --print-summary
@@ -135,22 +134,45 @@ cmake -S . -B build \
 cmake --build build -j$(nproc)
 ```
 
-ビルド時に生成されるヘッダ:
+Generated header:
+
 - `build/generated/ara_com_generated/vehicle_status_manifest_binding.h`
 
-## 4. 使い方 (GUI)
+## 4. GUI Usage
+
+### 4.1 Pub/Sub Service Designer GUI (recommended)
+
+Design a service from scratch using a form, with live YAML / ARXML / C++ previews
+and one-click generation of all build artifacts:
+
+```bash
+python3 tools/arxml_generator/pubsub_designer_gui.py
+```
+
+Features:
+
+- Set service name, ID (auto-generate from name), version
+- Configure network settings (IP / ports) via form fields
+- Manage events (add / edit / remove); define payload struct fields
+- Real-time preview: YAML, ARXML, C++ `types.h`, C++ `binding.h`, Provider App, Consumer App
+- **Generate All & Save** — writes every file to the selected output directory
+
+See also: [`user_apps/tutorials/00_pubsub_e2e_tutorial.md`](../../user_apps/tutorials/00_pubsub_e2e_tutorial.md)
+
+### 4.2 YAML → ARXML conversion GUI (legacy)
 
 ```bash
 python3 tools/arxml_generator/arxml_generator_gui.py
 ```
 
-GUI でできること:
-- 入力 YAML の追加/削除
-- 出力 ARXML パス指定
-- インデント、strict、allow-extensions、validate-only の指定
-- 実行結果サマリ表示
+Features:
 
-## 5. YAML の基本構造
+- Add / remove input YAML files
+- Specify output ARXML path
+- Set indent, strict, allow-extensions, validate-only options
+- Display generation summary
+
+## 5. Minimal YAML Structure
 
 ```yaml
 variables:
@@ -215,19 +237,17 @@ autosar:
               text: 1
 ```
 
-上記の `custom_elements` を使う場合は `--allow-extensions` が必要です。
+`custom_elements` requires `--allow-extensions`.
 
-## 6. 依存関係
+## 6. Dependencies
 
 - Python 3
-- PyYAML (`yaml`)
+- PyYAML
 
-PyYAML がない場合:
 ```bash
 python3 -m pip install pyyaml
 ```
 
-## 7. YAML 記述仕様
+## 7. YAML Reference
 
-詳細な YAML 記述ルールは以下を参照してください:
-- `tools/arxml_generator/YAML_MANUAL.ja.md`
+Detailed YAML syntax rules: `tools/arxml_generator/YAML_MANUAL.ja.md`
