@@ -9,7 +9,8 @@ include(GNUInstallDirs)
 set(AUTOSAR_AP_PREFIX "/opt/autosar_ap" CACHE PATH "Installed Adaptive AUTOSAR AP prefix")
 set(CYCLONEDDS_PREFIX "/opt/cyclonedds" CACHE PATH "CycloneDDS install prefix")
 
-set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+# Location after migration: user_apps/src/apps/communication/switchable_pubsub
+set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../..")
 set(AUTOSAR_CODEGEN_DIR "${REPO_ROOT}/tools/ara_com_codegen")
 set(SAMPLE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(SAMPLE_IDL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/idl")

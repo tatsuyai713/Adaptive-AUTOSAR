@@ -15,6 +15,12 @@
 - DDS バックエンドを ara::com 側から利用する流れを理解する。
 - IDL からの型生成（`idlc`）とアプリ連携を理解する。
 
+## 位置づけ（Manifest-first 方針）
+
+- このチュートリアルは transport 固定の DDS テンプレートです。
+- `ara::com::dds` と IDL 生成型を直接検証する内容で、マニフェストプロファイル切替は対象外です。
+- 単一バイナリをマニフェストで切替える本流は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
+
 ## 実行前準備
 
 ```bash

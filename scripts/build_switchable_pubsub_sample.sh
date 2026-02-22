@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-SAMPLE_DIR="${REPO_ROOT}/samples/switchable_pubsub"
+SWITCHABLE_APP_DIR="${REPO_ROOT}/user_apps/src/apps/communication/switchable_pubsub"
 
 AUTOSAR_AP_PREFIX="/opt/autosar_ap"
 CYCLONEDDS_PREFIX="/opt/cyclonedds"
@@ -44,8 +44,8 @@ if [[ "${CLEAN}" == "ON" ]]; then
   rm -rf "${BUILD_DIR}"
 fi
 
-if [[ ! -f "${SAMPLE_DIR}/CMakeLists.txt" ]]; then
-  echo "[ERROR] sample CMakeLists not found: ${SAMPLE_DIR}/CMakeLists.txt" >&2
+if [[ ! -f "${SWITCHABLE_APP_DIR}/CMakeLists.txt" ]]; then
+  echo "[ERROR] switchable user-app CMakeLists not found: ${SWITCHABLE_APP_DIR}/CMakeLists.txt" >&2
   exit 1
 fi
 
@@ -65,13 +65,13 @@ fi
 
 mkdir -p "${BUILD_DIR}"
 
-echo "[INFO] Configure switchable pub/sub sample"
-echo "       sample_dir=${SAMPLE_DIR}"
+echo "[INFO] Configure switchable pub/sub user app"
+echo "       app_dir=${SWITCHABLE_APP_DIR}"
 echo "       build_dir=${BUILD_DIR}"
 echo "       autosar_prefix=${AUTOSAR_AP_PREFIX}"
 echo "       cyclonedds_prefix=${CYCLONEDDS_PREFIX}"
 
-cmake -S "${SAMPLE_DIR}" -B "${BUILD_DIR}" \
+cmake -S "${SWITCHABLE_APP_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DAUTOSAR_AP_PREFIX="${AUTOSAR_AP_PREFIX}" \
   -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}" \

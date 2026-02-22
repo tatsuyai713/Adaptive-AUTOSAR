@@ -15,6 +15,12 @@
 - Understand how to use the DDS backend from the `ara::com` side.
 - Understand type generation from IDL (`idlc`) and application integration.
 
+## Positioning (Manifest-first roadmap)
+
+- This tutorial is a transport-specific DDS template.
+- It validates the DDS path directly (`ara::com::dds` + generated IDL types), not manifest-profile switching.
+- For same-binary backend switching by manifest profile, follow `user_apps/src/apps/communication/switchable_pubsub/README.md`.
+
 ## Prerequisites
 
 ```bash

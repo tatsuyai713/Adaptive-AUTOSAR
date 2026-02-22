@@ -4,6 +4,10 @@
 > **対象読者**: Adaptive AUTOSAR が初めてで、まず Pub/Sub 通信を動かしたい方
 > **所要時間**: 約 45〜60 分
 > **前提**: AUTOSAR AP ランタイムが `/opt/autosar_ap` にインストール済みであること
+>
+> **重要**: 本チュートリアルは最初の学習を簡単にするため、SOME/IP 中心のアプリ経路を使います。
+> 本番運用の主軸は、単一バイナリをマニフェストプロファイルで切替える方式です。
+> Manifest-first の手順は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
 
 ---
 
@@ -583,6 +587,8 @@ endif()
 
 ```bash
 export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+# 本チュートリアルは SOME/IP 固定のアプリ経路を使います。
+# この手順では ARA_COM_BINDING_MANIFEST は使用しません。
 export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/vsomeip/lib:${LD_LIBRARY_PATH:-}
 ```
@@ -768,6 +774,8 @@ python3 tools/arxml_generator/generate_arxml.py \
 
 # 実行環境変数設定
 export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+# 本チュートリアルは SOME/IP 固定のアプリ経路を使います。
+# このクイックリファレンスでは ARA_COM_BINDING_MANIFEST は使用しません。
 export VSOMEIP_CONFIGURATION=$AUTOSAR_AP_PREFIX/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=$AUTOSAR_AP_PREFIX/lib:/opt/vsomeip/lib:${LD_LIBRARY_PATH:-}
 ```

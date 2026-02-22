@@ -13,6 +13,12 @@
 - Use shared-memory-based communication with the `ara::com::zerocopy` API.
 - Understand the basics of Loan / Publish and TryTake.
 
+## Positioning (Manifest-first roadmap)
+
+- This tutorial is a transport-specific zero-copy template.
+- It is intentionally focused on the iceoryx path and not on manifest-profile switching.
+- For same-binary backend switching by manifest profile, follow `user_apps/src/apps/communication/switchable_pubsub/README.md`.
+
 ## Prerequisites
 
 ```bash

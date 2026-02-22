@@ -103,14 +103,15 @@ Example:
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
-### 5) Build only switchable DDS/vSomeIP Pub/Sub sample (independent)
+### 5) Build only switchable DDS/vSomeIP Pub/Sub user app (independent)
 
-This sample is built independently from the main runtime build and verifies the full generation chain during build:
+This user app is built independently from the main runtime build and verifies the full generation chain during build:
 
 - app source scan -> topic mapping YAML + manifest YAML (`autosar-generate-comm-manifest`)
 - manifest YAML -> ARXML (`tools/arxml_generator/generate_arxml.py`)
 - mapping YAML -> proxy/skeleton header (`autosar-generate-proxy-skeleton`)
 - ARXML -> binding constants header (`tools/arxml_generator/generate_ara_com_binding.py`)
+- app location: `user_apps/src/apps/communication/switchable_pubsub`
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh
@@ -122,9 +123,9 @@ Run smoke checks for both DDS and vSomeIP profiles in one command:
 ./scripts/build_switchable_pubsub_sample.sh --run-smoke
 ```
 
-Runtime transport selection for this sample is profile-based.
+Runtime transport selection for this user-app path is profile-based.
 Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
-`ARA_COM_EVENT_BINDING` is not used by this sample path.
+`ARA_COM_EVENT_BINDING` is not used by this path.
 
 Manual profile switch with same binaries:
 

@@ -13,6 +13,12 @@
 - ara::com API で Provider/Consumer を分離して実装する。
 - Offer/Find/Subscribe/Receive の基本フローを理解する。
 
+## 位置づけ（Manifest-first 方針）
+
+- このチュートリアルは transport 固定の SOME/IP テンプレートです。
+- バックエンドはコード上で固定されています（`user_apps/src/apps/communication/someip/types.h` の `TransportBinding::kVsomeip`）。
+- 単一バイナリをマニフェストで切替える本流は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
+
 ## 実行前準備
 
 ```bash

@@ -13,6 +13,12 @@
 - `ara::com::zerocopy` API で共有メモリベース通信を使う。
 - Loan/Publish と TryTake の基本を理解する。
 
+## 位置づけ（Manifest-first 方針）
+
+- このチュートリアルは transport 固定の zero-copy テンプレートです。
+- iceoryx 経路に絞った内容で、マニフェストプロファイル切替の説明は行いません。
+- 単一バイナリをマニフェストで切替える本流は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
+
 ## 実行前準備
 
 ```bash

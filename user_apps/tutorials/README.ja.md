@@ -11,33 +11,43 @@
 
 ビルド後の実行ファイルは `build-user-apps-opt/src/apps/...` 以下に生成されます。
 
+## バックエンド選択方針（Manifest-first）
+
+新規アプリ設計では、マニフェストプロファイル切替を主軸にしてください。
+
+- 単一バイナリを維持し、`ARA_COM_BINDING_MANIFEST` でバックエンドを切替える
+- 標準フローは `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照
+- このディレクトリの `04`/`05`/`06` は transport 個別テンプレートの参照用
+
 ## 目次
 
 0. **Pub/Sub 通信 完全チュートリアル** ← **まずここから始めてください**
    [`00_pubsub_e2e_tutorial.ja.md`](00_pubsub_e2e_tutorial.ja.md)
    YAML 定義 → ARXML 生成 → C++ コード生成 → ビルド → 実行 の全フロー解説
+1. Manifest プロファイルでのバックエンド切替（**推奨**）
+   [`11_manifest_profile_switching_e2e.ja.md`](11_manifest_profile_switching_e2e.ja.md)
 
-1. ランタイム初期化と終了
+2. ランタイム初期化と終了
    [`01_runtime_lifecycle.ja.md`](01_runtime_lifecycle.ja.md)
-2. 実行制御シグナル処理
+3. 実行制御シグナル処理
    [`02_exec_signal.ja.md`](02_exec_signal.ja.md)
-3. Persistency と PHM
+4. Persistency と PHM
    [`03_per_phm.ja.md`](03_per_phm.ja.md)
-4. SOME/IP Pub/Sub
+5. SOME/IP Pub/Sub（transport 個別テンプレート）
    [`04_someip_pubsub.ja.md`](04_someip_pubsub.ja.md)
-5. ZeroCopy Pub/Sub
+6. ZeroCopy Pub/Sub（transport 個別テンプレート）
    [`05_zerocopy_pubsub.ja.md`](05_zerocopy_pubsub.ja.md)
-6. DDS Pub/Sub
+7. DDS Pub/Sub（transport 個別テンプレート）
    [`06_dds_pubsub.ja.md`](06_dds_pubsub.ja.md)
-7. SocketCAN 受信とデコード
+8. SocketCAN 受信とデコード
    [`07_socketcan_decode.ja.md`](07_socketcan_decode.ja.md)
-8. ECU フルスタック統合
+9. ECU フルスタック統合
    [`08_ecu_full_stack.ja.md`](08_ecu_full_stack.ja.md)
-9. Raspberry Pi ECU 配備
+10. Raspberry Pi ECU 配備
    [`09_rpi_ecu_deployment.ja.md`](09_rpi_ecu_deployment.ja.md)
-10. Vector/ETAS/EB 資産の移植
+11. Vector/ETAS/EB 資産の移植
     [`10_vendor_autosar_asset_porting.ja.md`](10_vendor_autosar_asset_porting.ja.md)
-11. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
+12. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
     [`../../tools/host_tools/doip_diag_tester/README.ja.md`](../../tools/host_tools/doip_diag_tester/README.ja.md)
 
 ## 関連ツール

@@ -102,14 +102,15 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
-### 5) DDS/vSomeIP 切り替え Pub/Sub サンプルのみを独立ビルド
+### 5) DDS/vSomeIP 切り替え Pub/Sub ユーザーアプリのみを独立ビルド
 
-このサンプルはメインランタイムとは独立してビルドでき、ビルド時に次の生成チェーンが自動実行されます。
+このユーザーアプリはメインランタイムとは独立してビルドでき、ビルド時に次の生成チェーンが自動実行されます。
 
 - アプリソース走査 -> topic mapping YAML + manifest YAML (`autosar-generate-comm-manifest`)
 - manifest YAML -> ARXML (`tools/arxml_generator/generate_arxml.py`)
 - mapping YAML -> proxy/skeleton ヘッダ (`autosar-generate-proxy-skeleton`)
 - ARXML -> binding 定数ヘッダ (`tools/arxml_generator/generate_ara_com_binding.py`)
+- アプリ配置: `user_apps/src/apps/communication/switchable_pubsub`
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh
@@ -121,7 +122,7 @@ DDS と vSomeIP の両 profile をまとめてスモーク確認する場合:
 ./scripts/build_switchable_pubsub_sample.sh --run-smoke
 ```
 
-このサンプルの通信切り替えは profile manifest 方式です。
+このユーザーアプリ経路の通信切り替えは profile manifest 方式です。
 `ARA_COM_BINDING_MANIFEST` に生成済み profile manifest を指定してください。
 この経路では `ARA_COM_EVENT_BINDING` は使用しません。
 

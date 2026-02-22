@@ -4,6 +4,10 @@
 > **Audience**: Developers new to Adaptive AUTOSAR who want to get Pub/Sub working quickly.
 > **Estimated time**: 45–60 minutes.
 > **Prerequisite**: AUTOSAR AP runtime installed at `/opt/autosar_ap`.
+>
+> **Important**: This tutorial uses a SOME/IP-focused app path to keep the first learning step simple.
+> The primary production strategy is manifest-profile backend switching with one binary.
+> See `user_apps/src/apps/communication/switchable_pubsub/README.md` for the manifest-first workflow.
 
 ---
 
@@ -593,6 +597,8 @@ endif()
 
 ```bash
 export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+# This tutorial uses a SOME/IP-specific app path.
+# ARA_COM_BINDING_MANIFEST is not used in this section.
 export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/vsomeip/lib:${LD_LIBRARY_PATH:-}
 ```
@@ -793,6 +799,8 @@ python3 tools/arxml_generator/generate_arxml.py \
 
 # Set runtime environment
 export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+# This tutorial uses a SOME/IP-specific app path.
+# ARA_COM_BINDING_MANIFEST is not used in this quick reference block.
 export VSOMEIP_CONFIGURATION=$AUTOSAR_AP_PREFIX/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=$AUTOSAR_AP_PREFIX/lib:/opt/vsomeip/lib:${LD_LIBRARY_PATH:-}
 ```

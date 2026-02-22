@@ -1,6 +1,6 @@
-# Switchable Pub/Sub Sample (DDS <-> vSomeIP)
+# Switchable Pub/Sub User App (DDS <-> vSomeIP)
 
-This sample demonstrates one Pub/Sub application pair that switches transport
+This user app demonstrates one Pub/Sub application pair that switches transport
 at runtime by AUTOSAR-side manifest profile selection only.
 
 - same binaries: `autosar_switchable_pubsub_pub`, `autosar_switchable_pubsub_sub`
@@ -8,7 +8,9 @@ at runtime by AUTOSAR-side manifest profile selection only.
 - app source uses generated Proxy/Skeleton API only (standard `ara::com` usage pattern)
 - mapping source: auto-generated from `src/pubsub_usage_scan.cpp`
 
-## Build (sample-only)
+## Build (standalone user app)
+
+Note: script name `build_switchable_pubsub_sample.sh` is kept for backward compatibility.
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh
@@ -34,9 +36,9 @@ Generated artifacts are placed under:
 This runs DDS profile first, then vSomeIP profile, and validates message
 reception in both modes.
 
-Transport selection in this sample is manifest-profile based.
+Transport selection in this user-app path is manifest-profile based.
 Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
-`ARA_COM_EVENT_BINDING` is not used in this sample path.
+`ARA_COM_EVENT_BINDING` is not used in this path.
 
 ## Manual run
 
