@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Generate Adaptive AUTOSAR topic mapping + manifest from app sources.
 
-This script scans app C++ sources for lwrcl/rclcpp-style communication API calls:
+This script scans app C++ sources for ROS-style communication API calls:
   - create_publisher<MsgType>(topic, ...)
   - create_subscription<MsgType>(topic, ...)
   - create_service<SrvType>(service_name, ...)
   - create_client<SrvType>(service_name)
 
 From discovered topic/service usage, it generates:
-  1) topic mapping YAML(JSON-compatible) for lwrcl runtime
+  1) topic mapping YAML(JSON-compatible) for AUTOSAR runtime
   2) ARXML generator input manifest YAML(JSON-compatible)
 """
 
@@ -128,6 +128,21 @@ def allocate_u16(base: int, span: int, key: str, used: Set[int]) -> int:
 
 def format_hex(value: int) -> str:
     return f"0x{value:04X}"
+
+
+VALID_EVENT_BINDINGS = {"auto", "dds", "vsomeip"}
+
+
+def normalize_event_binding(value: str) -> str:
+    binding = value.strip().lower()
+    if binding not in VALID_EVENT_BINDINGS:
+        raise ValueError(
+            "Unsupported event binding '{}'. Expected one of: {}".format(
+                value,
+                ", ".join(sorted(VALID_EVENT_BINDINGS)),
+            )
+        )
+    return binding
 
 
 @dataclass(frozen=True)
@@ -256,7 +271,11 @@ def discover_usage(
     return msg_list, srv_list, warnings
 
 
-def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]) -> Tuple[dict, dict]:
+def build_outputs(
+    msg_usages: Iterable[MsgUsage],
+    srv_usages: Iterable[SrvUsage],
+    event_binding: str,
+) -> Tuple[dict, dict]:
     used_service_ids: Set[int] = set()
     used_topic_event_ids: Set[int] = set()
     used_service_event_ids: Set[int] = set()
@@ -277,7 +296,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
         event_group_id = 0x0001
 
         interface_name = "Ros2Msg_" + to_identifier(f"{usage.type_name}_{usage.ros_topic}")
-        instance_specifier = "/lwrcl/ros2/topic/" + usage.ros_topic.lstrip("/").replace("/", "_")
+        instance_specifier = "/autosar/ros2/topic/" + usage.ros_topic.lstrip("/").replace("/", "_")
         dds_topic = ros_topic_to_dds_topic(usage.ros_topic)
 
         topic_mappings.append(
@@ -289,6 +308,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                     "service_interface": interface_name,
                     "instance_specifier": instance_specifier,
                     "event": "data",
+                    "event_binding": event_binding,
                     "service_interface_id": format_hex(service_id),
                     "service_instance_id": format_hex(0x0001),
                     "event_group_id": format_hex(event_group_id),
@@ -368,7 +388,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
         res_group_id = 0x0002
 
         interface_name = "Ros2Srv_" + to_identifier(f"{usage.type_name}_{usage.ros_service}")
-        instance_specifier = "/lwrcl/ros2/service/" + usage.ros_service.lstrip("/").replace("/", "_")
+        instance_specifier = "/autosar/ros2/service/" + usage.ros_service.lstrip("/").replace("/", "_")
         req_ros, req_dds = service_to_request_topic(usage.ros_service)
         res_ros, res_dds = service_to_response_topic(usage.ros_service)
 
@@ -384,6 +404,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                     "service_interface": interface_name,
                     "instance_specifier": instance_specifier,
                     "event": "request",
+                    "event_binding": event_binding,
                     "service_interface_id": format_hex(service_id),
                     "service_instance_id": format_hex(0x0001),
                     "event_group_id": format_hex(req_group_id),
@@ -403,6 +424,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                     "service_interface": interface_name,
                     "instance_specifier": instance_specifier,
                     "event": "response",
+                    "event_binding": event_binding,
                     "service_interface_id": format_hex(service_id),
                     "service_instance_id": format_hex(0x0001),
                     "event_group_id": format_hex(res_group_id),
@@ -424,6 +446,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                     "service_interface": interface_name,
                     "instance_specifier": instance_specifier,
                     "method": "call",
+                    "event_binding": event_binding,
                     "service_interface_id": format_hex(service_id),
                     "service_instance_id": format_hex(0x0001),
                     "method_id": format_hex(method_id),
@@ -523,20 +546,23 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
             "schema_location": "http://autosar.org/schema/r4.0 autosar_00050.xsd",
             "packages": [
                 {
-                    "short_name": "LwrclAdaptiveAutosarManifest",
+                    "short_name": "AdaptiveAutosarManifest",
+                    "runtime": {
+                        "event_binding": event_binding,
+                    },
                     "communication_cluster": {
-                        "short_name": "LwrclCommunicationCluster",
+                        "short_name": "AACommunicationCluster",
                         "protocol_version": 1,
                         "ethernet_physical_channels": [
                             {
                                 "short_name": "LoopbackChannel",
                                 "network_endpoints": [
                                     {
-                                        "short_name": "LwrclProviderEndpoint",
+                                        "short_name": "AAProviderEndpoint",
                                         "ipv4_address": "${LOCAL_IP}",
                                     },
                                     {
-                                        "short_name": "LwrclConsumerEndpoint",
+                                        "short_name": "AAConsumerEndpoint",
                                         "ipv4_address": "${LOCAL_IP}",
                                     },
                                 ],
@@ -545,20 +571,20 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                     },
                     "ethernet_communication_connectors": [
                         {
-                            "short_name": "LwrclProviderConnector",
+                            "short_name": "AAProviderConnector",
                             "ap_application_endpoints": [
                                 {
-                                    "short_name": "LwrclProviderUdp",
+                                    "short_name": "AAProviderUdp",
                                     "transport": "udp",
                                     "port": 30601,
                                 }
                             ],
                         },
                         {
-                            "short_name": "LwrclConsumerConnector",
+                            "short_name": "AAConsumerConnector",
                             "ap_application_endpoints": [
                                 {
-                                    "short_name": "LwrclConsumerUdp",
+                                    "short_name": "AAConsumerUdp",
                                     "transport": "udp",
                                     "port": 30602,
                                 }
@@ -570,7 +596,7 @@ def build_outputs(msg_usages: Iterable[MsgUsage], srv_usages: Iterable[SrvUsage]
                         "required_service_instances": required_instances,
                     },
                     "dds": {
-                        "short_name": "LwrclDdsBinding",
+                        "short_name": "AADdsBinding",
                         "domain_id": 0,
                         "provided_topics": dds_topics,
                         "required_topics": dds_topics,
@@ -600,12 +626,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-mapping",
         required=True,
-        help="Output path for lwrcl_autosar_topic_mapping.yaml",
+        help="Output path for autosar_topic_mapping.yaml",
     )
     parser.add_argument(
         "--output-manifest",
         required=True,
-        help="Output path for lwrcl_autosar_manifest.yaml",
+        help="Output path for autosar_manifest.yaml",
+    )
+    parser.add_argument(
+        "--event-binding",
+        default="auto",
+        choices=sorted(VALID_EVENT_BINDINGS),
+        help="Generated event binding policy (auto|dds|vsomeip).",
     )
     parser.add_argument(
         "--print-summary",
@@ -626,7 +658,12 @@ def main() -> int:
         return 1
 
     msg_usages, srv_usages, warnings = discover_usage(apps_root)
-    mapping_payload, manifest_payload = build_outputs(msg_usages, srv_usages)
+    event_binding = normalize_event_binding(args.event_binding)
+    mapping_payload, manifest_payload = build_outputs(
+        msg_usages,
+        srv_usages,
+        event_binding,
+    )
 
     write_json_as_yaml(output_mapping, mapping_payload)
     write_json_as_yaml(output_manifest, manifest_payload)
@@ -636,6 +673,7 @@ def main() -> int:
         print(f"  apps root: {apps_root}")
         print(f"  msg topics: {len(msg_usages)}")
         print(f"  services: {len(srv_usages)}")
+        print(f"  event binding: {event_binding}")
         print(f"  mapping output: {output_mapping}")
         print(f"  manifest output: {output_manifest}")
         print(f"  unresolved expressions: {len(warnings)}")

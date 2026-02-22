@@ -102,6 +102,47 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
+### 5) DDS/vSomeIP 切り替え Pub/Sub サンプルのみを独立ビルド
+
+このサンプルはメインランタイムとは独立してビルドでき、ビルド時に次の生成チェーンが自動実行されます。
+
+- アプリソース走査 -> topic mapping YAML + manifest YAML (`autosar-generate-comm-manifest`)
+- manifest YAML -> ARXML (`tools/arxml_generator/generate_arxml.py`)
+- mapping YAML -> proxy/skeleton ヘッダ (`autosar-generate-proxy-skeleton`)
+- ARXML -> binding 定数ヘッダ (`tools/arxml_generator/generate_ara_com_binding.py`)
+
+```bash
+./scripts/build_switchable_pubsub_sample.sh
+```
+
+DDS と vSomeIP の両 profile をまとめてスモーク確認する場合:
+
+```bash
+./scripts/build_switchable_pubsub_sample.sh --run-smoke
+```
+
+このサンプルの通信切り替えは profile manifest 方式です。
+`ARA_COM_BINDING_MANIFEST` に生成済み profile manifest を指定してください。
+この経路では `ARA_COM_EVENT_BINDING` は使用しません。
+
+同一バイナリで profile を切り替える手動実行例:
+
+```bash
+# CycloneDDS profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_dds.yaml
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+
+# vSomeIP profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_vsomeip.yaml
+export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
+/opt/autosar_ap/bin/autosar_vsomeip_routing_manager &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+```
+
 ### Raspberry Pi ECU プロファイル (Linux + systemd)
 Raspberry Pi Linux マシンをプロトタイプ ECU として動作させるための
 ビルド/配備/検証スクリプトを同梱しています。

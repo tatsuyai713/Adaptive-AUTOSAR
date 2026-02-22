@@ -1,7 +1,7 @@
 /// @file src/ara/com/event_binding_adapter.h
 /// @brief Backend-agnostic ara::com pub/sub adapter for CycloneDDS/vsomeip.
 /// @details Mapping resolution and CDR conversion live in AUTOSAR runtime side
-///          so lwrcl does not depend on non-standard helper APIs directly.
+///          so applications do not depend on non-standard helper APIs directly.
 
 #ifndef ARA_COM_EVENT_BINDING_ADAPTER_H
 #define ARA_COM_EVENT_BINDING_ADAPTER_H
@@ -405,11 +405,11 @@ namespace ara
                         paths.emplace_back(override_path);
                     }
 
-                    paths.emplace_back("./lwrcl_autosar_topic_mapping.yaml");
-                    paths.emplace_back("./autosar/lwrcl_autosar_topic_mapping.yaml");
-                    paths.emplace_back("./apps/build-adaptive-autosar/autosar/lwrcl_autosar_topic_mapping.yaml");
-                    paths.emplace_back("/opt/autosar-ap-libs/share/lwrcl/autosar/lwrcl_autosar_topic_mapping.yaml");
-                    paths.emplace_back("/opt/autosar_ap/configuration/lwrcl_autosar_topic_mapping.yaml");
+                    paths.emplace_back("./autosar_topic_mapping.yaml");
+                    paths.emplace_back("./autosar/autosar_topic_mapping.yaml");
+                    paths.emplace_back("./apps/build-adaptive-autosar/autosar/autosar_topic_mapping.yaml");
+                    paths.emplace_back("/opt/autosar-ap-libs/share/autosar/com/autosar_topic_mapping.yaml");
+                    paths.emplace_back("/opt/autosar_ap/configuration/autosar_topic_mapping.yaml");
                     return paths;
                 }
 
@@ -421,11 +421,9 @@ namespace ara
                     }
 
                     disable_mapping_ =
-                        ParseBoolEnv("ARA_COM_DISABLE_TOPIC_MAPPING") ||
-                        ParseBoolEnv("LWRCL_AUTOSAR_DISABLE_TOPIC_MAPPING");
+                        ParseBoolEnv("ARA_COM_DISABLE_TOPIC_MAPPING");
                     require_mapping_ =
-                        ParseBoolEnv("ARA_COM_REQUIRE_TOPIC_MAPPING") ||
-                        ParseBoolEnv("LWRCL_AUTOSAR_REQUIRE_MAPPING");
+                        ParseBoolEnv("ARA_COM_REQUIRE_TOPIC_MAPPING");
                     loaded_ = true;
 
                     if (disable_mapping_)
@@ -434,10 +432,6 @@ namespace ara
                     }
 
                     const char *override_path = std::getenv("ARA_COM_TOPIC_MAPPING");
-                    if (override_path == nullptr || *override_path == 0)
-                    {
-                        override_path = std::getenv("LWRCL_AUTOSAR_TOPIC_MAPPING");
-                    }
 
                     const std::vector<std::string> candidates = CandidatePaths(override_path);
                     for (std::size_t i = 0U; i < candidates.size(); ++i)

@@ -23,6 +23,10 @@ namespace ara
     {
         namespace detail
         {
+            using org::eclipse::cyclonedds::core::cdr::move;
+            using org::eclipse::cyclonedds::core::cdr::read;
+            using org::eclipse::cyclonedds::core::cdr::write;
+
             template <typename T>
             class HasCdrSerializerOps
             {
@@ -30,15 +34,15 @@ namespace ara
                 template <typename U>
                 static auto Test(int)
                     -> decltype(
-                        org::eclipse::cyclonedds::core::cdr::move(
+                        move(
                             std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
                             std::declval<U &>(),
                             false),
-                        org::eclipse::cyclonedds::core::cdr::write(
+                        write(
                             std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
                             std::declval<U &>(),
                             false),
-                        org::eclipse::cyclonedds::core::cdr::read(
+                        read(
                             std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
                             std::declval<U &>(),
                             false),

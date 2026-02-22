@@ -113,6 +113,12 @@ jobs:
           --source-dir "${GITHUB_WORKSPACE}" \
           --with-platform-app
 
+        ./scripts/build_switchable_pubsub_sample.sh \
+          --prefix /tmp/autosar_ap \
+          --cyclonedds-prefix "${CYCLONEDDS_PREFIX}" \
+          --build-dir build-switchable-pubsub-sample-ci \
+          --run-smoke
+
         ./scripts/build_user_apps_from_opt.sh \
           --prefix /tmp/autosar_ap \
           --source-dir /tmp/autosar_ap/user_apps \

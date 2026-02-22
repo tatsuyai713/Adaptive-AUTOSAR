@@ -103,6 +103,47 @@ Example:
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
+### 5) Build only switchable DDS/vSomeIP Pub/Sub sample (independent)
+
+This sample is built independently from the main runtime build and verifies the full generation chain during build:
+
+- app source scan -> topic mapping YAML + manifest YAML (`autosar-generate-comm-manifest`)
+- manifest YAML -> ARXML (`tools/arxml_generator/generate_arxml.py`)
+- mapping YAML -> proxy/skeleton header (`autosar-generate-proxy-skeleton`)
+- ARXML -> binding constants header (`tools/arxml_generator/generate_ara_com_binding.py`)
+
+```bash
+./scripts/build_switchable_pubsub_sample.sh
+```
+
+Run smoke checks for both DDS and vSomeIP profiles in one command:
+
+```bash
+./scripts/build_switchable_pubsub_sample.sh --run-smoke
+```
+
+Runtime transport selection for this sample is profile-based.
+Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
+`ARA_COM_EVENT_BINDING` is not used by this sample path.
+
+Manual profile switch with same binaries:
+
+```bash
+# CycloneDDS profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_dds.yaml
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+
+# vSomeIP profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_vsomeip.yaml
+export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
+/opt/autosar_ap/bin/autosar_vsomeip_routing_manager &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+```
+
 ### Raspberry Pi ECU profile (Linux + systemd)
 The repository includes a deployment profile to run a Raspberry Pi machine as a
 prototype ECU.

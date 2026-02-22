@@ -1,0 +1,15 @@
+module sample
+{
+    module transport
+    {
+        struct VehicleStatusFrame
+        {
+            unsigned long SequenceCounter;
+            unsigned long SpeedCentiKph;
+            unsigned long EngineRpm;
+            unsigned short SteeringAngleCentiDeg;
+            octet Gear;
+            octet StatusFlags;
+        };
+    };
+};

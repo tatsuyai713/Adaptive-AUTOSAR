@@ -13,227 +13,7 @@ from pathlib import Path
 from typing import Dict, List
 
 
-HEADER_PREAMBLE = """#ifndef LWRCL_AUTOSAR_PROXY_SKELETON_HPP_
-#define LWRCL_AUTOSAR_PROXY_SKELETON_HPP_
-
-#include <ara/com/event_binding_adapter.h>
-#include <ara/com/sample_ptr.h>
-#include <ara/com/types.h>
-#include <ara/core/result.h>
-
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <limits>
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <utility>
-
-namespace lwrcl
-{
-namespace autosar_generated
-{
-
-struct TopicBinding
-{
-  const char *ros_topic;
-  const char *dds_topic;
-  const char *instance_specifier;
-  std::uint16_t service_interface_id;
-  std::uint16_t service_instance_id;
-  std::uint16_t event_group_id;
-  std::uint16_t event_id;
-  std::uint8_t major_version;
-  std::uint32_t minor_version;
-};
-
-"""
-
-HEADER_MIDDLE = """
-inline const TopicBinding *FindTopicBinding(const std::string &topic_name)
-{
-  for (std::size_t i = 0; i < kTopicBindings.size(); ++i)
-  {
-    const auto &entry = kTopicBindings[i];
-    if (topic_name == entry.dds_topic || topic_name == entry.ros_topic)
-    {
-      return &entry;
-    }
-  }
-  return nullptr;
-}
-
-inline const TopicBinding &ResolveTopicBindingOrThrow(const std::string &topic_name)
-{
-  const TopicBinding *binding = FindTopicBinding(topic_name);
-  if (binding == nullptr)
-  {
-    throw std::runtime_error(
-        "No generated AUTOSAR topic mapping for: " + topic_name);
-  }
-  return *binding;
-}
-
-template <typename SampleType>
-class TopicEventSkeleton
-{
-public:
-  class EventFacade
-  {
-  public:
-    explicit EventFacade(ara::com::EventPublisherAdapter<SampleType> &adapter)
-        : adapter_(adapter)
-    {
-    }
-
-    ara::core::Result<void> Offer()
-    {
-      return ara::core::Result<void>::FromValue();
-    }
-
-    void StopOffer()
-    {
-      // No-op: adapter handles lifecycle.
-    }
-
-    void Send(const SampleType &sample)
-    {
-      adapter_.Publish(sample);
-    }
-
-  private:
-    ara::com::EventPublisherAdapter<SampleType> &adapter_;
-  };
-
-  explicit TopicEventSkeleton(const std::string &topic_name)
-      : TopicEventSkeleton(ResolveTopicBindingOrThrow(topic_name))
-  {
-  }
-
-  explicit TopicEventSkeleton(const TopicBinding &binding)
-      : adapter_(
-            binding.dds_topic == nullptr ? std::string{} : std::string(binding.dds_topic),
-            0U),
-        Event(adapter_)
-  {
-  }
-
-  ara::core::Result<void> OfferService()
-  {
-    return ara::core::Result<void>::FromValue();
-  }
-
-  void StopOfferService()
-  {
-    // No-op: adapter handles lifecycle.
-  }
-
-  std::int32_t GetMatchedSubscriptionCount() const
-  {
-    return adapter_.GetMatchedSubscriptionCount();
-  }
-
-  EventFacade Event;
-
-private:
-  ara::com::EventPublisherAdapter<SampleType> adapter_;
-};
-
-template <typename SampleType>
-class TopicEventProxy
-{
-public:
-  class EventFacade
-  {
-  public:
-    explicit EventFacade(ara::com::EventSubscriberAdapter<SampleType> &adapter)
-        : adapter_(adapter),
-          subscribed_(false)
-    {
-    }
-
-    void Subscribe(std::size_t)
-    {
-      subscribed_ = true;
-    }
-
-    void Unsubscribe()
-    {
-      subscribed_ = false;
-      adapter_.Stop();
-    }
-
-    void UnsetReceiveHandler()
-    {
-      // No-op: polling mode.
-    }
-
-    ara::com::SubscriptionState GetSubscriptionState() const noexcept
-    {
-      if (!subscribed_)
-      {
-        return ara::com::SubscriptionState::kNotSubscribed;
-      }
-      return adapter_.GetMatchedPublicationCount() > 0
-                 ? ara::com::SubscriptionState::kSubscribed
-                 : ara::com::SubscriptionState::kSubscriptionPending;
-    }
-
-    template <typename Handler>
-    ara::core::Result<std::size_t> GetNewSamples(
-        Handler &&handler,
-        std::size_t maxNumberOfSamples = std::numeric_limits<std::size_t>::max())
-    {
-      std::size_t consumed = 0U;
-      const std::uint32_t max_samples_u32 =
-          maxNumberOfSamples > std::numeric_limits<std::uint32_t>::max()
-              ? std::numeric_limits<std::uint32_t>::max()
-              : static_cast<std::uint32_t>(maxNumberOfSamples);
-
-      adapter_.Poll(
-          max_samples_u32,
-          [&handler, &consumed](const SampleType &sample)
-          {
-            auto sample_ptr = std::make_unique<const SampleType>(sample);
-            handler(ara::com::SamplePtr<SampleType>{std::move(sample_ptr)});
-            ++consumed;
-          });
-
-      return ara::core::Result<std::size_t>::FromValue(consumed);
-    }
-
-  private:
-    ara::com::EventSubscriberAdapter<SampleType> &adapter_;
-    bool subscribed_;
-  };
-
-  explicit TopicEventProxy(const std::string &topic_name)
-      : TopicEventProxy(ResolveTopicBindingOrThrow(topic_name))
-  {
-  }
-
-  explicit TopicEventProxy(const TopicBinding &binding)
-      : adapter_(
-            binding.dds_topic == nullptr ? std::string{} : std::string(binding.dds_topic),
-            0U,
-            kDefaultSomeipQueueSize),
-        Event(adapter_)
-  {
-  }
-
-  EventFacade Event;
-
-private:
-  static constexpr std::size_t kDefaultSomeipQueueSize = 100U;
-  ara::com::EventSubscriberAdapter<SampleType> adapter_;
-};
-
-}  // namespace autosar_generated
-}  // namespace lwrcl
-
-#endif  // LWRCL_AUTOSAR_PROXY_SKELETON_HPP_
-"""
+HEADER_GUARD = "AUTOSAR_GENERATED_PROXY_SKELETON_HPP_"
 
 
 def parse_u16(value: object) -> int:
@@ -294,33 +74,676 @@ def build_topic_entries(mapping: Dict) -> List[Dict]:
     return out
 
 
-def generate_header(entries: List[Dict]) -> str:
-    lines: List[str] = [HEADER_PREAMBLE]
-    lines.append(f"static const std::array<TopicBinding, {len(entries)}> kTopicBindings = {{{{")
+def parse_namespace_parts(namespace_value: str) -> List[str]:
+    parts = [part.strip() for part in namespace_value.split("::") if part.strip()]
+    if not parts:
+        raise ValueError("Namespace must not be empty.")
+    return parts
+
+
+def emit_namespace_open(parts: List[str]) -> List[str]:
+    return [f"namespace {part}" for part in parts]
+
+
+def emit_namespace_open_braces(parts: List[str]) -> List[str]:
+    return [f"namespace {part}" + " {" for part in parts]
+
+
+def emit_namespace_close(parts: List[str]) -> List[str]:
+    return ["}  // namespace " + part for part in reversed(parts)]
+
+
+def generate_header(entries: List[Dict], namespace_value: str) -> str:
+    ns_parts = parse_namespace_parts(namespace_value)
+    lines: List[str] = [
+        f"#ifndef {HEADER_GUARD}",
+        f"#define {HEADER_GUARD}",
+        "",
+        "#include <ara/com/com_error_domain.h>",
+        "#include <ara/com/dds/dds_pubsub.h>",
+        "#include <ara/com/event.h>",
+        "#include <ara/com/internal/binding_factory.h>",
+        "#include <ara/com/sample_ptr.h>",
+        "#include <ara/com/serialization.h>",
+        "#include <ara/com/service_handle_type.h>",
+        "#include <ara/com/service_proxy_base.h>",
+        "#include <ara/com/service_skeleton_base.h>",
+        "#include <ara/com/types.h>",
+        "#include <ara/core/instance_specifier.h>",
+        "#include <ara/core/result.h>",
+        "",
+        "#include <algorithm>",
+        "#include <array>",
+        "#include <cctype>",
+        "#include <cstddef>",
+        "#include <cstdint>",
+        "#include <cstdlib>",
+        "#include <fstream>",
+        "#include <functional>",
+        "#include <limits>",
+        "#include <memory>",
+        "#include <mutex>",
+        "#include <stdexcept>",
+        "#include <string>",
+        "#include <utility>",
+        "#include <vector>",
+        "",
+    ]
+
+    lines.extend(emit_namespace_open_braces(ns_parts))
+    lines.extend(
+        [
+            "",
+            "struct TopicBinding",
+            "{",
+            "  const char *ros_topic;",
+            "  const char *dds_topic;",
+            "  const char *instance_specifier;",
+            "  std::uint16_t service_interface_id;",
+            "  std::uint16_t service_instance_id;",
+            "  std::uint16_t event_group_id;",
+            "  std::uint16_t event_id;",
+            "  std::uint8_t major_version;",
+            "  std::uint32_t minor_version;",
+            "};",
+            "",
+            f"static const std::array<TopicBinding, {len(entries)}> kTopicBindings = {{{{",
+        ]
+    )
+
     for entry in entries:
-        lines.append("    TopicBinding{")
-        lines.append(f'        "{c_quote(entry["ros_topic"])}",')
-        lines.append(f'        "{c_quote(entry["dds_topic"])}",')
-        lines.append(f'        "{c_quote(entry["instance_specifier"])}",')
-        lines.append(f'        static_cast<std::uint16_t>(0x{entry["service_interface_id"]:04X}),')
-        lines.append(f'        static_cast<std::uint16_t>(0x{entry["service_instance_id"]:04X}),')
-        lines.append(f'        static_cast<std::uint16_t>(0x{entry["event_group_id"]:04X}),')
-        lines.append(f'        static_cast<std::uint16_t>(0x{entry["event_id"]:04X}),')
-        lines.append(f'        static_cast<std::uint8_t>(0x{entry["major_version"]:02X}),')
-        lines.append(f'        static_cast<std::uint32_t>(0x{entry["minor_version"]:08X}),')
-        lines.append("    },")
-    lines.append("}};")
-    lines.append(HEADER_MIDDLE)
+        lines.extend(
+            [
+                "    TopicBinding{",
+                f'        "{c_quote(entry["ros_topic"])}",',
+                f'        "{c_quote(entry["dds_topic"])}",',
+                f'        "{c_quote(entry["instance_specifier"])}",',
+                f'        static_cast<std::uint16_t>(0x{entry["service_interface_id"]:04X}),',
+                f'        static_cast<std::uint16_t>(0x{entry["service_instance_id"]:04X}),',
+                f'        static_cast<std::uint16_t>(0x{entry["event_group_id"]:04X}),',
+                f'        static_cast<std::uint16_t>(0x{entry["event_id"]:04X}),',
+                f'        static_cast<std::uint8_t>(0x{entry["major_version"]:02X}),',
+                f'        static_cast<std::uint32_t>(0x{entry["minor_version"]:08X}),',
+                "    },",
+            ]
+        )
+
+    lines.extend(
+        [
+            "}};",
+            "",
+            "inline const TopicBinding *FindTopicBinding(const std::string &topic_name)",
+            "{",
+            "  for (std::size_t i = 0U; i < kTopicBindings.size(); ++i)",
+            "  {",
+            "    const auto &entry = kTopicBindings[i];",
+            "    if ((entry.ros_topic != nullptr && topic_name == entry.ros_topic) ||",
+            "        (entry.dds_topic != nullptr && topic_name == entry.dds_topic))",
+            "    {",
+            "      return &entry;",
+            "    }",
+            "  }",
+            "  return nullptr;",
+            "}",
+            "",
+            "inline const TopicBinding &GetTopicBinding(std::size_t index)",
+            "{",
+            "  if (index >= kTopicBindings.size())",
+            "  {",
+            "    throw std::out_of_range(\"AUTOSAR generated topic binding index out of range\");",
+            "  }",
+            "  return kTopicBindings[index];",
+            "}",
+            "",
+            "inline const TopicBinding &RequireTopicBinding(const std::string &topic_name)",
+            "{",
+            "  const TopicBinding *binding = FindTopicBinding(topic_name);",
+            "  if (binding == nullptr)",
+            "  {",
+            "    throw std::runtime_error(\"No AUTOSAR generated topic mapping for: \" + topic_name);",
+            "  }",
+            "  return *binding;",
+            "}",
+            "",
+            "namespace detail",
+            "{",
+            "inline ara::core::InstanceSpecifier CreateInstanceSpecifierOrThrow(const std::string &path)",
+            "{",
+            "  auto result = ara::core::InstanceSpecifier::Create(path.empty() ? std::string{} : path);",
+            "  if (!result.HasValue())",
+            "  {",
+            "    throw std::runtime_error(\"Invalid AUTOSAR instance specifier: \" + path);",
+            "  }",
+            "  return result.Value();",
+            "}",
+            "",
+            "inline std::string ResolveDdsTopicName(const TopicBinding &binding)",
+            "{",
+            "  if (binding.dds_topic != nullptr)",
+            "  {",
+            "    const std::string dds_topic(binding.dds_topic);",
+            "    if (!dds_topic.empty())",
+            "    {",
+            "      return dds_topic;",
+            "    }",
+            "  }",
+            "",
+            "  if (binding.ros_topic != nullptr)",
+            "  {",
+            "    const std::string ros_topic(binding.ros_topic);",
+            "    if (!ros_topic.empty())",
+            "    {",
+            "      if (ros_topic.front() == '/')",
+            "      {",
+            "        return \"rt\" + ros_topic;",
+            "      }",
+            "      return \"rt/\" + ros_topic;",
+            "    }",
+            "  }",
+            "",
+            "  throw std::runtime_error(\"Topic binding does not provide DDS topic name.\");",
+            "}",
+            "",
+            "inline bool ParseTransportBindingToken(",
+            "    std::string value,",
+            "    ara::com::internal::TransportBinding &transport)",
+            "{",
+            "  std::transform(",
+            "      value.begin(),",
+            "      value.end(),",
+            "      value.begin(),",
+            "      [](unsigned char c)",
+            "      {",
+            "        return static_cast<char>(std::tolower(c));",
+            "      });",
+            "",
+            "  if (value == \"vsomeip\" || value == \"someip\")",
+            "  {",
+            "    transport = ara::com::internal::TransportBinding::kVsomeip;",
+            "    return true;",
+            "  }",
+            "  if (value == \"dds\" || value == \"cyclonedds\" || value == \"cyclone-dds\")",
+            "  {",
+            "    transport = ara::com::internal::TransportBinding::kCycloneDds;",
+            "    return true;",
+            "  }",
+            "",
+            "  return false;",
+            "}",
+            "",
+            "inline std::string ExtractEventBindingValue(const std::string &manifest_text)",
+            "{",
+            "  const std::string key(\"\\\"event_binding\\\"\");",
+            "  const std::size_t key_pos = manifest_text.find(key);",
+            "  if (key_pos == std::string::npos)",
+            "  {",
+            "    return std::string{};",
+            "  }",
+            "",
+            "  const std::size_t colon_pos = manifest_text.find(':', key_pos + key.size());",
+            "  if (colon_pos == std::string::npos)",
+            "  {",
+            "    return std::string{};",
+            "  }",
+            "",
+            "  const std::size_t first_quote = manifest_text.find('\\\"', colon_pos + 1U);",
+            "  if (first_quote == std::string::npos)",
+            "  {",
+            "    return std::string{};",
+            "  }",
+            "",
+            "  const std::size_t second_quote = manifest_text.find('\\\"', first_quote + 1U);",
+            "  if (second_quote == std::string::npos)",
+            "  {",
+            "    return std::string{};",
+            "  }",
+            "",
+            "  return manifest_text.substr(first_quote + 1U, second_quote - first_quote - 1U);",
+            "}",
+            "",
+            "inline ara::com::internal::TransportBinding ResolveTransportBindingFromManifest()",
+            "{",
+            "  static std::once_flag once;",
+            "  static auto resolved = ara::com::internal::TransportBinding::kCycloneDds;",
+            "",
+            "  std::call_once(once, []()",
+            "                 {",
+            "                   const char *manifest_path = std::getenv(\"ARA_COM_BINDING_MANIFEST\");",
+            "                   if (manifest_path == nullptr || *manifest_path == '\\0')",
+            "                   {",
+            "                     return;",
+            "                   }",
+            "",
+            "                   std::ifstream ifs(manifest_path);",
+            "                   if (!ifs.good())",
+            "                   {",
+            "                     return;",
+            "                   }",
+            "",
+            "                   const std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());",
+            "                   const std::string token = ExtractEventBindingValue(content);",
+            "                   ara::com::internal::TransportBinding parsed_transport{};",
+            "                   if (ParseTransportBindingToken(token, parsed_transport))",
+            "                   {",
+            "                     resolved = parsed_transport;",
+            "                   }",
+            "                 });",
+            "",
+            "  return resolved;",
+            "}",
+            "",
+            "inline ara::com::internal::EventBindingConfig ToEventBindingConfig(const TopicBinding &binding)",
+            "{",
+            "  return ara::com::internal::EventBindingConfig{",
+            "      binding.service_interface_id,",
+            "      binding.service_instance_id,",
+            "      binding.event_id,",
+            "      binding.event_group_id,",
+            "      binding.major_version};",
+            "}",
+            "",
+            "template <typename SampleType>",
+            "class DdsSkeletonEventBinding final : public ara::com::internal::SkeletonEventBinding",
+            "{",
+            "public:",
+            "  explicit DdsSkeletonEventBinding(const std::string &topic_name, std::uint32_t domain_id = 0U)",
+            "      : publisher_(topic_name, domain_id)",
+            "  {",
+            "    if (!publisher_.IsBindingActive())",
+            "    {",
+            "      throw std::runtime_error(\"ara::com DDS publisher binding is not active.\");",
+            "    }",
+            "  }",
+            "",
+            "  ara::core::Result<void> Offer() override",
+            "  {",
+            "    return ara::core::Result<void>::FromValue();",
+            "  }",
+            "",
+            "  void StopOffer() override",
+            "  {",
+            "    // No-op for DDS event binding.",
+            "  }",
+            "",
+            "  ara::core::Result<void> Send(const std::vector<std::uint8_t> &payload) override",
+            "  {",
+            "    const std::uint8_t *raw = payload.empty() ? nullptr : payload.data();",
+            "    auto sample_result = ara::com::Serializer<SampleType>::Deserialize(raw, payload.size());",
+            "    if (!sample_result.HasValue())",
+            "    {",
+            "      return ara::core::Result<void>::FromError(sample_result.Error());",
+            "    }",
+            "",
+            "    auto write_result = publisher_.Write(sample_result.Value());",
+            "    if (!write_result.HasValue())",
+            "    {",
+            "      return ara::core::Result<void>::FromError(write_result.Error());",
+            "    }",
+            "",
+            "    return ara::core::Result<void>::FromValue();",
+            "  }",
+            "",
+            "  ara::core::Result<void *> Allocate(std::size_t size) override",
+            "  {",
+            "    void *ptr = std::malloc(size);",
+            "    if (ptr == nullptr)",
+            "    {",
+            "      return ara::core::Result<void *>::FromError(",
+            "          ara::com::MakeErrorCode(ara::com::ComErrc::kSampleAllocationFailure));",
+            "    }",
+            "",
+            "    return ara::core::Result<void *>::FromValue(ptr);",
+            "  }",
+            "",
+            "  ara::core::Result<void> SendAllocated(void *data, std::size_t size) override",
+            "  {",
+            "    if (data == nullptr)",
+            "    {",
+            "      return ara::core::Result<void>::FromError(",
+            "          ara::com::MakeErrorCode(ara::com::ComErrc::kFieldValueIsNotValid));",
+            "    }",
+            "",
+            "    std::vector<std::uint8_t> payload(",
+            "        static_cast<std::uint8_t *>(data),",
+            "        static_cast<std::uint8_t *>(data) + size);",
+            "    std::free(data);",
+            "",
+            "    return Send(payload);",
+            "  }",
+            "",
+            "private:",
+            "  ara::com::dds::DdsPublisher<SampleType> publisher_;",
+            "};",
+            "",
+            "template <typename SampleType>",
+            "class DdsProxyEventBinding final : public ara::com::internal::ProxyEventBinding",
+            "{",
+            "public:",
+            "  explicit DdsProxyEventBinding(const std::string &topic_name, std::uint32_t domain_id = 0U)",
+            "      : subscriber_(topic_name, domain_id)",
+            "  {",
+            "    if (!subscriber_.IsBindingActive())",
+            "    {",
+            "      throw std::runtime_error(\"ara::com DDS subscriber binding is not active.\");",
+            "    }",
+            "  }",
+            "",
+            "  ara::core::Result<void> Subscribe(std::size_t maxSampleCount) override",
+            "  {",
+            "    max_sample_count_ = std::max<std::size_t>(1U, maxSampleCount);",
+            "    state_ = ara::com::SubscriptionState::kSubscriptionPending;",
+            "    UpdateStateFromMatchedPublications();",
+            "    return ara::core::Result<void>::FromValue();",
+            "  }",
+            "",
+            "  void Unsubscribe() override",
+            "  {",
+            "    state_ = ara::com::SubscriptionState::kNotSubscribed;",
+            "    if (state_change_handler_)",
+            "    {",
+            "      state_change_handler_(state_);",
+            "    }",
+            "  }",
+            "",
+            "  ara::com::SubscriptionState GetSubscriptionState() const noexcept override",
+            "  {",
+            "    if (state_ == ara::com::SubscriptionState::kNotSubscribed)",
+            "    {",
+            "      return state_;",
+            "    }",
+            "",
+            "    auto matched = subscriber_.GetMatchedPublicationCount();",
+            "    if (matched.HasValue() && matched.Value() > 0)",
+            "    {",
+            "      return ara::com::SubscriptionState::kSubscribed;",
+            "    }",
+            "    return ara::com::SubscriptionState::kSubscriptionPending;",
+            "  }",
+            "",
+            "  ara::core::Result<std::size_t> GetNewSamples(",
+            "      RawReceiveHandler handler,",
+            "      std::size_t maxNumberOfSamples) override",
+            "  {",
+            "    if (!handler)",
+            "    {",
+            "      return ara::core::Result<std::size_t>::FromError(",
+            "          ara::com::MakeErrorCode(ara::com::ComErrc::kSetHandlerNotSet));",
+            "    }",
+            "",
+            "    if (state_ == ara::com::SubscriptionState::kNotSubscribed)",
+            "    {",
+            "      return ara::core::Result<std::size_t>::FromError(",
+            "          ara::com::MakeErrorCode(ara::com::ComErrc::kServiceNotAvailable));",
+            "    }",
+            "",
+            "    const std::size_t requested = std::min(maxNumberOfSamples, max_sample_count_);",
+            "    if (requested == 0U)",
+            "    {",
+            "      return ara::core::Result<std::size_t>::FromValue(0U);",
+            "    }",
+            "",
+            "    auto take_result = subscriber_.Take(",
+            "        requested,",
+            "        [&handler](const SampleType &sample)",
+            "        {",
+            "          auto payload = ara::com::Serializer<SampleType>::Serialize(sample);",
+            "          const std::uint8_t *raw = payload.empty() ? nullptr : payload.data();",
+            "          handler(raw, payload.size());",
+            "        });",
+            "",
+            "    if (!take_result.HasValue())",
+            "    {",
+            "      return ara::core::Result<std::size_t>::FromError(take_result.Error());",
+            "    }",
+            "",
+            "    if (receive_handler_ && take_result.Value() > 0U)",
+            "    {",
+            "      receive_handler_();",
+            "    }",
+            "",
+            "    UpdateStateFromMatchedPublications();",
+            "    return ara::core::Result<std::size_t>::FromValue(take_result.Value());",
+            "  }",
+            "",
+            "  void SetReceiveHandler(std::function<void()> handler) override",
+            "  {",
+            "    receive_handler_ = std::move(handler);",
+            "  }",
+            "",
+            "  void UnsetReceiveHandler() override",
+            "  {",
+            "    receive_handler_ = nullptr;",
+            "  }",
+            "",
+            "  std::size_t GetFreeSampleCount() const noexcept override",
+            "  {",
+            "    return max_sample_count_;",
+            "  }",
+            "",
+            "  void SetSubscriptionStateChangeHandler(ara::com::SubscriptionStateChangeHandler handler) override",
+            "  {",
+            "    state_change_handler_ = std::move(handler);",
+            "  }",
+            "",
+            "  void UnsetSubscriptionStateChangeHandler() override",
+            "  {",
+            "    state_change_handler_ = nullptr;",
+            "  }",
+            "",
+            "private:",
+            "  void UpdateStateFromMatchedPublications()",
+            "  {",
+            "    auto next_state = ara::com::SubscriptionState::kSubscriptionPending;",
+            "    auto matched = subscriber_.GetMatchedPublicationCount();",
+            "    if (matched.HasValue() && matched.Value() > 0)",
+            "    {",
+            "      next_state = ara::com::SubscriptionState::kSubscribed;",
+            "    }",
+            "",
+            "    if (state_ != next_state)",
+            "    {",
+            "      state_ = next_state;",
+            "      if (state_change_handler_)",
+            "      {",
+            "        state_change_handler_(state_);",
+            "      }",
+            "    }",
+            "  }",
+            "",
+            "  ara::com::dds::DdsSubscriber<SampleType> subscriber_;",
+            "  ara::com::SubscriptionState state_{ara::com::SubscriptionState::kNotSubscribed};",
+            "  std::size_t max_sample_count_{16U};",
+            "  std::function<void()> receive_handler_;",
+            "  ara::com::SubscriptionStateChangeHandler state_change_handler_;",
+            "};",
+            "",
+            "template <typename SampleType>",
+            "std::unique_ptr<ara::com::internal::SkeletonEventBinding> CreateSkeletonBindingOrThrow(",
+            "    const TopicBinding &binding)",
+            "{",
+            "  const auto transport = ResolveTransportBindingFromManifest();",
+            "",
+            "  if (transport == ara::com::internal::TransportBinding::kVsomeip)",
+            "  {",
+            "    auto someip_binding = ara::com::internal::BindingFactory::CreateSkeletonEventBinding(",
+            "        ara::com::internal::TransportBinding::kVsomeip,",
+            "        ToEventBindingConfig(binding));",
+            "    if (!someip_binding)",
+            "    {",
+            "      throw std::runtime_error(\"Failed to create SOME/IP skeleton event binding.\");",
+            "    }",
+            "    return someip_binding;",
+            "  }",
+            "",
+            "  if (transport == ara::com::internal::TransportBinding::kCycloneDds)",
+            "  {",
+            "    return std::unique_ptr<ara::com::internal::SkeletonEventBinding>(",
+            "        new DdsSkeletonEventBinding<SampleType>(ResolveDdsTopicName(binding), 0U));",
+            "  }",
+            "",
+            "  throw std::runtime_error(\"Unsupported AUTOSAR transport binding for skeleton event.\");",
+            "}",
+            "",
+            "template <typename SampleType>",
+            "std::unique_ptr<ara::com::internal::ProxyEventBinding> CreateProxyBindingOrThrow(",
+            "    const TopicBinding &binding)",
+            "{",
+            "  const auto transport = ResolveTransportBindingFromManifest();",
+            "",
+            "  if (transport == ara::com::internal::TransportBinding::kVsomeip)",
+            "  {",
+            "    auto someip_binding = ara::com::internal::BindingFactory::CreateProxyEventBinding(",
+            "        ara::com::internal::TransportBinding::kVsomeip,",
+            "        ToEventBindingConfig(binding));",
+            "    if (!someip_binding)",
+            "    {",
+            "      throw std::runtime_error(\"Failed to create SOME/IP proxy event binding.\");",
+            "    }",
+            "    return someip_binding;",
+            "  }",
+            "",
+            "  if (transport == ara::com::internal::TransportBinding::kCycloneDds)",
+            "  {",
+            "    return std::unique_ptr<ara::com::internal::ProxyEventBinding>(",
+            "        new DdsProxyEventBinding<SampleType>(ResolveDdsTopicName(binding), 0U));",
+            "  }",
+            "",
+            "  throw std::runtime_error(\"Unsupported AUTOSAR transport binding for proxy event.\");",
+            "}",
+            "",
+            "}  // namespace detail",
+            "",
+            "template <typename SampleType>",
+            "class TopicEventSkeleton : public ara::com::ServiceSkeletonBase",
+            "{",
+            "public:",
+            "  explicit TopicEventSkeleton(const std::string &topic_name)",
+            "      : TopicEventSkeleton(RequireTopicBinding(topic_name))",
+            "  {",
+            "  }",
+            "",
+            "  explicit TopicEventSkeleton(const TopicBinding &binding)",
+            "      : ara::com::ServiceSkeletonBase(",
+            "            detail::CreateInstanceSpecifierOrThrow(",
+            "                binding.instance_specifier == nullptr ? std::string{} : std::string(binding.instance_specifier)),",
+            "            binding.service_interface_id,",
+            "            binding.service_instance_id,",
+            "            binding.major_version,",
+            "            binding.minor_version,",
+            "            ara::com::MethodCallProcessingMode::kEvent),",
+            "        Event(detail::CreateSkeletonBindingOrThrow<SampleType>(binding))",
+            "  {",
+            "  }",
+            "",
+            "  ara::core::Result<void> OfferService()",
+            "  {",
+            "    return ara::com::ServiceSkeletonBase::OfferService();",
+            "  }",
+            "",
+            "  void StopOfferService()",
+            "  {",
+            "    ara::com::ServiceSkeletonBase::StopOfferService();",
+            "  }",
+            "",
+            "  std::int32_t GetMatchedSubscriptionCount() const",
+            "  {",
+            "    return 0;",
+            "  }",
+            "",
+            "  ara::com::SkeletonEvent<SampleType> Event;",
+            "};",
+            "",
+            "template <typename SampleType>",
+            "class TopicEventProxy : public ara::com::ServiceProxyBase",
+            "{",
+            "public:",
+            "  using HandleType = ara::com::ServiceHandleType;",
+            "",
+            "  explicit TopicEventProxy(const std::string &topic_name)",
+            "      : TopicEventProxy(RequireTopicBinding(topic_name))",
+            "  {",
+            "  }",
+            "",
+            "  explicit TopicEventProxy(const TopicBinding &binding)",
+            "      : ara::com::ServiceProxyBase(",
+            "            ara::com::ServiceHandleType{",
+            "                binding.service_interface_id,",
+            "                binding.service_instance_id}),",
+            "        Event(detail::CreateProxyBindingOrThrow<SampleType>(binding))",
+            "  {",
+            "  }",
+            "",
+            "  TopicEventProxy(HandleType handle, const TopicBinding &binding)",
+            "      : ara::com::ServiceProxyBase(handle),",
+            "        Event(detail::CreateProxyBindingOrThrow<SampleType>(binding))",
+            "  {",
+            "  }",
+            "",
+            "  static ara::core::Result<ara::com::ServiceHandleContainer<HandleType>> FindService(",
+            "      const TopicBinding &binding)",
+            "  {",
+            "    return ara::com::ServiceProxyBase::FindService(",
+            "        binding.service_interface_id,",
+            "        binding.service_instance_id);",
+            "  }",
+            "",
+            "  static ara::core::Result<ara::com::FindServiceHandle> StartFindService(",
+            "      ara::com::FindServiceHandler<HandleType> handler,",
+            "      const TopicBinding &binding)",
+            "  {",
+            "    return ara::com::ServiceProxyBase::StartFindService(",
+            "        std::move(handler),",
+            "        binding.service_interface_id,",
+            "        binding.service_instance_id);",
+            "  }",
+            "",
+            "  static void StopFindService(ara::com::FindServiceHandle handle)",
+            "  {",
+            "    (void)handle;",
+            "    ara::com::ServiceProxyBase::StopFindService();",
+            "  }",
+            "",
+            "  ara::com::ProxyEvent<SampleType> Event;",
+            "};",
+            "",
+        ]
+    )
+
+    lines.extend(emit_namespace_close(ns_parts))
+    lines.extend(
+        [
+            "",
+            f"#endif  // {HEADER_GUARD}",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate Adaptive AUTOSAR proxy/skeleton header."
+        description="Generate AUTOSAR proxy/skeleton C++ header from topic mapping."
     )
-    parser.add_argument("--mapping", required=True, help="Input topic mapping YAML(JSON-compatible).")
-    parser.add_argument("--output", required=True, help="Output header path.")
-    parser.add_argument("--print-summary", action="store_true", help="Print summary.")
+    parser.add_argument(
+        "--mapping",
+        required=True,
+        help="Input topic mapping file (JSON-compatible YAML).",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output header path.",
+    )
+    parser.add_argument(
+        "--namespace",
+        default="autosar_generated",
+        help="C++ namespace for generated classes.",
+    )
+    parser.add_argument(
+        "--print-summary",
+        action="store_true",
+        help="Print generation summary.",
+    )
     return parser.parse_args()
 
 
@@ -329,9 +752,13 @@ def main() -> int:
     mapping_path = Path(args.mapping).resolve()
     output_path = Path(args.output).resolve()
 
+    if not mapping_path.exists():
+        raise SystemExit(f"[autosar-proxy-skeleton-gen] mapping not found: {mapping_path}")
+
     mapping = load_mapping(mapping_path)
     entries = build_topic_entries(mapping)
-    header_text = generate_header(entries)
+    header_text = generate_header(entries, args.namespace)
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(header_text, encoding="utf-8")
 
@@ -339,6 +766,7 @@ def main() -> int:
         print("[autosar-proxy-skeleton-gen] generation summary")
         print(f"  mapping: {mapping_path}")
         print(f"  output: {output_path}")
+        print(f"  namespace: {args.namespace}")
         print(f"  topic bindings: {len(entries)}")
 
     return 0

@@ -798,6 +798,7 @@ def _build_package(ar_packages: ET.Element, package: Dict[str, Any], package_ind
             "provided_someip_service_instances",
             "required_someip_service_instances",
             "custom_elements",
+            "runtime",
         },
         package_ctx,
         gen_ctx,
