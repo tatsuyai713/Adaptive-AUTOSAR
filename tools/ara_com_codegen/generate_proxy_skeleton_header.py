@@ -16,23 +16,19 @@ from typing import Dict, List
 HEADER_PREAMBLE = """#ifndef LWRCL_AUTOSAR_PROXY_SKELETON_HPP_
 #define LWRCL_AUTOSAR_PROXY_SKELETON_HPP_
 
-#include <ara/com/event.h>
-#include <ara/com/internal/binding_factory.h>
+#include <ara/com/event_binding_adapter.h>
 #include <ara/com/sample_ptr.h>
-#include <ara/com/service_handle_type.h>
-#include <ara/com/service_proxy_base.h>
-#include <ara/com/service_skeleton_base.h>
-#include <ara/core/instance_specifier.h>
+#include <ara/com/types.h>
 #include <ara/core/result.h>
-
-#include <org/eclipse/cyclonedds/core/cdr/basic_cdr_ser.hpp>
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
-#include <vector>
+#include <utility>
 
 namespace lwrcl
 {
@@ -51,64 +47,6 @@ struct TopicBinding
   std::uint8_t major_version;
   std::uint32_t minor_version;
 };
-
-inline ara::core::InstanceSpecifier CreateInstanceSpecifierOrThrow(const char *path)
-{
-  auto result = ara::core::InstanceSpecifier::Create(path == nullptr ? std::string{} : std::string(path));
-  if (result.HasValue())
-  {
-    return result.Value();
-  }
-
-  auto fallback = ara::core::InstanceSpecifier::Create("/ara/com/generated/default");
-  if (fallback.HasValue())
-  {
-    return fallback.Value();
-  }
-
-  // InstanceSpecifier should always be creatable for this constant fallback.
-  return ara::core::InstanceSpecifier::Create("/ara/com/generated/fallback").Value();
-}
-
-template <typename T>
-inline std::vector<std::uint8_t> SerializeMessage(const T &message)
-{
-  using namespace org::eclipse::cyclonedds::core::cdr;
-
-  T mutable_message = message;
-  basic_cdr_stream sizer;
-  move(sizer, mutable_message, false);
-  const std::size_t payload_size = sizer.position();
-
-  std::vector<std::uint8_t> output(payload_size + 4U, 0U);
-  output[0] = 0x00;
-  output[1] = 0x01;
-  output[2] = 0x00;
-  output[3] = 0x00;
-
-  basic_cdr_stream writer;
-  writer.set_buffer(reinterpret_cast<char *>(output.data() + 4U), payload_size);
-  write(writer, mutable_message, false);
-  return output;
-}
-
-template <typename T>
-inline bool DeserializeMessage(const std::vector<std::uint8_t> &payload, T &message)
-{
-  using namespace org::eclipse::cyclonedds::core::cdr;
-
-  if (payload.size() <= 4U)
-  {
-    return false;
-  }
-
-  basic_cdr_stream reader;
-  reader.set_buffer(
-      reinterpret_cast<char *>(const_cast<std::uint8_t *>(payload.data() + 4U)),
-      payload.size() - 4U);
-  read(reader, message, false);
-  return true;
-}
 
 """
 
@@ -137,10 +75,36 @@ inline const TopicBinding &ResolveTopicBindingOrThrow(const std::string &topic_n
   return *binding;
 }
 
-class TopicEventSkeleton : public ara::com::ServiceSkeletonBase
+template <typename SampleType>
+class TopicEventSkeleton
 {
 public:
-  ara::com::SkeletonEvent<std::vector<std::uint8_t>> Event;
+  class EventFacade
+  {
+  public:
+    explicit EventFacade(ara::com::EventPublisherAdapter<SampleType> &adapter)
+        : adapter_(adapter)
+    {
+    }
+
+    ara::core::Result<void> Offer()
+    {
+      return ara::core::Result<void>::FromValue();
+    }
+
+    void StopOffer()
+    {
+      // No-op: adapter handles lifecycle.
+    }
+
+    void Send(const SampleType &sample)
+    {
+      adapter_.Publish(sample);
+    }
+
+  private:
+    ara::com::EventPublisherAdapter<SampleType> &adapter_;
+  };
 
   explicit TopicEventSkeleton(const std::string &topic_name)
       : TopicEventSkeleton(ResolveTopicBindingOrThrow(topic_name))
@@ -148,62 +112,101 @@ public:
   }
 
   explicit TopicEventSkeleton(const TopicBinding &binding)
-      : ara::com::ServiceSkeletonBase(
-            CreateInstanceSpecifierOrThrow(binding.instance_specifier),
-            binding.service_interface_id,
-            binding.service_instance_id,
-            binding.major_version,
-            binding.minor_version,
-            ara::com::MethodCallProcessingMode::kEvent),
-        Event(
-            ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
-                ara::com::internal::TransportBinding::kVsomeip,
-                ara::com::internal::EventBindingConfig{
-                    binding.service_interface_id,
-                    binding.service_instance_id,
-                    binding.event_id,
-                    binding.event_group_id,
-                    binding.major_version})),
-        event_group_id_(binding.event_group_id)
+      : adapter_(
+            binding.dds_topic == nullptr ? std::string{} : std::string(binding.dds_topic),
+            0U),
+        Event(adapter_)
   {
   }
 
-  std::uint16_t GetEventGroupId() const
+  ara::core::Result<void> OfferService()
   {
-    return event_group_id_;
+    return ara::core::Result<void>::FromValue();
   }
 
-  ara::core::Result<void> OfferEventService()
+  void StopOfferService()
   {
-    auto offer_service = OfferService();
-    if (!offer_service.HasValue())
-    {
-      return offer_service;
-    }
-    return Event.Offer();
+    // No-op: adapter handles lifecycle.
   }
 
-  void StopEventService()
+  std::int32_t GetMatchedSubscriptionCount() const
   {
-    Event.StopOffer();
-    StopOfferService();
+    return adapter_.GetMatchedSubscriptionCount();
   }
 
-  template <typename SampleType>
-  void SendSample(const SampleType &sample)
-  {
-    Event.Send(SerializeMessage(sample));
-  }
+  EventFacade Event;
 
 private:
-  std::uint16_t event_group_id_;
+  ara::com::EventPublisherAdapter<SampleType> adapter_;
 };
 
-class TopicEventProxy : public ara::com::ServiceProxyBase
+template <typename SampleType>
+class TopicEventProxy
 {
 public:
-  using HandleType = ara::com::ServiceHandleType;
-  ara::com::ProxyEvent<std::vector<std::uint8_t>> Event;
+  class EventFacade
+  {
+  public:
+    explicit EventFacade(ara::com::EventSubscriberAdapter<SampleType> &adapter)
+        : adapter_(adapter),
+          subscribed_(false)
+    {
+    }
+
+    void Subscribe(std::size_t)
+    {
+      subscribed_ = true;
+    }
+
+    void Unsubscribe()
+    {
+      subscribed_ = false;
+      adapter_.Stop();
+    }
+
+    void UnsetReceiveHandler()
+    {
+      // No-op: polling mode.
+    }
+
+    ara::com::SubscriptionState GetSubscriptionState() const noexcept
+    {
+      if (!subscribed_)
+      {
+        return ara::com::SubscriptionState::kNotSubscribed;
+      }
+      return adapter_.GetMatchedPublicationCount() > 0
+                 ? ara::com::SubscriptionState::kSubscribed
+                 : ara::com::SubscriptionState::kSubscriptionPending;
+    }
+
+    template <typename Handler>
+    ara::core::Result<std::size_t> GetNewSamples(
+        Handler &&handler,
+        std::size_t maxNumberOfSamples = std::numeric_limits<std::size_t>::max())
+    {
+      std::size_t consumed = 0U;
+      const std::uint32_t max_samples_u32 =
+          maxNumberOfSamples > std::numeric_limits<std::uint32_t>::max()
+              ? std::numeric_limits<std::uint32_t>::max()
+              : static_cast<std::uint32_t>(maxNumberOfSamples);
+
+      adapter_.Poll(
+          max_samples_u32,
+          [&handler, &consumed](const SampleType &sample)
+          {
+            auto sample_ptr = std::make_unique<const SampleType>(sample);
+            handler(ara::com::SamplePtr<SampleType>{std::move(sample_ptr)});
+            ++consumed;
+          });
+
+      return ara::core::Result<std::size_t>::FromValue(consumed);
+    }
+
+  private:
+    ara::com::EventSubscriberAdapter<SampleType> &adapter_;
+    bool subscribed_;
+  };
 
   explicit TopicEventProxy(const std::string &topic_name)
       : TopicEventProxy(ResolveTopicBindingOrThrow(topic_name))
@@ -211,41 +214,19 @@ public:
   }
 
   explicit TopicEventProxy(const TopicBinding &binding)
-      : ara::com::ServiceProxyBase(
-            HandleType{
-                binding.service_interface_id,
-                binding.service_instance_id}),
-        Event(
-            ara::com::internal::BindingFactory::CreateProxyEventBinding(
-                ara::com::internal::TransportBinding::kVsomeip,
-                ara::com::internal::EventBindingConfig{
-                    binding.service_interface_id,
-                    binding.service_instance_id,
-                    binding.event_id,
-                    binding.event_group_id,
-                    binding.major_version}))
+      : adapter_(
+            binding.dds_topic == nullptr ? std::string{} : std::string(binding.dds_topic),
+            0U,
+            kDefaultSomeipQueueSize),
+        Event(adapter_)
   {
   }
 
-  template <typename SampleType, typename Handler>
-  void TakeSamples(std::size_t max_samples, Handler &&handler)
-  {
-    (void)Event.GetNewSamples(
-        [&handler](ara::com::SamplePtr<std::vector<std::uint8_t>> payload_sample)
-        {
-          if (!payload_sample)
-          {
-            return;
-          }
+  EventFacade Event;
 
-          SampleType sample{};
-          if (DeserializeMessage(*payload_sample, sample))
-          {
-            handler(sample);
-          }
-        },
-        max_samples);
-  }
+private:
+  static constexpr std::size_t kDefaultSomeipQueueSize = 100U;
+  ara::com::EventSubscriberAdapter<SampleType> adapter_;
 };
 
 }  // namespace autosar_generated
