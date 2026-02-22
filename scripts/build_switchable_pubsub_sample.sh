@@ -116,6 +116,55 @@ fi
 
 echo "[INFO] Running smoke checks (DDS-profile then vSomeIP-profile)"
 
+TIMEOUT_BIN=""
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_BIN="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_BIN="gtimeout"
+else
+  echo "[ERROR] timeout command not found. Install GNU coreutils (timeout/gtimeout)." >&2
+  exit 1
+fi
+
+TIMEOUT_KILL_AFTER_ARGS=()
+if "${TIMEOUT_BIN}" --help 2>&1 | grep -q -- "--kill-after"; then
+  # Force-kill stuck processes after TERM grace period to avoid indefinite CI hangs.
+  TIMEOUT_KILL_AFTER_ARGS=(--kill-after=3s)
+fi
+
+run_with_timeout() {
+  local duration="$1"
+  shift
+  "${TIMEOUT_BIN}" "${TIMEOUT_KILL_AFTER_ARGS[@]}" "${duration}" "$@"
+}
+
+safe_wait_with_deadline() {
+  local pid="$1"
+  local label="$2"
+  local deadline_sec="$3"
+  local end_at=$((SECONDS + deadline_sec))
+
+  if [[ -z "${pid}" ]]; then
+    return 0
+  fi
+
+  while kill -0 "${pid}" >/dev/null 2>&1; do
+    if ((SECONDS >= end_at)); then
+      echo "[WARN] ${label} exceeded ${deadline_sec}s; sending SIGTERM." >&2
+      kill "${pid}" >/dev/null 2>&1 || true
+      sleep 1
+      if kill -0 "${pid}" >/dev/null 2>&1; then
+        echo "[WARN] ${label} did not stop on SIGTERM; sending SIGKILL." >&2
+        kill -9 "${pid}" >/dev/null 2>&1 || true
+      fi
+      break
+    fi
+    sleep 1
+  done
+
+  wait "${pid}" 2>/dev/null || true
+}
+
 LD_LIBS=""
 for libdir in "${AUTOSAR_AP_PREFIX}/lib" "${AUTOSAR_AP_PREFIX}/lib64" "${CYCLONEDDS_PREFIX}/lib" "/opt/vsomeip/lib" "/opt/iceoryx/lib"; do
   if [[ -d "${libdir}" ]]; then
@@ -138,11 +187,11 @@ unset VSOMEIP_CONFIGURATION
 DDS_PUB_LOG="${BUILD_DIR}/switchable_dds_pub.log"
 DDS_SUB_LOG="${BUILD_DIR}/switchable_dds_sub.log"
 rm -f "${DDS_PUB_LOG}" "${DDS_SUB_LOG}"
-(timeout 6s "${SUB_BIN}" >"${DDS_SUB_LOG}" 2>&1) &
+(run_with_timeout 6s "${SUB_BIN}" >"${DDS_SUB_LOG}" 2>&1) &
 DDS_SUB_PID=$!
 sleep 1
-(timeout 4s "${PUB_BIN}" >"${DDS_PUB_LOG}" 2>&1) || true
-wait "${DDS_SUB_PID}" || true
+(run_with_timeout 4s "${PUB_BIN}" >"${DDS_PUB_LOG}" 2>&1) || true
+safe_wait_with_deadline "${DDS_SUB_PID}" "DDS subscriber smoke process" 12
 
 DDS_HEARD_COUNT=$(grep -c "I heard seq=" "${DDS_SUB_LOG}" || true)
 if [[ "${DDS_HEARD_COUNT}" -lt 1 ]]; then
@@ -161,15 +210,15 @@ VSOMEIP_PUB_LOG="${BUILD_DIR}/switchable_vsomeip_pub.log"
 VSOMEIP_SUB_LOG="${BUILD_DIR}/switchable_vsomeip_sub.log"
 VSOMEIP_RM_LOG="${BUILD_DIR}/switchable_vsomeip_routing_manager.log"
 rm -f "${VSOMEIP_PUB_LOG}" "${VSOMEIP_SUB_LOG}" "${VSOMEIP_RM_LOG}"
-(timeout 12s "${AUTOSAR_AP_PREFIX}/bin/autosar_vsomeip_routing_manager" >"${VSOMEIP_RM_LOG}" 2>&1) &
+(run_with_timeout 12s "${AUTOSAR_AP_PREFIX}/bin/autosar_vsomeip_routing_manager" >"${VSOMEIP_RM_LOG}" 2>&1) &
 RM_PID=$!
 sleep 1
-(timeout 6s "${SUB_BIN}" >"${VSOMEIP_SUB_LOG}" 2>&1) &
+(run_with_timeout 6s "${SUB_BIN}" >"${VSOMEIP_SUB_LOG}" 2>&1) &
 VSOMEIP_SUB_PID=$!
 sleep 1
-(timeout 4s "${PUB_BIN}" >"${VSOMEIP_PUB_LOG}" 2>&1) || true
-wait "${VSOMEIP_SUB_PID}" || true
-wait "${RM_PID}" || true
+(run_with_timeout 4s "${PUB_BIN}" >"${VSOMEIP_PUB_LOG}" 2>&1) || true
+safe_wait_with_deadline "${VSOMEIP_SUB_PID}" "vSomeIP subscriber smoke process" 12
+safe_wait_with_deadline "${RM_PID}" "vSomeIP routing manager smoke process" 18
 
 VSOMEIP_HEARD_COUNT=$(grep -c "I heard seq=" "${VSOMEIP_SUB_LOG}" || true)
 if [[ "${VSOMEIP_HEARD_COUNT}" -lt 1 ]]; then
