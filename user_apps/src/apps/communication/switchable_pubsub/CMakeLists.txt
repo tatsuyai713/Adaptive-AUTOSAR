@@ -88,6 +88,10 @@ set(GENERATED_MAPPING_SOMEIP "${GENERATED_DIR}/switchable_topic_mapping_vsomeip.
 set(GENERATED_MANIFEST_YAML_SOMEIP "${GENERATED_DIR}/switchable_manifest_vsomeip.yaml")
 set(GENERATED_ARXML_SOMEIP "${GENERATED_DIR}/switchable_manifest_vsomeip.arxml")
 
+set(GENERATED_MAPPING_ICEORYX "${GENERATED_DIR}/switchable_topic_mapping_iceoryx.yaml")
+set(GENERATED_MANIFEST_YAML_ICEORYX "${GENERATED_DIR}/switchable_manifest_iceoryx.yaml")
+set(GENERATED_ARXML_ICEORYX "${GENERATED_DIR}/switchable_manifest_iceoryx.arxml")
+
 set(GENERATED_PROXY_HEADER "${GENERATED_DIR}/switchable_proxy_skeleton.hpp")
 set(GENERATED_BINDING_HEADER "${GENERATED_DIR}/switchable_binding.hpp")
 
@@ -126,6 +130,23 @@ add_custom_command(
 )
 
 add_custom_command(
+  OUTPUT
+    "${GENERATED_MAPPING_ICEORYX}"
+    "${GENERATED_MANIFEST_YAML_ICEORYX}"
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${GENERATED_DIR}"
+  COMMAND ${AUTOSAR_COMM_MANIFEST_GENERATOR}
+    --apps-root "${SAMPLE_SOURCE_DIR}"
+    --output-mapping "${GENERATED_MAPPING_ICEORYX}"
+    --output-manifest "${GENERATED_MANIFEST_YAML_ICEORYX}"
+    --event-binding iceoryx
+    --print-summary
+  DEPENDS
+    "${SAMPLE_SOURCE_DIR}/pubsub_usage_scan.cpp"
+  COMMENT "Generate iceoryx mapping/manifest for switchable Pub/Sub"
+  VERBATIM
+)
+
+add_custom_command(
   OUTPUT "${GENERATED_ARXML_DDS}"
   COMMAND ${Python3_EXECUTABLE} "${ARXML_GENERATOR_SCRIPT}"
     --input "${GENERATED_MANIFEST_YAML_DDS}"
@@ -150,6 +171,20 @@ add_custom_command(
     "${GENERATED_MANIFEST_YAML_SOMEIP}"
     "${ARXML_GENERATOR_SCRIPT}"
   COMMENT "Generate SOME/IP-profile ARXML for switchable Pub/Sub"
+  VERBATIM
+)
+
+add_custom_command(
+  OUTPUT "${GENERATED_ARXML_ICEORYX}"
+  COMMAND ${Python3_EXECUTABLE} "${ARXML_GENERATOR_SCRIPT}"
+    --input "${GENERATED_MANIFEST_YAML_ICEORYX}"
+    --output "${GENERATED_ARXML_ICEORYX}"
+    --overwrite
+    --print-summary
+  DEPENDS
+    "${GENERATED_MANIFEST_YAML_ICEORYX}"
+    "${ARXML_GENERATOR_SCRIPT}"
+  COMMENT "Generate iceoryx-profile ARXML for switchable Pub/Sub"
   VERBATIM
 )
 
@@ -188,6 +223,9 @@ add_custom_target(
     "${GENERATED_MAPPING_SOMEIP}"
     "${GENERATED_MANIFEST_YAML_SOMEIP}"
     "${GENERATED_ARXML_SOMEIP}"
+    "${GENERATED_MAPPING_ICEORYX}"
+    "${GENERATED_MANIFEST_YAML_ICEORYX}"
+    "${GENERATED_ARXML_ICEORYX}"
     "${GENERATED_PROXY_HEADER}"
     "${GENERATED_BINDING_HEADER}"
 )

@@ -14,7 +14,7 @@
 ## Purpose
 
 - Verify backend switching with one binary pair by changing only `ARA_COM_BINDING_MANIFEST`.
-- Run the same publisher/subscriber binaries in both DDS and vSomeIP profiles.
+- Run the same publisher/subscriber binaries in DDS, iceoryx, and vSomeIP profiles.
 
 ## Prerequisites
 
@@ -46,6 +46,7 @@ Installed middleware/runtime:
 This single command runs:
 
 - DDS-profile smoke
+- iceoryx-profile smoke
 - vSomeIP-profile smoke
 
 ```bash
@@ -59,6 +60,7 @@ This single command runs:
 Expected key output:
 
 - `[OK] DDS-profile smoke passed (...)`
+- `[OK] iceoryx-profile smoke passed (...)`
 - `[OK] vSomeIP-profile smoke passed (...)`
 - `[OK] Switchable pub/sub smoke checks passed`
 
@@ -92,7 +94,39 @@ export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generate
 ./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_pub
 ```
 
-### 3-3. vSomeIP profile
+### 3-3. iceoryx profile
+
+Terminal 1:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+iox-roudi
+```
+
+Terminal 2:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_sub
+```
+
+Terminal 3:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_pub
+```
+
+### 3-4. vSomeIP profile
 
 Terminal 1:
 
@@ -126,11 +160,11 @@ export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json
 
 ## Verification Checklist
 
-- Same binaries are used in both modes:
+- Same binaries are used in all modes:
   - `autosar_switchable_pubsub_pub`
   - `autosar_switchable_pubsub_sub`
-- Only the manifest path changes between DDS and vSomeIP.
-- Subscriber logs include `I heard seq=` in both modes.
+- Only the manifest path changes between DDS/iceoryx/vSomeIP.
+- Subscriber logs include `I heard seq=` in all modes.
 
 ## Troubleshooting
 
@@ -138,6 +172,7 @@ Manifest path check:
 
 ```bash
 ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_dds.yaml
+ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
 ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_vsomeip.yaml
 ```
 

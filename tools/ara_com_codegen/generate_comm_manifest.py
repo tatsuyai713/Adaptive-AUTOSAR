@@ -130,7 +130,7 @@ def format_hex(value: int) -> str:
     return f"0x{value:04X}"
 
 
-VALID_EVENT_BINDINGS = {"auto", "dds", "vsomeip"}
+VALID_EVENT_BINDINGS = {"auto", "dds", "vsomeip", "iceoryx"}
 
 
 def normalize_event_binding(value: str) -> str:
@@ -637,7 +637,7 @@ def parse_args() -> argparse.Namespace:
         "--event-binding",
         default="auto",
         choices=sorted(VALID_EVENT_BINDINGS),
-        help="Generated event binding policy (auto|dds|vsomeip).",
+        help="Generated event binding policy (auto|dds|vsomeip|iceoryx).",
     )
     parser.add_argument(
         "--print-summary",

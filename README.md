@@ -103,7 +103,7 @@ Example:
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
-### 5) Build only switchable DDS/vSomeIP Pub/Sub user app (independent)
+### 5) Build only switchable DDS/iceoryx/vSomeIP Pub/Sub user app (independent)
 
 This user app is built independently from the main runtime build and verifies the full generation chain during build:
 
@@ -117,7 +117,7 @@ This user app is built independently from the main runtime build and verifies th
 ./scripts/build_switchable_pubsub_sample.sh
 ```
 
-Run smoke checks for both DDS and vSomeIP profiles in one command:
+Run smoke checks for DDS, iceoryx, and vSomeIP profiles in one command:
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh --run-smoke
@@ -133,6 +133,13 @@ Manual profile switch with same binaries:
 # CycloneDDS profile
 unset ARA_COM_EVENT_BINDING
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_dds.yaml
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+
+# iceoryx profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_iceoryx.yaml
+iox-roudi &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 

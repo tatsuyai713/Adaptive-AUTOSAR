@@ -84,10 +84,13 @@ echo "[INFO] Generated artifacts:"
 for artifact in \
   "${BUILD_DIR}/generated/switchable_topic_mapping_dds.yaml" \
   "${BUILD_DIR}/generated/switchable_topic_mapping_vsomeip.yaml" \
+  "${BUILD_DIR}/generated/switchable_topic_mapping_iceoryx.yaml" \
   "${BUILD_DIR}/generated/switchable_manifest_dds.yaml" \
   "${BUILD_DIR}/generated/switchable_manifest_vsomeip.yaml" \
+  "${BUILD_DIR}/generated/switchable_manifest_iceoryx.yaml" \
   "${BUILD_DIR}/generated/switchable_manifest_dds.arxml" \
   "${BUILD_DIR}/generated/switchable_manifest_vsomeip.arxml" \
+  "${BUILD_DIR}/generated/switchable_manifest_iceoryx.arxml" \
   "${BUILD_DIR}/generated/switchable_proxy_skeleton.hpp" \
   "${BUILD_DIR}/generated/switchable_binding.hpp"; do
   if [[ -f "${artifact}" ]]; then
@@ -114,7 +117,7 @@ if [[ "${RUN_SMOKE}" != "ON" ]]; then
   exit 0
 fi
 
-echo "[INFO] Running smoke checks (DDS-profile then vSomeIP-profile)"
+echo "[INFO] Running smoke checks (DDS-profile then iceoryx-profile then vSomeIP-profile)"
 
 TIMEOUT_BIN=""
 if command -v timeout >/dev/null 2>&1; then
@@ -179,6 +182,18 @@ export LD_LIBRARY_PATH="${LD_LIBS}:${LD_LIBRARY_PATH:-}"
 PUB_BIN="${BUILD_DIR}/autosar_switchable_pubsub_pub"
 SUB_BIN="${BUILD_DIR}/autosar_switchable_pubsub_sub"
 
+ROUDI_BIN=""
+if command -v iox-roudi >/dev/null 2>&1; then
+  ROUDI_BIN="$(command -v iox-roudi)"
+elif [[ -x "/opt/iceoryx/bin/iox-roudi" ]]; then
+  ROUDI_BIN="/opt/iceoryx/bin/iox-roudi"
+fi
+
+if [[ -z "${ROUDI_BIN}" ]]; then
+  echo "[ERROR] iox-roudi not found. Install iceoryx runtime or add iox-roudi to PATH." >&2
+  exit 1
+fi
+
 # DDS-profile mode
 export ARA_COM_BINDING_MANIFEST="${BUILD_DIR}/generated/switchable_manifest_dds.yaml"
 unset ARA_COM_EVENT_BINDING
@@ -200,6 +215,33 @@ if [[ "${DDS_HEARD_COUNT}" -lt 1 ]]; then
 fi
 
 echo "[OK] DDS-profile smoke passed (received=${DDS_HEARD_COUNT})"
+
+# iceoryx-profile mode
+export ARA_COM_BINDING_MANIFEST="${BUILD_DIR}/generated/switchable_manifest_iceoryx.yaml"
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+ICEORYX_PUB_LOG="${BUILD_DIR}/switchable_iceoryx_pub.log"
+ICEORYX_SUB_LOG="${BUILD_DIR}/switchable_iceoryx_sub.log"
+ICEORYX_ROUDI_LOG="${BUILD_DIR}/switchable_iceoryx_roudi.log"
+rm -f "${ICEORYX_PUB_LOG}" "${ICEORYX_SUB_LOG}" "${ICEORYX_ROUDI_LOG}"
+(run_with_timeout 12s "${ROUDI_BIN}" >"${ICEORYX_ROUDI_LOG}" 2>&1) &
+ROUDI_PID=$!
+sleep 1
+(run_with_timeout 6s "${SUB_BIN}" >"${ICEORYX_SUB_LOG}" 2>&1) &
+ICEORYX_SUB_PID=$!
+sleep 1
+(run_with_timeout 4s "${PUB_BIN}" >"${ICEORYX_PUB_LOG}" 2>&1) || true
+safe_wait_with_deadline "${ICEORYX_SUB_PID}" "iceoryx subscriber smoke process" 12
+safe_wait_with_deadline "${ROUDI_PID}" "iceoryx RouDi smoke process" 18
+
+ICEORYX_HEARD_COUNT=$(grep -c "I heard seq=" "${ICEORYX_SUB_LOG}" || true)
+if [[ "${ICEORYX_HEARD_COUNT}" -lt 1 ]]; then
+  echo "[ERROR] iceoryx-profile smoke failed: subscriber did not receive samples." >&2
+  exit 1
+fi
+
+echo "[OK] iceoryx-profile smoke passed (received=${ICEORYX_HEARD_COUNT})"
 
 # vSomeIP-profile mode
 export ARA_COM_BINDING_MANIFEST="${BUILD_DIR}/generated/switchable_manifest_vsomeip.yaml"

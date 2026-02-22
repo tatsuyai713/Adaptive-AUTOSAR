@@ -14,7 +14,7 @@
 ## 目的
 
 - `ARA_COM_BINDING_MANIFEST` の切替だけで、同一バイナリのバックエンド切替を検証する。
-- 同じ Publisher/Subscriber バイナリを DDS と vSomeIP の両プロファイルで動かす。
+- 同じ Publisher/Subscriber バイナリを DDS/iceoryx/vSomeIP の各プロファイルで動かす。
 
 ## 実行前準備
 
@@ -46,6 +46,7 @@ export VSOMEIP_PREFIX=/opt/vsomeip
 この 1 コマンドで以下を連続実行します:
 
 - DDS プロファイル smoke
+- iceoryx プロファイル smoke
 - vSomeIP プロファイル smoke
 
 ```bash
@@ -59,6 +60,7 @@ export VSOMEIP_PREFIX=/opt/vsomeip
 期待される主な出力:
 
 - `[OK] DDS-profile smoke passed (...)`
+- `[OK] iceoryx-profile smoke passed (...)`
 - `[OK] vSomeIP-profile smoke passed (...)`
 - `[OK] Switchable pub/sub smoke checks passed`
 
@@ -92,7 +94,39 @@ export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generate
 ./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_pub
 ```
 
-### 3-3. vSomeIP プロファイル
+### 3-3. iceoryx プロファイル
+
+端末 1:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+iox-roudi
+```
+
+端末 2:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_sub
+```
+
+端末 3:
+
+```bash
+unset ARA_COM_EVENT_BINDING
+unset ARA_COM_PREFER_SOMEIP
+unset VSOMEIP_CONFIGURATION
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
+./build-switchable-pubsub-sample-e2e/autosar_switchable_pubsub_pub
+```
+
+### 3-4. vSomeIP プロファイル
 
 端末 1:
 
@@ -126,11 +160,11 @@ export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json
 
 ## 動作確認チェックリスト
 
-- 両モードで同じバイナリを使っている:
+- 全モードで同じバイナリを使っている:
   - `autosar_switchable_pubsub_pub`
   - `autosar_switchable_pubsub_sub`
-- DDS と vSomeIP の差分は manifest パスのみ。
-- 両モードで Subscriber ログに `I heard seq=` が出る。
+- DDS/iceoryx/vSomeIP の差分は manifest パスのみ。
+- 全モードで Subscriber ログに `I heard seq=` が出る。
 
 ## トラブルシューティング
 
@@ -138,6 +172,7 @@ manifest パス確認:
 
 ```bash
 ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_dds.yaml
+ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_iceoryx.yaml
 ls build-switchable-pubsub-sample-e2e/generated/switchable_manifest_vsomeip.yaml
 ```
 

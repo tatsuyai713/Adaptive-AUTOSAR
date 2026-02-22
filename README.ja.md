@@ -102,7 +102,7 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 ./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
 ```
 
-### 5) DDS/vSomeIP 切り替え Pub/Sub ユーザーアプリのみを独立ビルド
+### 5) DDS/iceoryx/vSomeIP 切り替え Pub/Sub ユーザーアプリのみを独立ビルド
 
 このユーザーアプリはメインランタイムとは独立してビルドでき、ビルド時に次の生成チェーンが自動実行されます。
 
@@ -116,7 +116,7 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 ./scripts/build_switchable_pubsub_sample.sh
 ```
 
-DDS と vSomeIP の両 profile をまとめてスモーク確認する場合:
+DDS/iceoryx/vSomeIP の各 profile をまとめてスモーク確認する場合:
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh --run-smoke
@@ -132,6 +132,13 @@ DDS と vSomeIP の両 profile をまとめてスモーク確認する場合:
 # CycloneDDS profile
 unset ARA_COM_EVENT_BINDING
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_dds.yaml
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
+./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
+
+# iceoryx profile
+unset ARA_COM_EVENT_BINDING
+export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_iceoryx.yaml
+iox-roudi &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 
