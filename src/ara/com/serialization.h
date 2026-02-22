@@ -9,7 +9,11 @@
 #include <cstring>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
+
+#include <org/eclipse/cyclonedds/core/cdr/basic_cdr_ser.hpp>
+
 #include "../core/result.h"
 #include "./com_error_domain.h"
 
@@ -17,20 +21,44 @@ namespace ara
 {
     namespace com
     {
-        /// @brief Default serializer for trivially-copyable types.
-        ///        Provides POD serialization via memcpy. Specialize this template
-        ///        for complex or non-trivially-copyable types.
-        template <typename T, typename Enable = void>
-        struct Serializer
+        namespace detail
         {
-            static_assert(
-                std::is_trivially_copyable<T>::value,
-                "Default Serializer requires trivially copyable types. "
-                "Provide a Serializer<T> specialization for complex types.");
+            template <typename T>
+            class HasCdrSerializerOps
+            {
+            private:
+                template <typename U>
+                static auto Test(int)
+                    -> decltype(
+                        org::eclipse::cyclonedds::core::cdr::move(
+                            std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
+                            std::declval<U &>(),
+                            false),
+                        org::eclipse::cyclonedds::core::cdr::write(
+                            std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
+                            std::declval<U &>(),
+                            false),
+                        org::eclipse::cyclonedds::core::cdr::read(
+                            std::declval<org::eclipse::cyclonedds::core::cdr::basic_cdr_stream &>(),
+                            std::declval<U &>(),
+                            false),
+                        std::true_type{});
 
-            /// @brief Serializes a trivially-copyable value into raw bytes.
-            /// @param value Value to serialize.
-            /// @returns Byte vector containing a binary copy of `value`.
+                template <typename>
+                static std::false_type Test(...);
+
+            public:
+                static constexpr bool value = decltype(Test<T>(0))::value;
+            };
+        } // namespace detail
+
+        template <typename T, typename Enable = void>
+        struct Serializer;
+
+        /// @brief Default serializer for trivially-copyable types.
+        template <typename T>
+        struct Serializer<T, typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
+        {
             static std::vector<std::uint8_t> Serialize(const T &value)
             {
                 std::vector<std::uint8_t> buffer(sizeof(T));
@@ -38,10 +66,6 @@ namespace ara
                 return buffer;
             }
 
-            /// @brief Deserializes a trivially-copyable value from raw bytes.
-            /// @param data Pointer to input payload buffer.
-            /// @param size Payload size in bytes.
-            /// @returns `Result<T>` with value on success or `kFieldValueIsNotValid`.
             static core::Result<T> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)
@@ -58,13 +82,82 @@ namespace ara
             }
         };
 
+        /// @brief CDR serializer for ROS/CycloneDDS generated message types.
+        template <typename T>
+        struct Serializer<
+            T,
+            typename std::enable_if<
+                !std::is_trivially_copyable<T>::value &&
+                detail::HasCdrSerializerOps<T>::value>::type>
+        {
+            static std::vector<std::uint8_t> Serialize(const T &value)
+            {
+                using namespace org::eclipse::cyclonedds::core::cdr;
+
+                T mutable_value = value;
+                basic_cdr_stream sizer;
+                move(sizer, mutable_value, false);
+                const std::size_t payload_size = sizer.position();
+
+                std::vector<std::uint8_t> buffer(payload_size + 4U, 0U);
+                buffer[0] = 0x00;
+                buffer[1] = 0x01;
+                buffer[2] = 0x00;
+                buffer[3] = 0x00;
+
+                basic_cdr_stream writer;
+                writer.set_buffer(reinterpret_cast<char *>(buffer.data() + 4U), payload_size);
+                write(writer, mutable_value, false);
+                return buffer;
+            }
+
+            static core::Result<T> Deserialize(
+                const std::uint8_t *data,
+                std::size_t size)
+            {
+                using namespace org::eclipse::cyclonedds::core::cdr;
+
+                if (data == nullptr || size <= 4U)
+                {
+                    return core::Result<T>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                try
+                {
+                    T value{};
+                    basic_cdr_stream reader;
+                    reader.set_buffer(
+                        reinterpret_cast<char *>(const_cast<std::uint8_t *>(data + 4U)),
+                        size - 4U);
+                    read(reader, value, false);
+                    return core::Result<T>::FromValue(std::move(value));
+                }
+                catch (...)
+                {
+                    return core::Result<T>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+            }
+        };
+
+        /// @brief Compile-time error for unsupported complex types.
+        template <typename T>
+        struct Serializer<
+            T,
+            typename std::enable_if<
+                !std::is_trivially_copyable<T>::value &&
+                !detail::HasCdrSerializerOps<T>::value>::type>
+        {
+            static_assert(
+                std::is_trivially_copyable<T>::value || detail::HasCdrSerializerOps<T>::value,
+                "Serializer<T> requires either trivially-copyable type or Cyclone CDR move/write/read support.");
+        };
+
         /// @brief Serializer specialization for std::string
         template <>
         struct Serializer<std::string, void>
         {
-            /// @brief Serializes a string as `<uint32 length><bytes>`.
-            /// @param value String value to serialize.
-            /// @returns Encoded byte vector.
             static std::vector<std::uint8_t> Serialize(const std::string &value)
             {
                 std::vector<std::uint8_t> buffer;
@@ -75,10 +168,6 @@ namespace ara
                 return buffer;
             }
 
-            /// @brief Deserializes a string from `<uint32 length><bytes>`.
-            /// @param data Pointer to encoded payload.
-            /// @param size Payload size in bytes.
-            /// @returns `Result<std::string>` on success or validation error.
             static core::Result<std::string> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)
@@ -109,19 +198,12 @@ namespace ara
         template <>
         struct Serializer<std::vector<std::uint8_t>, void>
         {
-            /// @brief Returns the input bytes without transformation.
-            /// @param value Byte vector to forward.
-            /// @returns Same content as `value`.
             static std::vector<std::uint8_t> Serialize(
                 const std::vector<std::uint8_t> &value)
             {
                 return value;
             }
 
-            /// @brief Copies raw payload bytes into a vector.
-            /// @param data Payload start pointer.
-            /// @param size Payload size in bytes.
-            /// @returns Byte vector containing copied payload.
             static core::Result<std::vector<std::uint8_t>> Deserialize(
                 const std::uint8_t *data,
                 std::size_t size)
@@ -130,7 +212,7 @@ namespace ara
                     std::vector<std::uint8_t>(data, data + size));
             }
         };
-    }
-}
+    } // namespace com
+} // namespace ara
 
 #endif

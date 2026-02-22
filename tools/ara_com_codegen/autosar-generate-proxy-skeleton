@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/generate_proxy_skeleton_header.py" ]; then
+  GEN_DIR="$SCRIPT_DIR"
+else
+  GEN_DIR="$(cd "$SCRIPT_DIR/../tools/ara_com_codegen" && pwd)"
+fi
+exec python3 "$GEN_DIR/generate_proxy_skeleton_header.py" "$@"

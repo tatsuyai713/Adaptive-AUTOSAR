@@ -1807,3 +1807,18 @@ install(
   NAMESPACE AdaptiveAutosarAP::
   DESTINATION ${ADAPTIVE_AUTOSAR_AP_CMAKE_INSTALL_DIR}
 )
+
+if(AUTOSAR_AP_INSTALL_TOOLS)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/tools/ara_com_codegen")
+    install(
+      DIRECTORY ${CMAKE_SOURCE_DIR}/tools/ara_com_codegen
+      DESTINATION tools
+    )
+    install(
+      PROGRAMS
+        ${CMAKE_SOURCE_DIR}/tools/ara_com_codegen/autosar-generate-comm-manifest
+        ${CMAKE_SOURCE_DIR}/tools/ara_com_codegen/autosar-generate-proxy-skeleton
+      DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
+endif()
