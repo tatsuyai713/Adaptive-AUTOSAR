@@ -241,16 +241,6 @@ target_link_libraries(
   CycloneDDS-CXX::ddscxx
 )
 
-find_library(
-  SWITCHABLE_YAML_CPP_LIBRARY
-  NAMES yaml-cpp
-  HINTS
-    /opt/autosar-ap-libs/lib
-    /lib
-    /usr/lib/x86_64-linux-gnu
-    /lib/x86_64-linux-gnu
-)
-
 function(add_switchable_pubsub_target target_name source_file)
   add_executable(
     ${target_name}
@@ -269,7 +259,6 @@ function(add_switchable_pubsub_target target_name source_file)
     AdaptiveAutosarAP::ara_com
     AdaptiveAutosarAP::ara_log
     switchable_pubsub_dds_types
-    ${SWITCHABLE_YAML_CPP_LIBRARY}
   )
 
   target_include_directories(
