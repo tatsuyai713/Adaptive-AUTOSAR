@@ -168,6 +168,38 @@ safe_wait_with_deadline() {
   wait "${pid}" 2>/dev/null || true
 }
 
+wait_for_roudi_ready() {
+  local pid="$1"
+  local log_file="$2"
+  local timeout_sec="$3"
+  local end_at=$((SECONDS + timeout_sec))
+
+  while ((SECONDS < end_at)); do
+    if ! kill -0 "${pid}" >/dev/null 2>&1; then
+      return 1
+    fi
+
+    if grep -Eq "RouDi is ready|RouDi is ready for clients" "${log_file}" 2>/dev/null; then
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  grep -Eq "RouDi is ready|RouDi is ready for clients" "${log_file}" 2>/dev/null
+}
+
+dump_log_tail() {
+  local title="$1"
+  local file="$2"
+  echo "----- ${title}: ${file} (tail) -----" >&2
+  if [[ -f "${file}" ]]; then
+    tail -n 80 "${file}" >&2 || true
+  else
+    echo "(missing log file)" >&2
+  fi
+}
+
 LD_LIBS=""
 for libdir in "${AUTOSAR_AP_PREFIX}/lib" "${AUTOSAR_AP_PREFIX}/lib64" "${CYCLONEDDS_PREFIX}/lib" "/opt/vsomeip/lib" "/opt/iceoryx/lib"; do
   if [[ -d "${libdir}" ]]; then
@@ -225,19 +257,36 @@ ICEORYX_PUB_LOG="${BUILD_DIR}/switchable_iceoryx_pub.log"
 ICEORYX_SUB_LOG="${BUILD_DIR}/switchable_iceoryx_sub.log"
 ICEORYX_ROUDI_LOG="${BUILD_DIR}/switchable_iceoryx_roudi.log"
 rm -f "${ICEORYX_PUB_LOG}" "${ICEORYX_SUB_LOG}" "${ICEORYX_ROUDI_LOG}"
-(run_with_timeout 12s "${ROUDI_BIN}" >"${ICEORYX_ROUDI_LOG}" 2>&1) &
-ROUDI_PID=$!
-sleep 1
+OWN_ROUDI="OFF"
+if pgrep -f "iox-roudi" >/dev/null 2>&1; then
+  echo "[INFO] Reusing already-running RouDi process."
+else
+  OWN_ROUDI="ON"
+  (run_with_timeout 16s "${ROUDI_BIN}" >"${ICEORYX_ROUDI_LOG}" 2>&1) &
+  ROUDI_PID=$!
+  if ! wait_for_roudi_ready "${ROUDI_PID}" "${ICEORYX_ROUDI_LOG}" 14; then
+    echo "[ERROR] iceoryx-profile smoke failed: RouDi did not become ready." >&2
+    dump_log_tail "iceoryx roudi log" "${ICEORYX_ROUDI_LOG}"
+    safe_wait_with_deadline "${ROUDI_PID}" "iceoryx RouDi smoke process" 6
+    exit 1
+  fi
+fi
+
 (run_with_timeout 6s "${SUB_BIN}" >"${ICEORYX_SUB_LOG}" 2>&1) &
 ICEORYX_SUB_PID=$!
 sleep 1
 (run_with_timeout 4s "${PUB_BIN}" >"${ICEORYX_PUB_LOG}" 2>&1) || true
 safe_wait_with_deadline "${ICEORYX_SUB_PID}" "iceoryx subscriber smoke process" 12
-safe_wait_with_deadline "${ROUDI_PID}" "iceoryx RouDi smoke process" 18
+if [[ "${OWN_ROUDI}" == "ON" ]]; then
+  safe_wait_with_deadline "${ROUDI_PID}" "iceoryx RouDi smoke process" 18
+fi
 
 ICEORYX_HEARD_COUNT=$(grep -c "I heard seq=" "${ICEORYX_SUB_LOG}" || true)
 if [[ "${ICEORYX_HEARD_COUNT}" -lt 1 ]]; then
   echo "[ERROR] iceoryx-profile smoke failed: subscriber did not receive samples." >&2
+  dump_log_tail "iceoryx subscriber log" "${ICEORYX_SUB_LOG}"
+  dump_log_tail "iceoryx publisher log" "${ICEORYX_PUB_LOG}"
+  dump_log_tail "iceoryx roudi log" "${ICEORYX_ROUDI_LOG}"
   exit 1
 fi
 
