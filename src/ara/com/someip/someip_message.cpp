@@ -10,6 +10,45 @@ namespace ara
     {
         namespace someip
         {
+            namespace
+            {
+                bool IsRequestSideMessageType(SomeIpMessageType messageType) noexcept
+                {
+                    switch (messageType)
+                    {
+                    case SomeIpMessageType::Request:
+                    case SomeIpMessageType::RequestNoReturn:
+                    case SomeIpMessageType::Notification:
+                    case SomeIpMessageType::TpRequest:
+                    case SomeIpMessageType::TpRequestNoReturn:
+                    case SomeIpMessageType::TpNotification:
+                        return true;
+                    default:
+                        return false;
+                    }
+                }
+
+                bool IsResponseSideMessageType(SomeIpMessageType messageType) noexcept
+                {
+                    switch (messageType)
+                    {
+                    case SomeIpMessageType::Response:
+                    case SomeIpMessageType::Error:
+                    case SomeIpMessageType::TpResponse:
+                    case SomeIpMessageType::TpError:
+                        return true;
+                    default:
+                        return false;
+                    }
+                }
+
+                bool IsErrorMessageType(SomeIpMessageType messageType) noexcept
+                {
+                    return (messageType == SomeIpMessageType::Error) ||
+                           (messageType == SomeIpMessageType::TpError);
+                }
+            } // namespace
+
 
             SomeIpMessage::SomeIpMessage(uint32_t messageId,
                                          uint16_t clientId,
@@ -41,10 +80,8 @@ namespace ara
                                                                              messageType,
                                                                              SomeIpReturnCode::eOK)
             {
-                if ((messageType != SomeIpMessageType::Request) &&
-                    (messageType != SomeIpMessageType::Notification))
+                if (!IsRequestSideMessageType(messageType))
                 {
-                    // E2E is not supported yet.
                     throw std::invalid_argument("Invalid message type.");
                 }
             }
@@ -63,13 +100,11 @@ namespace ara
                                                                              messageType,
                                                                              returnCode)
             {
-                if ((messageType == SomeIpMessageType::Request) ||
-                    (messageType == SomeIpMessageType::Notification))
+                if (!IsResponseSideMessageType(messageType))
                 {
-                    // E2E is not supported yet.
                     throw std::invalid_argument("Invalid message type.");
                 }
-                else if ((messageType == SomeIpMessageType::Error) &&
+                else if (IsErrorMessageType(messageType) &&
                          (returnCode == SomeIpReturnCode::eOK))
                 {
                     // Error message cannot have OK return code.

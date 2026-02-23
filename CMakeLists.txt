@@ -381,6 +381,9 @@ set(test_ara_com_helper_dir
 set(test_ara_com_option_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/option")
 
+set(test_ara_com_someip_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/com/someip")
+
 set(test_ara_com_someip_pubsub_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/someip/pubsub")
 
@@ -1618,6 +1621,7 @@ if(build_tests)
     ${test_ara_com_option_dir}/loadbalancing_option_test.cpp
     ${test_ara_com_someip_pubsub_dir}/someip_pubsub_test.cpp
     ${test_ara_com_someip_pubsub_fsm_dir}/pubsub_state_test.cpp
+    ${test_ara_com_someip_dir}/someip_message_test.cpp
     ${test_ara_com_someip_rpc_dir}/someip_rpc_message_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_server_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_client_test.cpp
@@ -1700,6 +1704,7 @@ if(build_tests)
     ${test_ara_per_dir}/per_error_domain_test.cpp
     ${test_ara_per_dir}/key_value_storage_test.cpp
     ${test_ara_per_dir}/file_storage_test.cpp
+    ${test_ara_per_dir}/persistency_api_test.cpp
     ${test_ara_per_dir}/read_accessor_test.cpp
     ${test_ara_crypto_dir}/crypto_error_domain_test.cpp
     ${test_ara_crypto_dir}/crypto_provider_test.cpp
