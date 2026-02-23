@@ -7,6 +7,7 @@ SWITCHABLE_APP_DIR="${REPO_ROOT}/user_apps/src/apps/communication/switchable_pub
 
 AUTOSAR_AP_PREFIX="/opt/autosar_ap"
 CYCLONEDDS_PREFIX="/opt/cyclonedds"
+ICEORYX_PREFIX="/opt/iceoryx"
 BUILD_DIR="${REPO_ROOT}/build-switchable-pubsub-sample"
 RUN_SMOKE="OFF"
 CLEAN="OFF"
@@ -19,6 +20,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cyclonedds-prefix)
       CYCLONEDDS_PREFIX="$2"
+      shift 2
+      ;;
+    --iceoryx-prefix)
+      ICEORYX_PREFIX="$2"
       shift 2
       ;;
     --build-dir)
@@ -70,11 +75,13 @@ echo "       app_dir=${SWITCHABLE_APP_DIR}"
 echo "       build_dir=${BUILD_DIR}"
 echo "       autosar_prefix=${AUTOSAR_AP_PREFIX}"
 echo "       cyclonedds_prefix=${CYCLONEDDS_PREFIX}"
+echo "       iceoryx_prefix=${ICEORYX_PREFIX}"
 
 cmake -S "${SWITCHABLE_APP_DIR}" -B "${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DAUTOSAR_AP_PREFIX="${AUTOSAR_AP_PREFIX}" \
   -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}" \
+  -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
   -DAdaptiveAutosarAP_DIR="${AP_CMAKE_DIR}"
 
 cmake --build "${BUILD_DIR}" -j"$(nproc)"

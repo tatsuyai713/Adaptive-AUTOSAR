@@ -345,6 +345,8 @@ def generate_types_h_text(cfg: ServiceConfig) -> str:
     event_constants = []
     event_bindings_sk = []
     event_bindings_px = []
+    skeleton_binding_helpers = []
+    proxy_binding_helpers = []
 
     for ev in cfg.events:
         skeleton_events.append(f"ara::com::SkeletonEvent<{ev.payload_type}> {ev.name};")
@@ -355,29 +357,51 @@ def generate_types_h_text(cfg: ServiceConfig) -> str:
         event_constants.append(
             f"constexpr std::uint16_t k{ev.name}GroupId{{0x{ev.event_group_id:04X}U}};"
         )
-        binding_cfg = (
-            f"ara::com::internal::BindingFactory::CreateSkeletonEventBinding(\n"
-            f"                    ara::com::internal::TransportBinding::kVsomeip,\n"
-            f"                    ara::com::internal::EventBindingConfig{{\n"
-            f"                        kServiceId, kInstanceId,\n"
-            f"                        k{ev.name}Id, k{ev.name}GroupId,\n"
-            f"                        kMajorVersion}})"
+        skeleton_binding_helpers.append(
+            f"""\
+    static std::unique_ptr<ara::com::internal::SkeletonEventBinding>
+    Create{ev.name}Binding()
+    {{
+        auto binding = ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
+            ara::com::internal::TransportBinding::kVsomeip,
+            ara::com::internal::EventBindingConfig{{
+                kServiceId,
+                kInstanceId,
+                k{ev.name}Id,
+                k{ev.name}GroupId,
+                kMajorVersion}});
+        if (!binding)
+        {{
+            throw std::runtime_error("Failed to create SOME/IP skeleton event binding.");
+        }}
+        return binding;
+    }}"""
         )
         event_bindings_sk.append(
-            f"              {ev.name}{{\n"
-            f"                  {binding_cfg}}}"
+            f"              {ev.name}{{Create{ev.name}Binding()}}"
         )
-        proxy_binding_cfg = (
-            f"ara::com::internal::BindingFactory::CreateProxyEventBinding(\n"
-            f"                    ara::com::internal::TransportBinding::kVsomeip,\n"
-            f"                    ara::com::internal::EventBindingConfig{{\n"
-            f"                        handle.GetServiceId(), handle.GetInstanceId(),\n"
-            f"                        k{ev.name}Id, k{ev.name}GroupId,\n"
-            f"                        kMajorVersion}})"
+        proxy_binding_helpers.append(
+            f"""\
+    static std::unique_ptr<ara::com::internal::ProxyEventBinding>
+    Create{ev.name}Binding(const HandleType &handle)
+    {{
+        auto binding = ara::com::internal::BindingFactory::CreateProxyEventBinding(
+            ara::com::internal::TransportBinding::kVsomeip,
+            ara::com::internal::EventBindingConfig{{
+                handle.GetServiceId(),
+                handle.GetInstanceId(),
+                k{ev.name}Id,
+                k{ev.name}GroupId,
+                kMajorVersion}});
+        if (!binding)
+        {{
+            throw std::runtime_error("Failed to create SOME/IP proxy event binding.");
+        }}
+        return binding;
+    }}"""
         )
         event_bindings_px.append(
-            f"              {ev.name}{{\n"
-            f"                  {proxy_binding_cfg}}}"
+            f"              {ev.name}{{Create{ev.name}Binding(handle)}}"
         )
 
     # Generate payload structs
@@ -400,6 +424,8 @@ def generate_types_h_text(cfg: ServiceConfig) -> str:
     constants_str = "\n".join(event_constants)
     sk_init_str = ",\n".join(event_bindings_sk)
     px_init_str = ",\n".join(event_bindings_px)
+    sk_helpers_str = "\n\n".join(skeleton_binding_helpers)
+    px_helpers_str = "\n\n".join(proxy_binding_helpers)
 
     guard = f"USER_APPS_{sname.upper()}_TYPES_H"
     ns_parts = cfg.cpp_namespace.split("::")
@@ -414,6 +440,7 @@ def generate_types_h_text(cfg: ServiceConfig) -> str:
 // Service: {sname}  ServiceID=0x{cfg.service_id:04X}  InstanceID=0x{cfg.instance_id:04X}
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 #include <ara/com/event.h>
@@ -457,6 +484,10 @@ inline ara::core::InstanceSpecifier CreateInstanceSpecifierOrThrow(const char* p
 // ─────────────────────────────────────────────────────────────
 class {sname}Skeleton : public ara::com::ServiceSkeletonBase
 {{
+private:
+    // In commercial AUTOSAR stacks this section is generated and vendor-specific.
+{sk_helpers_str}
+
 public:
     {sk_events_str}
 
@@ -477,6 +508,12 @@ class {sname}Proxy : public ara::com::ServiceProxyBase
 {{
 public:
     using HandleType = ara::com::ServiceHandleType;
+
+private:
+    // In commercial AUTOSAR stacks this section is generated and vendor-specific.
+{px_helpers_str}
+
+public:
 
     {px_events_str}
 

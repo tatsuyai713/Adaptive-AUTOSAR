@@ -16,7 +16,7 @@
 ## 位置づけ（Manifest-first 方針）
 
 - このチュートリアルは transport 固定の SOME/IP テンプレートです。
-- バックエンド固有のバインディング処理は `ara::com` 基底クラスの生成コード向けヘルパー（`CreateSomeIp*EventBinding`）にカプセル化されています。
+- バックエンド固有のバインディング処理は生成コード相当の Proxy/Skeleton ヘッダ（`user_apps/src/apps/communication/someip/types.h`）に閉じ込め、アプリ本体は標準 `ara::com` API を使います。
 - 単一バイナリをマニフェストで切替える本流は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
 
 ## 実行前準備

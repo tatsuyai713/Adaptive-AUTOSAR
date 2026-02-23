@@ -5,13 +5,8 @@
 #ifndef ARA_COM_SERVICE_SKELETON_BASE_H
 #define ARA_COM_SERVICE_SKELETON_BASE_H
 
-#ifndef ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS
-#define ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS 1
-#endif
-
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <mutex>
 #include <utility>
 #include <vector>
@@ -23,11 +18,6 @@ namespace ara
 {
     namespace com
     {
-        namespace internal
-        {
-            class SkeletonEventBinding;
-        }
-
         /// @brief Base class for standard AUTOSAR AP skeleton classes.
         ///        Generated skeleton classes inherit from this and add typed
         ///        SkeletonEvent<T>, SkeletonField<T> members and virtual methods.
@@ -63,14 +53,6 @@ namespace ara
             std::uint16_t GetServiceId() const noexcept;
             /// @brief Returns configured instance identifier.
             std::uint16_t GetInstanceId() const noexcept;
-
-            /// @brief Create a SOME/IP skeleton-event binding for generated code.
-            /// @details Keeps transport-specific binding details out of app-level code.
-            std::unique_ptr<internal::SkeletonEventBinding>
-            CreateSomeIpSkeletonEventBinding(
-                std::uint16_t eventId,
-                std::uint16_t eventGroupId,
-                std::uint8_t majorVersion = 0U) const;
 
         public:
             /// @brief Callback type to validate/deny event subscription changes.

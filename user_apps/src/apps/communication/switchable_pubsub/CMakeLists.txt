@@ -8,6 +8,7 @@ include(GNUInstallDirs)
 
 set(AUTOSAR_AP_PREFIX "/opt/autosar_ap" CACHE PATH "Installed Adaptive AUTOSAR AP prefix")
 set(CYCLONEDDS_PREFIX "/opt/cyclonedds" CACHE PATH "CycloneDDS install prefix")
+set(ICEORYX_PREFIX "/opt/iceoryx" CACHE PATH "iceoryx install prefix")
 
 # Location after migration: user_apps/src/apps/communication/switchable_pubsub
 set(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../..")
@@ -38,11 +39,57 @@ find_package(
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 list(APPEND CMAKE_PREFIX_PATH "${CYCLONEDDS_PREFIX}/lib/cmake")
+list(APPEND CMAKE_PREFIX_PATH "${ICEORYX_PREFIX}/lib/cmake" "${ICEORYX_PREFIX}/lib64/cmake")
 if(NOT TARGET CycloneDDS::ddsc)
   find_package(CycloneDDS REQUIRED)
 endif()
 if(NOT TARGET CycloneDDS-CXX::ddscxx)
   find_package(CycloneDDS-CXX REQUIRED)
+endif()
+find_package(iceoryx_binding_c QUIET CONFIG)
+
+set(SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS "")
+if(TARGET iceoryx_binding_c::iceoryx_binding_c)
+  get_target_property(
+    _switchable_iceoryx_binding_includes
+    iceoryx_binding_c::iceoryx_binding_c
+    INTERFACE_INCLUDE_DIRECTORIES)
+  if(_switchable_iceoryx_binding_includes)
+    list(APPEND SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS ${_switchable_iceoryx_binding_includes})
+  endif()
+endif()
+
+if(NOT SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS)
+  set(_switchable_iceoryx_binding_hints
+    "${ICEORYX_PREFIX}/include/iceoryx/v"
+    "/opt/qnx/iceoryx/include/iceoryx/v")
+  file(
+    GLOB
+    _switchable_iceoryx_versioned_dirs
+    LIST_DIRECTORIES true
+    "${ICEORYX_PREFIX}/include/iceoryx/v*")
+  foreach(_switchable_iceoryx_dir IN LISTS _switchable_iceoryx_versioned_dirs)
+    if(IS_DIRECTORY "${_switchable_iceoryx_dir}")
+      list(APPEND _switchable_iceoryx_binding_hints "${_switchable_iceoryx_dir}")
+    endif()
+  endforeach()
+  find_path(
+    SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIR
+    NAMES iceoryx_binding_c/chunk.h
+    HINTS ${_switchable_iceoryx_binding_hints}
+  )
+  if(SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIR)
+    list(APPEND SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS "${SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIR}")
+  endif()
+endif()
+
+get_target_property(_switchable_dds_has_shm CycloneDDS::ddsc SHM_SUPPORT_IS_AVAILABLE)
+if(_switchable_dds_has_shm AND NOT SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS)
+  message(
+    FATAL_ERROR
+    "CycloneDDS reports SHM support enabled (SHM_SUPPORT_IS_AVAILABLE=${_switchable_dds_has_shm}) "
+    "but iceoryx_binding_c headers were not found. "
+    "Install iceoryx dev package or set ICEORYX_PREFIX to the installation root.")
 endif()
 
 find_program(IDLC_EXECUTABLE NAMES idlc HINTS "${CYCLONEDDS_PREFIX}/bin" "/opt/cyclonedds/bin")
@@ -270,6 +317,7 @@ target_include_directories(
   PUBLIC
   "${CYCLONEDDS_PREFIX}/include/ddscxx"
   "${CYCLONEDDS_PREFIX}/include"
+  ${SWITCHABLE_ICEORYX_BINDING_INCLUDE_DIRS}
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
@@ -279,6 +327,14 @@ target_link_libraries(
   CycloneDDS::ddsc
   CycloneDDS-CXX::ddscxx
 )
+
+if(TARGET iceoryx_binding_c::iceoryx_binding_c)
+  target_link_libraries(
+    switchable_pubsub_dds_types
+    PUBLIC
+    iceoryx_binding_c::iceoryx_binding_c
+  )
+endif()
 
 function(add_switchable_pubsub_target target_name source_file)
   add_executable(

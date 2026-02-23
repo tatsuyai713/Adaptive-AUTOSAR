@@ -2,20 +2,17 @@
 #define USER_APPS_COM_SOMEIP_TEMPLATE_TYPES_H
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 #include <ara/com/event.h>
+#include <ara/com/internal/binding_factory.h>
 #include <ara/com/service_handle_type.h>
 #include <ara/com/service_proxy_base.h>
 #include <ara/com/service_skeleton_base.h>
 #include <ara/com/types.h>
 #include <ara/core/instance_specifier.h>
 #include <ara/core/result.h>
-
-// Compatibility fallback for pre-helper runtime packages.
-#if !defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
-#include <ara/com/internal/binding_factory.h>
-#endif
 
 namespace user_apps
 {
@@ -56,6 +53,21 @@ namespace user_apps
         // Minimal skeleton template that exposes one typed event.
         class VehicleSignalSkeleton : public ara::com::ServiceSkeletonBase
         {
+        private:
+            // In commercial AUTOSAR stacks this part is generated and vendor-specific.
+            static std::unique_ptr<ara::com::internal::SkeletonEventBinding>
+            CreateStatusEventBinding()
+            {
+                return ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
+                    ara::com::internal::TransportBinding::kVsomeip,
+                    ara::com::internal::EventBindingConfig{
+                        kServiceId,
+                        kInstanceId,
+                        kEventId,
+                        kEventGroupId,
+                        kMajorVersion});
+            }
+
         public:
             ara::com::SkeletonEvent<VehicleSignalFrame> StatusEvent;
 
@@ -65,27 +77,10 @@ namespace user_apps
                       std::move(specifier),
                       kServiceId,
                       kInstanceId,
-                  kMajorVersion,
-                  0U,
-                  ara::com::MethodCallProcessingMode::kEvent},
-#if defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
-                  StatusEvent{
-                      CreateSomeIpSkeletonEventBinding(
-                          kEventId,
-                          kEventGroupId,
-                          kMajorVersion)}
-#else
-                  // Legacy fallback path (installed runtime without helper macro).
-                  StatusEvent{
-                      ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
-                          ara::com::internal::TransportBinding::kVsomeip,
-                          ara::com::internal::EventBindingConfig{
-                              kServiceId,
-                              kInstanceId,
-                              kEventId,
-                              kEventGroupId,
-                              kMajorVersion})}
-#endif
+                      kMajorVersion,
+                      0U,
+                      ara::com::MethodCallProcessingMode::kEvent},
+                  StatusEvent{CreateStatusEventBinding()}
             {
             }
         };
@@ -94,6 +89,21 @@ namespace user_apps
         // to one typed event.
         class VehicleSignalProxy : public ara::com::ServiceProxyBase
         {
+        private:
+            // In commercial AUTOSAR stacks this part is generated and vendor-specific.
+            static std::unique_ptr<ara::com::internal::ProxyEventBinding>
+            CreateStatusEventBinding(const ara::com::ServiceHandleType &handle)
+            {
+                return ara::com::internal::BindingFactory::CreateProxyEventBinding(
+                    ara::com::internal::TransportBinding::kVsomeip,
+                    ara::com::internal::EventBindingConfig{
+                        handle.GetServiceId(),
+                        handle.GetInstanceId(),
+                        kEventId,
+                        kEventGroupId,
+                        kMajorVersion});
+            }
+
         public:
             using HandleType = ara::com::ServiceHandleType;
 
@@ -101,24 +111,7 @@ namespace user_apps
 
             explicit VehicleSignalProxy(HandleType handle)
                 : ara::com::ServiceProxyBase{handle},
-#if defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
-                  StatusEvent{
-                      CreateSomeIpProxyEventBinding(
-                          kEventId,
-                          kEventGroupId,
-                          kMajorVersion)}
-#else
-                  // Legacy fallback path (installed runtime without helper macro).
-                  StatusEvent{
-                      ara::com::internal::BindingFactory::CreateProxyEventBinding(
-                          ara::com::internal::TransportBinding::kVsomeip,
-                          ara::com::internal::EventBindingConfig{
-                              handle.GetServiceId(),
-                              handle.GetInstanceId(),
-                              kEventId,
-                              kEventGroupId,
-                              kMajorVersion})}
-#endif
+                  StatusEvent{CreateStatusEventBinding(handle)}
             {
             }
 

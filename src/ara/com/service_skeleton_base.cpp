@@ -7,7 +7,6 @@
 
 #include "./service_skeleton_base.h"
 #include "./com_error_domain.h"
-#include "./internal/binding_factory.h"
 #include "./someip/vsomeip_application.h"
 
 namespace ara
@@ -46,24 +45,6 @@ namespace ara
         std::uint16_t ServiceSkeletonBase::GetInstanceId() const noexcept
         {
             return mInstanceId;
-        }
-
-        std::unique_ptr<internal::SkeletonEventBinding>
-        ServiceSkeletonBase::CreateSomeIpSkeletonEventBinding(
-            std::uint16_t eventId,
-            std::uint16_t eventGroupId,
-            std::uint8_t majorVersion) const
-        {
-            const std::uint8_t resolvedMajorVersion{
-                majorVersion == 0U ? mMajorVersion : majorVersion};
-            return internal::BindingFactory::CreateSkeletonEventBinding(
-                internal::TransportBinding::kVsomeip,
-                internal::EventBindingConfig{
-                    mServiceId,
-                    mInstanceId,
-                    eventId,
-                    eventGroupId,
-                    resolvedMajorVersion});
         }
 
         core::Result<void> ServiceSkeletonBase::OfferService()

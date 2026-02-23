@@ -5,13 +5,8 @@
 #ifndef ARA_COM_SERVICE_PROXY_BASE_H
 #define ARA_COM_SERVICE_PROXY_BASE_H
 
-#ifndef ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS
-#define ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS 1
-#endif
-
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <vector>
 #include "./types.h"
 #include "./service_handle_type.h"
@@ -22,11 +17,6 @@ namespace ara
 {
     namespace com
     {
-        namespace internal
-        {
-            class ProxyEventBinding;
-        }
-
         /// @brief Base class for standard AUTOSAR AP proxy classes.
         ///        Generated proxy classes inherit from this and add typed
         ///        Event<T>, Method<R(Args...)>, Field<T> members.
@@ -39,14 +29,6 @@ namespace ara
             /// @brief Constructor from a service handle
             /// @param handle Handle identifying the service instance
             explicit ServiceProxyBase(ServiceHandleType handle) noexcept;
-
-            /// @brief Create a SOME/IP proxy-event binding for generated code.
-            /// @details Keeps transport-specific binding details out of app-level code.
-            std::unique_ptr<internal::ProxyEventBinding>
-            CreateSomeIpProxyEventBinding(
-                std::uint16_t eventId,
-                std::uint16_t eventGroupId,
-                std::uint8_t majorVersion = 1U) const;
 
         public:
             ServiceProxyBase(const ServiceProxyBase &) = delete;

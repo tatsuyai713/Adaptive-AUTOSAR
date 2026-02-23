@@ -13,7 +13,6 @@
 
 #include "./service_proxy_base.h"
 #include "./com_error_domain.h"
-#include "./internal/binding_factory.h"
 #include "./someip/vsomeip_application.h"
 
 namespace
@@ -89,22 +88,6 @@ namespace ara
         const ServiceHandleType &ServiceProxyBase::GetHandle() const noexcept
         {
             return mHandle;
-        }
-
-        std::unique_ptr<internal::ProxyEventBinding>
-        ServiceProxyBase::CreateSomeIpProxyEventBinding(
-            std::uint16_t eventId,
-            std::uint16_t eventGroupId,
-            std::uint8_t majorVersion) const
-        {
-            return internal::BindingFactory::CreateProxyEventBinding(
-                internal::TransportBinding::kVsomeip,
-                internal::EventBindingConfig{
-                    mHandle.GetServiceId(),
-                    mHandle.GetInstanceId(),
-                    eventId,
-                    eventGroupId,
-                    majorVersion});
         }
 
         core::Result<ServiceHandleContainer<ServiceHandleType>>
