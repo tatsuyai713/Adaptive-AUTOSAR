@@ -4,10 +4,14 @@
 #include "ara/com/service_skeleton_base.h"
 #include "ara/com/event.h"
 #include "ara/com/types.h"
-#include "ara/com/internal/binding_factory.h"
 #include "ara/core/instance_specifier.h"
 #include "ara/core/result.h"
 #include "./vehicle_status_types.h"
+
+// Compatibility fallback for pre-helper runtime packages.
+#if !defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
+#include "ara/com/internal/binding_factory.h"
+#endif
 
 namespace sample
 {
@@ -47,6 +51,14 @@ namespace sample
                       cMajorVersion,
                       0U,
                       mode},
+#if defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
+                  StatusEvent{
+                      CreateSomeIpSkeletonEventBinding(
+                          cStatusEventId,
+                          cStatusEventGroupId,
+                          cMajorVersion)}
+#else
+                  // Legacy fallback path (installed runtime without helper macro).
                   StatusEvent{
                       ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
                           ara::com::internal::TransportBinding::kVsomeip,
@@ -56,6 +68,7 @@ namespace sample
                               cStatusEventId,
                               cStatusEventGroupId,
                               cMajorVersion})}
+#endif
             {
             }
 

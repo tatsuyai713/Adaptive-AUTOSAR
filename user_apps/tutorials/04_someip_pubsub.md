@@ -16,7 +16,7 @@
 ## Positioning (Manifest-first roadmap)
 
 - This tutorial is a transport-specific SOME/IP template.
-- Backend is fixed in code (`TransportBinding::kVsomeip` in `user_apps/src/apps/communication/someip/types.h`).
+- Backend binding details are encapsulated in generated-style helper APIs (`CreateSomeIp*EventBinding` in `ara::com` base classes).
 - For same-binary backend switching by manifest profile, follow `user_apps/src/apps/communication/switchable_pubsub/README.md`.
 
 ## Prerequisites

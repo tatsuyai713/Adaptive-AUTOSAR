@@ -13,7 +13,7 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/exec_runtime_monitor_app.cpp")
     exec_runtime_monitor_app.cpp
     AdaptiveAutosarAP::ara_core
     AdaptiveAutosarAP::ara_exec
+    AdaptiveAutosarAP::ara_phm
     AdaptiveAutosarAP::ara_log
-    AdaptiveAutosarAP::ara_com
   )
 endif()

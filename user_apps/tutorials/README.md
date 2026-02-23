@@ -33,11 +33,11 @@ For new app design, use manifest-profile switching as the primary approach:
    [`02_exec_signal.ja.md`](02_exec_signal.ja.md)
 4. Persistency and PHM
    [`03_per_phm.ja.md`](03_per_phm.ja.md)
-5. SOME/IP Pub/Sub (transport-specific template)
+5. SOME/IP Pub/Sub (transport-focused, standard `ara::com` API template)
    [`04_someip_pubsub.ja.md`](04_someip_pubsub.ja.md)
-6. ZeroCopy Pub/Sub (transport-specific template)
+6. ZeroCopy Pub/Sub (transport-focused template)
    [`05_zerocopy_pubsub.ja.md`](05_zerocopy_pubsub.ja.md)
-7. DDS Pub/Sub (transport-specific template)
+7. DDS Pub/Sub (transport-focused template)
    [`06_dds_pubsub.ja.md`](06_dds_pubsub.ja.md)
 8. SocketCAN receive and decode
    [`07_socketcan_decode.ja.md`](07_socketcan_decode.ja.md)

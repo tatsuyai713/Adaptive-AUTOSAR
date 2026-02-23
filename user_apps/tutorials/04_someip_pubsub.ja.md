@@ -16,7 +16,7 @@
 ## 位置づけ（Manifest-first 方針）
 
 - このチュートリアルは transport 固定の SOME/IP テンプレートです。
-- バックエンドはコード上で固定されています（`user_apps/src/apps/communication/someip/types.h` の `TransportBinding::kVsomeip`）。
+- バックエンド固有のバインディング処理は `ara::com` 基底クラスの生成コード向けヘルパー（`CreateSomeIp*EventBinding`）にカプセル化されています。
 - 単一バイナリをマニフェストで切替える本流は `user_apps/src/apps/communication/switchable_pubsub/README.md` を参照してください。
 
 ## 実行前準備

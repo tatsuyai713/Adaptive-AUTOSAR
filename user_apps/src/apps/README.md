@@ -14,7 +14,7 @@ This directory contains executable application entry points grouped by function.
   - `dds/`
 - `feature/`
   - `runtime/`: lifecycle-focused feature app
-    - includes an `ara::exec` state-reporting + watchdog monitoring sample
+    - includes an `ara::exec` + `ara::phm` runtime monitoring sample
   - `can/`: SocketCAN receive/decode feature app
   - `ecu/`: full ECU integration feature app
 

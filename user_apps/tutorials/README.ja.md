@@ -33,11 +33,11 @@
    [`02_exec_signal.ja.md`](02_exec_signal.ja.md)
 4. Persistency と PHM
    [`03_per_phm.ja.md`](03_per_phm.ja.md)
-5. SOME/IP Pub/Sub（transport 個別テンプレート）
+5. SOME/IP Pub/Sub（transport 焦点、標準 `ara::com` API テンプレート）
    [`04_someip_pubsub.ja.md`](04_someip_pubsub.ja.md)
-6. ZeroCopy Pub/Sub（transport 個別テンプレート）
+6. ZeroCopy Pub/Sub（transport 焦点テンプレート）
    [`05_zerocopy_pubsub.ja.md`](05_zerocopy_pubsub.ja.md)
-7. DDS Pub/Sub（transport 個別テンプレート）
+7. DDS Pub/Sub（transport 焦点テンプレート）
    [`06_dds_pubsub.ja.md`](06_dds_pubsub.ja.md)
 8. SocketCAN 受信とデコード
    [`07_socketcan_decode.ja.md`](07_socketcan_decode.ja.md)

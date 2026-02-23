@@ -5,13 +5,17 @@
 #include <stdexcept>
 
 #include <ara/com/event.h>
-#include <ara/com/internal/binding_factory.h>
 #include <ara/com/service_handle_type.h>
 #include <ara/com/service_proxy_base.h>
 #include <ara/com/service_skeleton_base.h>
 #include <ara/com/types.h>
 #include <ara/core/instance_specifier.h>
 #include <ara/core/result.h>
+
+// Compatibility fallback for pre-helper runtime packages.
+#if !defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
+#include <ara/com/internal/binding_factory.h>
+#endif
 
 namespace user_apps
 {
@@ -61,9 +65,17 @@ namespace user_apps
                       std::move(specifier),
                       kServiceId,
                       kInstanceId,
-                      kMajorVersion,
-                      0U,
-                      ara::com::MethodCallProcessingMode::kEvent},
+                  kMajorVersion,
+                  0U,
+                  ara::com::MethodCallProcessingMode::kEvent},
+#if defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
+                  StatusEvent{
+                      CreateSomeIpSkeletonEventBinding(
+                          kEventId,
+                          kEventGroupId,
+                          kMajorVersion)}
+#else
+                  // Legacy fallback path (installed runtime without helper macro).
                   StatusEvent{
                       ara::com::internal::BindingFactory::CreateSkeletonEventBinding(
                           ara::com::internal::TransportBinding::kVsomeip,
@@ -73,6 +85,7 @@ namespace user_apps
                               kEventId,
                               kEventGroupId,
                               kMajorVersion})}
+#endif
             {
             }
         };
@@ -88,6 +101,14 @@ namespace user_apps
 
             explicit VehicleSignalProxy(HandleType handle)
                 : ara::com::ServiceProxyBase{handle},
+#if defined(ARA_COM_HAS_GENERATED_EVENT_BINDING_HELPERS)
+                  StatusEvent{
+                      CreateSomeIpProxyEventBinding(
+                          kEventId,
+                          kEventGroupId,
+                          kMajorVersion)}
+#else
+                  // Legacy fallback path (installed runtime without helper macro).
                   StatusEvent{
                       ara::com::internal::BindingFactory::CreateProxyEventBinding(
                           ara::com::internal::TransportBinding::kVsomeip,
@@ -97,6 +118,7 @@ namespace user_apps
                               kEventId,
                               kEventGroupId,
                               kMajorVersion})}
+#endif
             {
             }
 
