@@ -15,6 +15,8 @@
 
 - Verify backend switching with one binary pair by changing only `ARA_COM_BINDING_MANIFEST`.
 - Run the same publisher/subscriber binaries in DDS, iceoryx, and vSomeIP profiles.
+- Optional: override profile selection at runtime with `ARA_COM_EVENT_BINDING`
+  (`dds|iceoryx|vsomeip|auto`) for debugging.
 
 ## Prerequisites
 

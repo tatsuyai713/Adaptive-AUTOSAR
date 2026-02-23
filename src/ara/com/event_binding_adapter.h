@@ -1,5 +1,5 @@
 /// @file src/ara/com/event_binding_adapter.h
-/// @brief Backend-agnostic ara::com pub/sub adapter for CycloneDDS/vsomeip.
+/// @brief Backend-agnostic ara::com pub/sub adapter for CycloneDDS/vsomeip/iceoryx.
 /// @details Mapping resolution and CDR conversion live in AUTOSAR runtime side
 ///          so applications do not depend on non-standard helper APIs directly.
 
@@ -13,6 +13,7 @@
 #include <ara/com/service_handle_type.h>
 #include <ara/com/service_proxy_base.h>
 #include <ara/com/service_skeleton_base.h>
+#include <ara/com/zerocopy/zero_copy.h>
 #include <ara/core/instance_specifier.h>
 #include <ara/core/result.h>
 
@@ -41,7 +42,8 @@ namespace ara
         enum class EventTransportBinding
         {
             kDds,
-            kSomeip
+            kSomeip,
+            kIceoryx
         };
 
         inline std::string NormalizeTransportName(std::string value)
@@ -68,30 +70,134 @@ namespace ara
                    normalized == "on";
         }
 
-        inline EventTransportBinding ResolveEventTransportBinding()
+        inline bool ParseTransportBindingToken(
+            const std::string &value,
+            EventTransportBinding &binding,
+            bool *isAuto = nullptr)
         {
-            const char *env = std::getenv("ARA_COM_EVENT_BINDING");
-            if (env == nullptr || *env == 0)
+            if (isAuto != nullptr)
             {
-                return EventTransportBinding::kDds;
+                *isAuto = false;
             }
 
-            const std::string value = NormalizeTransportName(std::string(env));
-            if (value == "someip" || value == "vsomeip")
+            const std::string normalized = NormalizeTransportName(value);
+            if (normalized.empty())
+            {
+                return false;
+            }
+
+            if (normalized == "someip" || normalized == "vsomeip")
+            {
+                binding = EventTransportBinding::kSomeip;
+                return true;
+            }
+            if (normalized == "dds" || normalized == "cyclonedds" ||
+                normalized == "cyclone-dds")
+            {
+                binding = EventTransportBinding::kDds;
+                return true;
+            }
+            if (normalized == "iceoryx" || normalized == "zerocopy" ||
+                normalized == "zero-copy" || normalized == "iox")
+            {
+                binding = EventTransportBinding::kIceoryx;
+                return true;
+            }
+            if (normalized == "auto")
+            {
+                if (isAuto != nullptr)
+                {
+                    *isAuto = true;
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        inline EventTransportBinding ResolveAutoEventTransportBinding()
+        {
+            if (ParseBoolEnv("ARA_COM_PREFER_SOMEIP"))
             {
                 return EventTransportBinding::kSomeip;
             }
-            if (value == "dds" || value == "cyclonedds" || value == "cyclone-dds")
+            if (ParseBoolEnv("ARA_COM_PREFER_ICEORYX") ||
+                ParseBoolEnv("ARA_COM_PREFER_ZEROCOPY"))
             {
-                return EventTransportBinding::kDds;
+                return EventTransportBinding::kIceoryx;
             }
-            if (value == "auto")
+            return EventTransportBinding::kDds;
+        }
+
+        inline std::string ResolveManifestEventBindingToken()
+        {
+            const char *manifestPath = std::getenv("ARA_COM_BINDING_MANIFEST");
+            if (manifestPath == nullptr || *manifestPath == 0)
             {
-                if (ParseBoolEnv("ARA_COM_PREFER_SOMEIP"))
+                return std::string{};
+            }
+
+            try
+            {
+                YAML::Node root{YAML::LoadFile(manifestPath)};
+                YAML::Node autosar = root["autosar"];
+                if (autosar)
                 {
-                    return EventTransportBinding::kSomeip;
+                    YAML::Node packages = autosar["packages"];
+                    if (packages && packages.IsSequence())
+                    {
+                        for (std::size_t i = 0U; i < packages.size(); ++i)
+                        {
+                            const YAML::Node runtime = packages[i]["runtime"];
+                            if (runtime && runtime["event_binding"])
+                            {
+                                return runtime["event_binding"].as<std::string>();
+                            }
+                        }
+                    }
+
+                    YAML::Node runtime = autosar["runtime"];
+                    if (runtime && runtime["event_binding"])
+                    {
+                        return runtime["event_binding"].as<std::string>();
+                    }
                 }
-                return EventTransportBinding::kDds;
+            }
+            catch (...)
+            {
+                return std::string{};
+            }
+
+            return std::string{};
+        }
+
+        inline EventTransportBinding ResolveEventTransportBinding(
+            const std::string &deploymentHintToken = std::string{})
+        {
+            EventTransportBinding parsedBinding{EventTransportBinding::kDds};
+            bool isAuto{false};
+
+            const char *envBinding = std::getenv("ARA_COM_EVENT_BINDING");
+            if (envBinding != nullptr &&
+                ParseTransportBindingToken(envBinding, parsedBinding, &isAuto))
+            {
+                return isAuto ? ResolveAutoEventTransportBinding()
+                              : parsedBinding;
+            }
+
+            const std::string manifestToken = ResolveManifestEventBindingToken();
+            if (!manifestToken.empty() &&
+                ParseTransportBindingToken(manifestToken, parsedBinding, &isAuto))
+            {
+                return isAuto ? ResolveAutoEventTransportBinding()
+                              : parsedBinding;
+            }
+
+            if (!deploymentHintToken.empty() &&
+                ParseTransportBindingToken(deploymentHintToken, parsedBinding, &isAuto))
+            {
+                return isAuto ? ResolveAutoEventTransportBinding()
+                              : parsedBinding;
             }
 
             return EventTransportBinding::kDds;
@@ -100,12 +206,21 @@ namespace ara
         struct EventInstanceDeployment
         {
             std::string instance_specifier;
+            std::string event_binding{"auto"};
             std::uint16_t service_interface_id{0x0000U};
             std::uint16_t service_instance_id{0x0001U};
             std::uint16_t event_group_id{0x0001U};
             std::uint16_t event_id{0x8001U};
             std::uint8_t major_version{1U};
             std::uint32_t minor_version{0U};
+            std::uint32_t dds_domain_id{0U};
+            std::string iceoryx_service;
+            std::string iceoryx_instance;
+            std::string iceoryx_event;
+            std::string iceoryx_runtime_name{"adaptive_autosar_ara_com"};
+            std::uint64_t iceoryx_history_capacity{0U};
+            std::uint64_t iceoryx_queue_capacity{256U};
+            std::uint64_t iceoryx_history_request{0U};
         };
 
         struct ResolvedEventBinding
@@ -194,6 +309,38 @@ namespace ara
                 }
             }
 
+            inline std::uint64_t ParseU64(const YAML::Node &node, std::uint64_t fallback)
+            {
+                if (!node || node.IsNull())
+                {
+                    return fallback;
+                }
+
+                try
+                {
+                    if (node.IsScalar())
+                    {
+                        const std::string text = Trim(node.as<std::string>());
+                        if (text.empty())
+                        {
+                            return fallback;
+                        }
+                        std::size_t idx = 0U;
+                        const unsigned long long parsed =
+                            std::stoull(text, &idx, 0);
+                        if (idx == text.size())
+                        {
+                            return static_cast<std::uint64_t>(parsed);
+                        }
+                    }
+                    return node.as<std::uint64_t>();
+                }
+                catch (...)
+                {
+                    return fallback;
+                }
+            }
+
             inline std::string NormalizeRosTopic(const std::string &topic_name)
             {
                 std::string topic = Trim(topic_name);
@@ -234,6 +381,128 @@ namespace ara
                 }
 
                 return "rt/" + topic;
+            }
+
+            inline std::string SanitizeZeroCopyToken(std::string token)
+            {
+                std::transform(
+                    token.begin(),
+                    token.end(),
+                    token.begin(),
+                    [](unsigned char c)
+                    {
+                        if (std::isalnum(c) != 0)
+                        {
+                            return static_cast<char>(c);
+                        }
+                        return '_';
+                    });
+
+                token.erase(
+                    token.begin(),
+                    std::find_if(
+                        token.begin(),
+                        token.end(),
+                        [](char c)
+                        {
+                            return c != '_';
+                        }));
+
+                while (!token.empty() && token.back() == '_')
+                {
+                    token.pop_back();
+                }
+
+                if (token.empty())
+                {
+                    return std::string{"default"};
+                }
+                return token;
+            }
+
+            inline ara::com::zerocopy::ChannelDescriptor
+            BuildZeroCopyChannelDescriptor(
+                const ResolvedEventBinding &binding,
+                const std::string &fallbackTopicName)
+            {
+                ara::com::zerocopy::ChannelDescriptor channel{};
+                channel.Service = Trim(binding.deployment.iceoryx_service);
+                channel.Instance = Trim(binding.deployment.iceoryx_instance);
+                channel.Event = Trim(binding.deployment.iceoryx_event);
+
+                if (!channel.Service.empty() &&
+                    !channel.Instance.empty() &&
+                    !channel.Event.empty())
+                {
+                    return channel;
+                }
+
+                std::string topic = Trim(binding.dds_topic_name);
+                if (topic.empty())
+                {
+                    topic = Trim(fallbackTopicName);
+                }
+                if (topic.rfind("rt/", 0U) == 0U ||
+                    topic.rfind("rp/", 0U) == 0U)
+                {
+                    topic = topic.substr(3U);
+                }
+                else if (!topic.empty() && topic.front() == '/')
+                {
+                    topic = topic.substr(1U);
+                }
+
+                std::vector<std::string> segments;
+                std::size_t begin = 0U;
+                while (begin < topic.size())
+                {
+                    const std::size_t end = topic.find('/', begin);
+                    const std::string segment = topic.substr(
+                        begin,
+                        end == std::string::npos
+                            ? std::string::npos
+                            : (end - begin));
+                    if (!segment.empty())
+                    {
+                        segments.push_back(
+                            SanitizeZeroCopyToken(segment));
+                    }
+                    if (end == std::string::npos)
+                    {
+                        break;
+                    }
+                    begin = end + 1U;
+                }
+
+                if (channel.Service.empty())
+                {
+                    channel.Service = segments.size() > 0U
+                                          ? segments[0]
+                                          : std::string{"autosar"};
+                }
+                if (channel.Instance.empty())
+                {
+                    channel.Instance = segments.size() > 1U
+                                           ? segments[1]
+                                           : std::string{"adaptive"};
+                }
+                if (channel.Event.empty())
+                {
+                    if (segments.size() > 2U)
+                    {
+                        channel.Event = segments[2];
+                        for (std::size_t i = 3U; i < segments.size(); ++i)
+                        {
+                            channel.Event += "_" + segments[i];
+                        }
+                    }
+                    else
+                    {
+                        channel.Event = std::string{"status"};
+                    }
+                }
+
+                return channel;
             }
 
             class EventBindingRegistry
@@ -280,13 +549,14 @@ namespace ara
                             "AUTOSAR topic mapping entry not found for: " + trimmed);
                     }
 
-                    ResolvedEventBinding fallback;
-                    fallback.has_mapping = false;
-                    fallback.input_topic = trimmed;
-                    fallback.ros_topic = normalized_ros;
-                    fallback.dds_topic_name = trimmed;
-                    return fallback;
-                }
+                        ResolvedEventBinding fallback;
+                        fallback.has_mapping = false;
+                        fallback.input_topic = trimmed;
+                        fallback.ros_topic = normalized_ros;
+                        fallback.dds_topic_name = trimmed;
+                        fallback.deployment.event_binding = "auto";
+                        return fallback;
+                    }
 
             private:
                 EventBindingRegistry() = default;
@@ -360,6 +630,8 @@ namespace ara
                         {
                             binding.deployment.instance_specifier =
                                 ara["instance_specifier"] ? ara["instance_specifier"].as<std::string>() : "";
+                            binding.deployment.event_binding =
+                                ara["event_binding"] ? ara["event_binding"].as<std::string>() : "auto";
                             binding.deployment.service_interface_id =
                                 static_cast<std::uint16_t>(ParseU32(ara["service_interface_id"], 0U));
                             binding.deployment.service_instance_id =
@@ -371,11 +643,41 @@ namespace ara
                             binding.deployment.major_version =
                                 static_cast<std::uint8_t>(ParseU32(ara["major_version"], 1U));
                             binding.deployment.minor_version = ParseU32(ara["minor_version"], 0U);
+                            binding.deployment.dds_domain_id =
+                                ParseU32(ara["dds_domain_id"], 0U);
+                            binding.deployment.iceoryx_service =
+                                ara["iceoryx_service"] ? ara["iceoryx_service"].as<std::string>() : "";
+                            binding.deployment.iceoryx_instance =
+                                ara["iceoryx_instance"] ? ara["iceoryx_instance"].as<std::string>() : "";
+                            binding.deployment.iceoryx_event =
+                                ara["iceoryx_event"] ? ara["iceoryx_event"].as<std::string>() : "";
+                            binding.deployment.iceoryx_runtime_name =
+                                ara["iceoryx_runtime_name"] ? ara["iceoryx_runtime_name"].as<std::string>() : "adaptive_autosar_ara_com";
+                            binding.deployment.iceoryx_history_capacity =
+                                ParseU64(ara["iceoryx_history_capacity"], 0U);
+                            binding.deployment.iceoryx_queue_capacity =
+                                ParseU64(ara["iceoryx_queue_capacity"], 256U);
+                            binding.deployment.iceoryx_history_request =
+                                ParseU64(ara["iceoryx_history_request"], 0U);
+                        }
+                        else
+                        {
+                            binding.deployment.event_binding = "auto";
                         }
 
                         if (binding.deployment.instance_specifier.empty())
                         {
                             binding.deployment.instance_specifier = "/ara/com/generated/default";
+                        }
+                        binding.deployment.event_binding = NormalizeTransportName(
+                            binding.deployment.event_binding);
+                        if (binding.deployment.event_binding.empty())
+                        {
+                            binding.deployment.event_binding = "auto";
+                        }
+                        if (binding.deployment.iceoryx_runtime_name.empty())
+                        {
+                            binding.deployment.iceoryx_runtime_name = "adaptive_autosar_ara_com";
                         }
 
                         if (binding.input_topic.empty())
@@ -570,9 +872,11 @@ namespace ara
             EventPublisherAdapter(
                 const std::string &topic_name,
                 std::uint32_t domain_id)
-                : binding_(ResolveEventTransportBinding()),
-                  resolved_binding_(detail::EventBindingRegistry::Instance().Resolve(topic_name)),
+                : resolved_binding_(detail::EventBindingRegistry::Instance().Resolve(topic_name)),
+                  binding_(ResolveEventTransportBinding(
+                      resolved_binding_.deployment.event_binding)),
                   dds_publisher_(nullptr),
+                  zerocopy_publisher_(nullptr),
                   someip_skeleton_(nullptr),
                   someip_subscriber_count_(0)
             {
@@ -580,6 +884,10 @@ namespace ara
                     resolved_binding_.dds_topic_name.empty()
                         ? topic_name
                         : resolved_binding_.dds_topic_name;
+                const std::uint32_t resolved_dds_domain_id{
+                    resolved_binding_.deployment.dds_domain_id == 0U
+                        ? domain_id
+                        : resolved_binding_.deployment.dds_domain_id};
 
                 if (binding_ == EventTransportBinding::kSomeip && resolved_binding_.has_mapping)
                 {
@@ -613,10 +921,28 @@ namespace ara
                     return;
                 }
 
+                if (binding_ == EventTransportBinding::kIceoryx)
+                {
+                    const auto channel = detail::BuildZeroCopyChannelDescriptor(
+                        resolved_binding_,
+                        topic_name);
+                    zerocopy_publisher_ = std::make_unique<
+                        ara::com::zerocopy::ZeroCopyPublisher>(
+                        channel,
+                        resolved_binding_.deployment.iceoryx_runtime_name,
+                        resolved_binding_.deployment.iceoryx_history_capacity);
+                    if (!zerocopy_publisher_->IsBindingActive())
+                    {
+                        throw std::runtime_error(
+                            "ara::com iceoryx publisher binding is not active.");
+                    }
+                    return;
+                }
+
                 binding_ = EventTransportBinding::kDds;
                 dds_publisher_ = std::make_unique<ara::com::dds::DdsPublisher<SampleType>>(
                     dds_topic_name,
-                    domain_id);
+                    resolved_dds_domain_id);
 
                 if (!dds_publisher_->IsBindingActive())
                 {
@@ -668,9 +994,19 @@ namespace ara
                     return;
                 }
 
-                if (someip_skeleton_)
+                if (binding_ == EventTransportBinding::kSomeip &&
+                    someip_skeleton_)
                 {
                     someip_skeleton_->Event.Send(detail::SerializeSample(sample));
+                    return;
+                }
+
+                if (binding_ == EventTransportBinding::kIceoryx &&
+                    zerocopy_publisher_)
+                {
+                    auto payload = ara::com::Serializer<SampleType>::Serialize(
+                        sample);
+                    (void)zerocopy_publisher_->PublishCopy(payload);
                 }
             }
 
@@ -689,13 +1025,24 @@ namespace ara
                     return 0;
                 }
 
+                if (binding_ == EventTransportBinding::kIceoryx)
+                {
+                    if (zerocopy_publisher_ &&
+                        zerocopy_publisher_->HasSubscribers())
+                    {
+                        return 1;
+                    }
+                    return 0;
+                }
+
                 return someip_subscriber_count_.load();
             }
 
         private:
-            EventTransportBinding binding_;
             ResolvedEventBinding resolved_binding_;
+            EventTransportBinding binding_;
             std::unique_ptr<ara::com::dds::DdsPublisher<SampleType>> dds_publisher_;
+            std::unique_ptr<ara::com::zerocopy::ZeroCopyPublisher> zerocopy_publisher_;
             std::unique_ptr<SomeipEventSkeletonAdapter> someip_skeleton_;
             mutable std::atomic<std::int32_t> someip_subscriber_count_;
         };
@@ -710,16 +1057,23 @@ namespace ara
                 const std::string &topic_name,
                 std::uint32_t domain_id,
                 std::size_t someip_queue_size)
-                : binding_(ResolveEventTransportBinding()),
-                  resolved_binding_(detail::EventBindingRegistry::Instance().Resolve(topic_name)),
+                : resolved_binding_(detail::EventBindingRegistry::Instance().Resolve(topic_name)),
+                  binding_(ResolveEventTransportBinding(
+                      resolved_binding_.deployment.event_binding)),
                   dds_subscriber_(nullptr),
+                  zerocopy_subscriber_(nullptr),
                   someip_proxy_(nullptr),
-                  someip_queue_size_(someip_queue_size)
+                  someip_queue_size_(someip_queue_size),
+                  zerocopy_has_publication_(0)
             {
                 const std::string dds_topic_name =
                     resolved_binding_.dds_topic_name.empty()
                         ? topic_name
                         : resolved_binding_.dds_topic_name;
+                const std::uint32_t resolved_dds_domain_id{
+                    resolved_binding_.deployment.dds_domain_id == 0U
+                        ? domain_id
+                        : resolved_binding_.deployment.dds_domain_id};
 
                 if (binding_ == EventTransportBinding::kSomeip && resolved_binding_.has_mapping)
                 {
@@ -730,10 +1084,35 @@ namespace ara
                     return;
                 }
 
+                if (binding_ == EventTransportBinding::kIceoryx)
+                {
+                    const auto channel = detail::BuildZeroCopyChannelDescriptor(
+                        resolved_binding_,
+                        topic_name);
+                    const std::uint64_t queue_capacity{
+                        resolved_binding_.deployment.iceoryx_queue_capacity == 0U
+                            ? static_cast<std::uint64_t>(
+                                  std::max<std::size_t>(someip_queue_size_, 1U))
+                            : resolved_binding_.deployment.iceoryx_queue_capacity};
+
+                    zerocopy_subscriber_ = std::make_unique<
+                        ara::com::zerocopy::ZeroCopySubscriber>(
+                        channel,
+                        resolved_binding_.deployment.iceoryx_runtime_name,
+                        queue_capacity,
+                        resolved_binding_.deployment.iceoryx_history_request);
+                    if (!zerocopy_subscriber_->IsBindingActive())
+                    {
+                        throw std::runtime_error(
+                            "ara::com iceoryx subscriber binding is not active.");
+                    }
+                    return;
+                }
+
                 binding_ = EventTransportBinding::kDds;
                 dds_subscriber_ = std::make_unique<ara::com::dds::DdsSubscriber<SampleType>>(
                     dds_topic_name,
-                    domain_id);
+                    resolved_dds_domain_id);
 
                 if (!dds_subscriber_->IsBindingActive())
                 {
@@ -789,26 +1168,73 @@ namespace ara
                     return;
                 }
 
-                if (!someip_proxy_)
+                if (binding_ == EventTransportBinding::kSomeip)
                 {
+                    if (!someip_proxy_)
+                    {
+                        return;
+                    }
+
+                    (void)someip_proxy_->Event.GetNewSamples(
+                        [&handler](ara::com::SamplePtr<std::vector<std::uint8_t>> payload_sample)
+                        {
+                            if (!payload_sample)
+                            {
+                                return;
+                            }
+
+                            SampleType sample{};
+                            if (detail::DeserializeSample(*payload_sample, sample))
+                            {
+                                handler(sample);
+                            }
+                        },
+                        max_samples);
                     return;
                 }
 
-                (void)someip_proxy_->Event.GetNewSamples(
-                    [&handler](ara::com::SamplePtr<std::vector<std::uint8_t>> payload_sample)
+                if (binding_ == EventTransportBinding::kIceoryx)
+                {
+                    if (!zerocopy_subscriber_)
                     {
-                        if (!payload_sample)
+                        return;
+                    }
+
+                    const std::size_t sample_budget{
+                        std::max<std::size_t>(
+                            static_cast<std::size_t>(1U),
+                            static_cast<std::size_t>(max_samples))};
+                    std::size_t received_count{0U};
+                    for (std::size_t i = 0U; i < sample_budget; ++i)
+                    {
+                        ara::com::zerocopy::ReceivedSample sample;
+                        auto take_result = zerocopy_subscriber_->TryTake(sample);
+                        if (!take_result.HasValue() || !take_result.Value())
                         {
-                            return;
+                            break;
                         }
 
-                        SampleType sample{};
-                        if (detail::DeserializeSample(*payload_sample, sample))
+                        if (sample.Size() == 0U)
                         {
-                            handler(sample);
+                            continue;
                         }
-                    },
-                    max_samples);
+
+                        auto deserialize_result = ara::com::Serializer<SampleType>::Deserialize(
+                            sample.Data(),
+                            sample.Size());
+                        if (deserialize_result.HasValue())
+                        {
+                            handler(deserialize_result.Value());
+                            ++received_count;
+                        }
+                    }
+
+                    if (received_count > 0U)
+                    {
+                        zerocopy_has_publication_.store(1);
+                    }
+                    return;
+                }
             }
 
             std::int32_t GetMatchedPublicationCount() const
@@ -826,6 +1252,11 @@ namespace ara
                     return 0;
                 }
 
+                if (binding_ == EventTransportBinding::kIceoryx)
+                {
+                    return zerocopy_has_publication_.load();
+                }
+
                 if (!someip_proxy_)
                 {
                     return 0;
@@ -837,7 +1268,8 @@ namespace ara
 
             void Stop()
             {
-                if (someip_proxy_)
+                if (binding_ == EventTransportBinding::kSomeip &&
+                    someip_proxy_)
                 {
                     someip_proxy_->Event.UnsetReceiveHandler();
                     someip_proxy_->Event.Unsubscribe();
@@ -845,11 +1277,13 @@ namespace ara
             }
 
         private:
-            EventTransportBinding binding_;
             ResolvedEventBinding resolved_binding_;
+            EventTransportBinding binding_;
             std::unique_ptr<ara::com::dds::DdsSubscriber<SampleType>> dds_subscriber_;
+            std::unique_ptr<ara::com::zerocopy::ZeroCopySubscriber> zerocopy_subscriber_;
             std::unique_ptr<SomeipEventProxyAdapter> someip_proxy_;
             std::size_t someip_queue_size_;
+            mutable std::atomic<std::int32_t> zerocopy_has_publication_;
         };
     } // namespace com
 } // namespace ara

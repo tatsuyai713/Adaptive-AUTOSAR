@@ -44,7 +44,8 @@ namespace ara
         void InstanceSpecifier::Serialize(
             std::vector<uint8_t> &serializedObject) const
         {
-            // According to AUTOSAR R22-11 SOME/IP Protocol Specification,
+            // According to AUTOSAR SOME/IP Protocol Specification
+            // (including R24-11 profile),
             // string fields should start with a field length (32-bit by default)
             // and then the serialized string.
             auto _metaModelIdLength{

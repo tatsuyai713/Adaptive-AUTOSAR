@@ -83,11 +83,65 @@ option(build_tests "Build all the tests." ON)
 option(ARA_COM_USE_VSOMEIP "Use vsomeip as SOME/IP transport backend." ON)
 option(ARA_COM_USE_ICEORYX "Use iceoryx for ara::com zero-copy backend." ON)
 option(ARA_COM_USE_CYCLONEDDS "Use Cyclone DDS as ara::com DDS backend." OFF)
+set(
+  AUTOSAR_AP_RELEASE_PROFILE
+  "R24-11"
+  CACHE STRING
+  "Target AUTOSAR AP release profile for repository APIs (format: RYY-MM).")
+set_property(
+  CACHE AUTOSAR_AP_RELEASE_PROFILE
+  PROPERTY STRINGS
+    "R22-11"
+    "R24-11")
+set(
+  ARA_COM_AUTOSAR_AP_RELEASE
+  "${AUTOSAR_AP_RELEASE_PROFILE}"
+  CACHE STRING
+  "Deprecated alias. Use AUTOSAR_AP_RELEASE_PROFILE instead.")
+set_property(
+  CACHE ARA_COM_AUTOSAR_AP_RELEASE
+  PROPERTY STRINGS
+    "R22-11"
+    "R24-11")
+
+if(NOT "${ARA_COM_AUTOSAR_AP_RELEASE}" STREQUAL "${AUTOSAR_AP_RELEASE_PROFILE}")
+  # Keep backward compatibility: when legacy cache key is provided, it drives the profile.
+  set(
+    AUTOSAR_AP_RELEASE_PROFILE
+    "${ARA_COM_AUTOSAR_AP_RELEASE}"
+    CACHE STRING
+    "Target AUTOSAR AP release profile for repository APIs (format: RYY-MM)."
+    FORCE)
+endif()
+set(
+  ARA_COM_AUTOSAR_AP_RELEASE
+  "${AUTOSAR_AP_RELEASE_PROFILE}"
+  CACHE STRING
+  "Deprecated alias. Use AUTOSAR_AP_RELEASE_PROFILE instead."
+  FORCE)
+
 option(ARA_COM_ENABLE_ARXML_CODEGEN "Generate ara::com sample binding headers from ARXML." ON)
 option(AUTOSAR_AP_BUILD_PLATFORM_APP "Build the bundled platform executable (adaptive_autosar)." ON)
 option(AUTOSAR_AP_BUILD_SAMPLES "Build bundled sample applications in this repository." ON)
 option(AUTOSAR_AP_INSTALL_TOOLS "Install Python/shell helper tools into install prefix." ON)
 option(AUTOSAR_AP_INSTALL_USER_APP_TEMPLATE "Install standalone user-app template project." ON)
+
+string(
+  REGEX MATCH
+  "^R([0-9][0-9])-([0-9][0-9])$"
+  ARA_COM_RELEASE_PROFILE_MATCH
+  "${AUTOSAR_AP_RELEASE_PROFILE}")
+if(NOT ARA_COM_RELEASE_PROFILE_MATCH)
+  message(
+    FATAL_ERROR
+    "AUTOSAR_AP_RELEASE_PROFILE must follow RYY-MM format (e.g. R24-11). "
+    "Current value: ${AUTOSAR_AP_RELEASE_PROFILE}")
+endif()
+
+set(AUTOSAR_AP_RELEASE_YEAR "${CMAKE_MATCH_1}")
+set(AUTOSAR_AP_RELEASE_MONTH "${CMAKE_MATCH_2}")
+set(ARA_COM_AP_RELEASE_YEAR "${AUTOSAR_AP_RELEASE_YEAR}")
+set(ARA_COM_AP_RELEASE_MONTH "${AUTOSAR_AP_RELEASE_MONTH}")
 
 find_package(OpenSSL REQUIRED)
 
@@ -398,6 +452,8 @@ add_library(
 
 add_library(
   ara_core
+  ${source_ara_core_dir}/ap_release_info.h
+  ${source_ara_core_dir}/ap_release_info.cpp
   ${source_ara_core_dir}/optional.h
   ${source_ara_core_dir}/result.h
   ${source_ara_core_dir}/future.h
@@ -434,6 +490,8 @@ add_library(
 
 add_library(
   ara_com
+  ${source_ara_com_dir}/ap_release_info.h
+  ${source_ara_com_dir}/ap_release_info.cpp
   ${source_ara_com_dir}/types.h
   ${source_ara_com_dir}/sample_ptr.h
   ${source_ara_com_dir}/serialization.h
@@ -803,6 +861,42 @@ target_link_libraries(
   ara_com
   ara_core
   async_bsd_socket_lib
+)
+
+set(autosar_ap_release_targets
+  ara_core
+  ara_log
+  ara_com
+  ara_sm
+  ara_exec
+  ara_diag
+  ara_phm
+  ara_per
+  ara_crypto
+  ara_iam
+  ara_tsync
+  ara_ucm
+  ara_nm
+)
+
+foreach(_autosar_release_target IN LISTS autosar_ap_release_targets)
+  if(TARGET ${_autosar_release_target})
+    target_compile_definitions(
+      ${_autosar_release_target}
+      PUBLIC
+        AUTOSAR_AP_RELEASE_STRING="${AUTOSAR_AP_RELEASE_PROFILE}"
+        AUTOSAR_AP_RELEASE_YEAR=${AUTOSAR_AP_RELEASE_YEAR}
+        AUTOSAR_AP_RELEASE_MONTH=${AUTOSAR_AP_RELEASE_MONTH}
+    )
+  endif()
+endforeach()
+
+target_compile_definitions(
+  ara_com
+  PUBLIC
+    ARA_COM_AP_RELEASE_STRING="${AUTOSAR_AP_RELEASE_PROFILE}"
+    ARA_COM_AP_RELEASE_YEAR=${ARA_COM_AP_RELEASE_YEAR}
+    ARA_COM_AP_RELEASE_MONTH=${ARA_COM_AP_RELEASE_MONTH}
 )
 
 if(ARA_COM_USE_VSOMEIP)
@@ -1547,6 +1641,7 @@ if(build_tests)
     ${test_ara_core_dir}/result_void_test.cpp
     ${test_ara_core_dir}/error_domain_test.cpp
     ${test_ara_core_dir}/error_code_test.cpp
+    ${test_ara_core_dir}/ap_release_info_test.cpp
     ${test_ara_core_dir}/instance_specifier_test.cpp
     ${test_ara_core_dir}/future_test.cpp
     ${test_ara_core_dir}/initialization_test.cpp
@@ -1586,6 +1681,7 @@ if(build_tests)
     ${test_ara_phm_dir}/restart_recovery_action_test.cpp
     ${test_ara_phm_dir}/recovery_action_dispatcher_test.cpp
     ${test_ara_com_dir}/com_error_domain_test.cpp
+    ${test_ara_com_dir}/ap_release_info_test.cpp
     ${test_ara_com_dir}/types_test.cpp
     ${test_ara_com_dir}/sample_ptr_test.cpp
     ${test_ara_com_dir}/serialization_test.cpp
@@ -1659,11 +1755,30 @@ if(build_tests)
 
   include(GoogleTest)
   gtest_discover_tests(arxml_unit_test TEST_LIST arxml_unit_test_cases)
+
+  set(ara_unit_test_properties
+    RESOURCE_LOCK ara_unit_runtime
+    TIMEOUT 60
+  )
+
+  if(ARA_COM_USE_VSOMEIP)
+    set(ara_unit_test_vsomeip_config
+      "${CMAKE_SOURCE_DIR}/configuration/vsomeip-local.json")
+
+    if(EXISTS "${ara_unit_test_vsomeip_config}")
+      list(
+        APPEND
+        ara_unit_test_properties
+        ENVIRONMENT
+        "VSOMEIP_CONFIGURATION=${ara_unit_test_vsomeip_config};ADAPTIVE_AUTOSAR_VSOMEIP_CONFIG=${ara_unit_test_vsomeip_config}")
+    endif()
+  endif()
+
   gtest_discover_tests(
     ara_unit_test
     TEST_LIST ara_unit_test_cases
     PROPERTIES
-    RESOURCE_LOCK ara_unit_runtime
+    ${ara_unit_test_properties}
   )
  endif()
 

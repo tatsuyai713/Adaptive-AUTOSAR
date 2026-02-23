@@ -41,7 +41,8 @@ message reception in all modes.
 
 Transport selection in this user-app path is manifest-profile based.
 Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
-`ARA_COM_EVENT_BINDING` is not used in this path.
+`ARA_COM_EVENT_BINDING` may be used as a runtime override
+(`dds|iceoryx|vsomeip|auto`) when needed.
 
 ## Manual run
 

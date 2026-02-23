@@ -90,9 +90,9 @@ namespace sample
             }
 
             /// @brief Stop continuous service discovery
-            static void StopFindService(ara::com::FindServiceHandle)
+            static void StopFindService(ara::com::FindServiceHandle handle)
             {
-                ServiceProxyBase::StopFindService();
+                (void)ServiceProxyBase::StopFindService(handle);
             }
         };
     }

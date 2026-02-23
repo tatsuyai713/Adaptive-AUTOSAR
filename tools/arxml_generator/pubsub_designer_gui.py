@@ -503,9 +503,9 @@ public:
             std::move(handler), kServiceId, kInstanceId);
     }}
 
-    static void StopFindService(ara::com::FindServiceHandle)
+    static void StopFindService(ara::com::FindServiceHandle handle)
     {{
-        ara::com::ServiceProxyBase::StopFindService();
+        (void)ara::com::ServiceProxyBase::StopFindService(handle);
     }}
 }};
 

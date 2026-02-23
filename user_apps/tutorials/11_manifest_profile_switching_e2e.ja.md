@@ -15,6 +15,8 @@
 
 - `ARA_COM_BINDING_MANIFEST` の切替だけで、同一バイナリのバックエンド切替を検証する。
 - 同じ Publisher/Subscriber バイナリを DDS/iceoryx/vSomeIP の各プロファイルで動かす。
+- 必要に応じて `ARA_COM_EVENT_BINDING` (`dds|iceoryx|vsomeip|auto`) で
+  実行時上書きできることを確認する。
 
 ## 実行前準備
 

@@ -72,6 +72,27 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 (`adaptive_autosar`) by default. Use `--without-platform-app` only when you
 intentionally want a library-only install.
 
+#### AUTOSAR AP release profile (default: `R24-11`)
+
+This repository tracks the `R24-11` release profile as the default baseline
+across `ara::*` modules.
+
+When configuring directly with CMake, you can pin the target AP release profile:
+
+```bash
+cmake -S . -B build \
+  -DAUTOSAR_AP_RELEASE_PROFILE=R24-11
+```
+
+The selected profile is exported via compile definitions of installed
+`AdaptiveAutosarAP::*` targets and can be queried in:
+- `ara/core/ap_release_info.h` (`ara::core::ApReleaseInfo`) for all modules
+- `ara/com/ap_release_info.h` (`ara::com::ApReleaseInfo`) for `ara::com`
+
+Backward-compatible alias:
+- `-DARA_COM_AUTOSAR_AP_RELEASE=...` is still accepted and mapped to
+  `AUTOSAR_AP_RELEASE_PROFILE`.
+
 ### 2) Build user apps against installed runtime only
 
 ```bash
@@ -125,7 +146,8 @@ Run smoke checks for DDS, iceoryx, and vSomeIP profiles in one command:
 
 Runtime transport selection for this user-app path is profile-based.
 Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
-`ARA_COM_EVENT_BINDING` is not used by this path.
+`ARA_COM_EVENT_BINDING` can optionally override the profile at runtime
+(`dds|iceoryx|vsomeip|auto`).
 
 Manual profile switch with same binaries:
 
@@ -203,6 +225,8 @@ Porting tutorial:
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`
 
 ## Implemented Feature Matrix (Against AUTOSAR AP Scope)
+Release baseline for this matrix: `R24-11`.
+
 Status meanings:
 - `Implemented (subset)`: Implemented in this repo, but not full AUTOSAR feature-complete.
 - `Not implemented`: Not provided in this repo currently.

@@ -72,6 +72,26 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 (`adaptive_autosar`) もビルドします。ライブラリのみを意図する場合のみ
 `--without-platform-app` を使ってください。
 
+#### AUTOSAR AP リリースプロファイル (既定: `R24-11`)
+
+本リポジトリは `ara::*` 全体で `R24-11` を既定ベースラインとして扱います。
+
+CMake を直接実行する場合、対象 AP リリースを明示指定できます:
+
+```bash
+cmake -S . -B build \
+  -DAUTOSAR_AP_RELEASE_PROFILE=R24-11
+```
+
+選択したプロファイルはインストール済み `AdaptiveAutosarAP::*` の compile
+定義として利用側に伝播し、以下から参照できます。
+- 全モジュール共通: `ara/core/ap_release_info.h` (`ara::core::ApReleaseInfo`)
+- `ara::com` 向け互換: `ara/com/ap_release_info.h` (`ara::com::ApReleaseInfo`)
+
+後方互換エイリアス:
+- `-DARA_COM_AUTOSAR_AP_RELEASE=...` も引き続き利用可能で、
+  `AUTOSAR_AP_RELEASE_PROFILE` にマップされます。
+
 ### 2) インストール済みランタイムのみ参照して user_apps をビルド
 
 ```bash
@@ -124,7 +144,8 @@ DDS/iceoryx/vSomeIP の各 profile をまとめてスモーク確認する場合
 
 このユーザーアプリ経路の通信切り替えは profile manifest 方式です。
 `ARA_COM_BINDING_MANIFEST` に生成済み profile manifest を指定してください。
-この経路では `ARA_COM_EVENT_BINDING` は使用しません。
+必要に応じて `ARA_COM_EVENT_BINDING` で実行時上書きも可能です
+(`dds|iceoryx|vsomeip|auto`)。
 
 同一バイナリで profile を切り替える手動実行例:
 
@@ -202,6 +223,8 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
 - `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`
 
 ## 実装機能マトリクス (AUTOSAR AP 全体仕様に対する位置付け)
+このマトリクスの前提リリース: `R24-11`。
+
 ステータス定義:
 - `実装あり (一部)`: リポジトリ内に実装あり。ただし AUTOSAR 仕様全体としては部分対応。
 - `未実装`: 現在のリポジトリ対象外。

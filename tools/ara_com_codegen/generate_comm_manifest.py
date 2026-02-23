@@ -81,6 +81,32 @@ def ros_topic_to_dds_topic(ros_topic: str) -> str:
     return "rt" + normalized
 
 
+def sanitize_iceoryx_token(token: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9]+", "_", token.strip())
+    sanitized = sanitized.strip("_")
+    return sanitized or "default"
+
+
+def dds_topic_to_iceoryx_channel(dds_topic: str) -> Tuple[str, str, str]:
+    topic = dds_topic.strip()
+    if topic.startswith("rt/") or topic.startswith("rp/"):
+        topic = topic[3:]
+    elif topic.startswith("/"):
+        topic = topic[1:]
+
+    segments = [sanitize_iceoryx_token(part) for part in topic.split("/") if part]
+    if not segments:
+        return "autosar", "adaptive", "status"
+
+    service = segments[0]
+    instance = segments[1] if len(segments) > 1 else "adaptive"
+    if len(segments) > 2:
+        event = "_".join(segments[2:])
+    else:
+        event = "status"
+    return service, instance, event
+
+
 def normalize_service_name(service_name: str) -> str:
     text = service_name.strip()
     if not text:
@@ -298,6 +324,7 @@ def build_outputs(
         interface_name = "Ros2Msg_" + to_identifier(f"{usage.type_name}_{usage.ros_topic}")
         instance_specifier = "/autosar/ros2/topic/" + usage.ros_topic.lstrip("/").replace("/", "_")
         dds_topic = ros_topic_to_dds_topic(usage.ros_topic)
+        iox_service, iox_instance, iox_event = dds_topic_to_iceoryx_channel(dds_topic)
 
         topic_mappings.append(
             {
@@ -315,6 +342,14 @@ def build_outputs(
                     "event_id": format_hex(event_id),
                     "major_version": 1,
                     "minor_version": 0,
+                    "dds_domain_id": 0,
+                    "iceoryx_service": iox_service,
+                    "iceoryx_instance": iox_instance,
+                    "iceoryx_event": iox_event,
+                    "iceoryx_runtime_name": "adaptive_autosar_ara_com",
+                    "iceoryx_history_capacity": 0,
+                    "iceoryx_queue_capacity": 256,
+                    "iceoryx_history_request": 0,
                 },
             }
         )
@@ -391,6 +426,8 @@ def build_outputs(
         instance_specifier = "/autosar/ros2/service/" + usage.ros_service.lstrip("/").replace("/", "_")
         req_ros, req_dds = service_to_request_topic(usage.ros_service)
         res_ros, res_dds = service_to_response_topic(usage.ros_service)
+        req_iox_service, req_iox_instance, req_iox_event = dds_topic_to_iceoryx_channel(req_dds)
+        res_iox_service, res_iox_instance, res_iox_event = dds_topic_to_iceoryx_channel(res_dds)
 
         request_type = f"{usage.type_name}_Request"
         response_type = f"{usage.type_name}_Response"
@@ -411,6 +448,14 @@ def build_outputs(
                     "event_id": format_hex(req_event_id),
                     "major_version": 1,
                     "minor_version": 0,
+                    "dds_domain_id": 0,
+                    "iceoryx_service": req_iox_service,
+                    "iceoryx_instance": req_iox_instance,
+                    "iceoryx_event": req_iox_event,
+                    "iceoryx_runtime_name": "adaptive_autosar_ara_com",
+                    "iceoryx_history_capacity": 0,
+                    "iceoryx_queue_capacity": 256,
+                    "iceoryx_history_request": 0,
                 },
             }
         )
@@ -431,6 +476,14 @@ def build_outputs(
                     "event_id": format_hex(res_event_id),
                     "major_version": 1,
                     "minor_version": 0,
+                    "dds_domain_id": 0,
+                    "iceoryx_service": res_iox_service,
+                    "iceoryx_instance": res_iox_instance,
+                    "iceoryx_event": res_iox_event,
+                    "iceoryx_runtime_name": "adaptive_autosar_ara_com",
+                    "iceoryx_history_capacity": 0,
+                    "iceoryx_queue_capacity": 256,
+                    "iceoryx_history_request": 0,
                 },
             }
         )
@@ -549,6 +602,7 @@ def build_outputs(
                     "short_name": "AdaptiveAutosarManifest",
                     "runtime": {
                         "event_binding": event_binding,
+                        "autosar_ap_release": "R24-11",
                     },
                     "communication_cluster": {
                         "short_name": "AACommunicationCluster",
