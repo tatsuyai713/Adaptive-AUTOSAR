@@ -85,6 +85,7 @@ cmake --build build-user-apps-feature-only -j"$(nproc)"
 
 ### フィーチャーアプリ（`user_apps/src/apps/feature/`）
 - `autosar_user_tpl_runtime_lifecycle`
+- `autosar_user_tpl_exec_runtime_monitor`
 - `autosar_user_tpl_can_socketcan_receiver`
 - `autosar_user_tpl_ecu_full_stack`
 - `autosar_user_tpl_ecu_someip_source`
@@ -108,6 +109,7 @@ cmake --build build-user-apps-feature-only -j"$(nproc)"
 - インデックス: `user_apps/tutorials/README.ja.md`
 - ランタイムライフサイクル: `user_apps/tutorials/01_runtime_lifecycle.ja.md`
 - 実行シグナルハンドリング: `user_apps/tutorials/02_exec_signal.ja.md`
+- `ara::exec` 実行状態報告と監視: `user_apps/tutorials/12_exec_runtime_monitoring.ja.md`
 - Persistency + PHM: `user_apps/tutorials/03_per_phm.ja.md`
 - SOME/IP pub/sub: `user_apps/tutorials/04_someip_pubsub.ja.md`
 - ゼロコピー pub/sub: `user_apps/tutorials/05_zerocopy_pubsub.ja.md`

@@ -47,7 +47,9 @@ For new app design, use manifest-profile switching as the primary approach:
    [`09_rpi_ecu_deployment.ja.md`](09_rpi_ecu_deployment.ja.md)
 11. Porting Vector/ETAS/EB assets
     [`10_vendor_autosar_asset_porting.ja.md`](10_vendor_autosar_asset_porting.ja.md)
-12. DoIP/DIAG tester (Ubuntu host) — moved to host_tools
+12. `ara::exec` runtime reporting and monitoring
+   [`12_exec_runtime_monitoring.md`](12_exec_runtime_monitoring.md)
+13. DoIP/DIAG tester (Ubuntu host) — moved to host_tools
     [`../../tools/host_tools/doip_diag_tester/README.ja.md`](../../tools/host_tools/doip_diag_tester/README.ja.md)
 
 ## Related Tools

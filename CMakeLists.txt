@@ -900,10 +900,13 @@ target_compile_definitions(
 )
 
 if(ARA_COM_USE_VSOMEIP)
+  # Public ara::com headers include vsomeip headers when ARA_COM_USE_VSOMEIP=1,
+  # so consumers must inherit the vsomeip include directory.
   target_include_directories(
     ara_com
-    PRIVATE
-    ${VSOMEIP_PREFIX}/include
+    PUBLIC
+    $<BUILD_INTERFACE:${VSOMEIP_PREFIX}/include>
+    $<INSTALL_INTERFACE:${VSOMEIP_PREFIX}/include>
   )
 
   target_link_directories(

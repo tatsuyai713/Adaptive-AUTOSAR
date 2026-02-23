@@ -14,6 +14,7 @@
   - `dds/`
 - `feature/`
   - `runtime/`: ライフサイクル重視のフィーチャーアプリ
+    - `ara::exec` 実行状態報告 + watchdog 監視のサンプルを含む
   - `can/`: SocketCAN 受信/デコード フィーチャーアプリ
   - `ecu/`: ECU フル統合 フィーチャーアプリ
 

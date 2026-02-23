@@ -47,7 +47,9 @@
    [`09_rpi_ecu_deployment.ja.md`](09_rpi_ecu_deployment.ja.md)
 11. Vector/ETAS/EB 資産の移植
     [`10_vendor_autosar_asset_porting.ja.md`](10_vendor_autosar_asset_porting.ja.md)
-12. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
+12. `ara::exec` 実行状態報告と監視
+    [`12_exec_runtime_monitoring.ja.md`](12_exec_runtime_monitoring.ja.md)
+13. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
     [`../../tools/host_tools/doip_diag_tester/README.ja.md`](../../tools/host_tools/doip_diag_tester/README.ja.md)
 
 ## 関連ツール
