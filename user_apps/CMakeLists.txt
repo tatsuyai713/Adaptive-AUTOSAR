@@ -51,6 +51,16 @@ function(configure_user_apps_dds_app_target target_name)
       PRIVATE
       user_apps_dds_types
     )
+    # Ensure CycloneDDS headers are searched before vsomeip stub headers
+    # (vsomeip ships dds/core/macros.hpp stubs that would shadow the real ones).
+    if(USER_APPS_CYCLONEDDS_INCLUDE_DIRS)
+      target_include_directories(
+        ${target_name}
+        BEFORE
+        PRIVATE
+        ${USER_APPS_CYCLONEDDS_INCLUDE_DIRS}
+      )
+    endif()
     target_include_directories(
       ${target_name}
       PRIVATE
