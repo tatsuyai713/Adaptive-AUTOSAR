@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 CYCLONEDDS_TAG="0.10.5"
 CYCLONEDDS_CXX_TAG="0.10.5"
 INSTALL_PREFIX="/opt/cyclonedds"
@@ -13,7 +15,8 @@ _mem_jobs=$(( _mem_kb / 1572864 ))
 [[ "${_mem_jobs}" -lt 1 ]] && _mem_jobs=1
 JOBS=$(( _nproc < _mem_jobs ? _nproc : _mem_jobs ))
 [[ "${JOBS}" -lt 1 ]] && JOBS=1
-ENABLE_SHM="AUTO" # AUTO | ON | OFF
+ENABLE_SHM="AUTO"    # AUTO | ON | OFF
+SKIP_ICEORYX="OFF"   # OFF: auto-install iceoryx when SHM is needed; ON: skip
 SKIP_SYSTEM_DEPS="OFF"
 FORCE_REINSTALL="OFF"
 
@@ -55,6 +58,10 @@ while [[ $# -gt 0 ]]; do
       SKIP_SYSTEM_DEPS="ON"
       shift
       ;;
+    --skip-iceoryx)
+      SKIP_ICEORYX="ON"
+      shift
+      ;;
     --force)
       FORCE_REINSTALL="ON"
       shift
@@ -83,14 +90,40 @@ fi
 
 if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; then
   ${SUDO} apt-get update -qq
-  ${SUDO} apt-get install -y --no-install-recommends libssl-dev bison flex
+  ${SUDO} apt-get install -y --no-install-recommends libssl-dev bison flex libacl1-dev
 fi
 
+# ---------------------------------------------------------------------------
+# Resolve SHM mode and install iceoryx if needed
+# ---------------------------------------------------------------------------
 if [[ "${ENABLE_SHM}" == "AUTO" ]]; then
   if [[ -d "${ICEORYX_PREFIX}/lib/cmake/iceoryx_hoofs" ]]; then
+    echo "[INFO] iceoryx found at ${ICEORYX_PREFIX} – enabling SHM."
     ENABLE_SHM="ON"
-  else
+  elif [[ "${SKIP_ICEORYX}" == "ON" ]]; then
+    echo "[INFO] iceoryx not found and --skip-iceoryx set – building without SHM."
     ENABLE_SHM="OFF"
+  else
+    echo "[INFO] iceoryx not found – installing iceoryx for SHM support."
+    ICEORYX_INSTALL_ARGS=("--prefix" "${ICEORYX_PREFIX}")
+    if [[ "${SKIP_SYSTEM_DEPS}" == "ON" ]]; then
+      ICEORYX_INSTALL_ARGS+=("--skip-system-deps")
+    fi
+    bash "${SCRIPT_DIR}/install_iceoryx.sh" "${ICEORYX_INSTALL_ARGS[@]}"
+    ENABLE_SHM="ON"
+  fi
+elif [[ "${ENABLE_SHM}" == "ON" ]]; then
+  if [[ ! -d "${ICEORYX_PREFIX}/lib/cmake/iceoryx_hoofs" ]]; then
+    if [[ "${SKIP_ICEORYX}" == "ON" ]]; then
+      echo "[ERROR] --enable-shm requested but iceoryx not found at ${ICEORYX_PREFIX} and --skip-iceoryx set." >&2
+      exit 1
+    fi
+    echo "[INFO] --enable-shm set but iceoryx not found – installing iceoryx."
+    ICEORYX_INSTALL_ARGS=("--prefix" "${ICEORYX_PREFIX}")
+    if [[ "${SKIP_SYSTEM_DEPS}" == "ON" ]]; then
+      ICEORYX_INSTALL_ARGS+=("--skip-system-deps")
+    fi
+    bash "${SCRIPT_DIR}/install_iceoryx.sh" "${ICEORYX_INSTALL_ARGS[@]}"
   fi
 fi
 
@@ -141,4 +174,25 @@ cmake -S "${BUILD_DIR}/cyclonedds-cxx" -B "${BUILD_DIR}/cyclonedds-cxx-build" \
 cmake --build "${BUILD_DIR}/cyclonedds-cxx-build" -j"${JOBS}"
 ${SUDO} cmake --install "${BUILD_DIR}/cyclonedds-cxx-build"
 
+if [[ "${ENABLE_SHM}" == "ON" ]]; then
+  ${SUDO} mkdir -p "${INSTALL_PREFIX}/etc"
+  cat <<'CYCLONEDDS_XML' | ${SUDO} tee "${INSTALL_PREFIX}/etc/cyclonedds-lwrcl.xml" > /dev/null
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="any">
+    <SharedMemory>
+      <Enable>true</Enable>
+      <LogLevel>warn</LogLevel>
+    </SharedMemory>
+  </Domain>
+</CycloneDDS>
+CYCLONEDDS_XML
+fi
+
 echo "[OK] Installed cyclonedds ${CYCLONEDDS_TAG} (+cxx ${CYCLONEDDS_CXX_TAG}) to ${INSTALL_PREFIX} (SHM=${ENABLE_SHM})"
+if [[ "${ENABLE_SHM}" == "ON" ]]; then
+  echo "[INFO] CycloneDDS SHM config: ${INSTALL_PREFIX}/etc/cyclonedds-lwrcl.xml"
+  echo "[INFO] To use iceoryx zero-copy transport:"
+  echo "       export CYCLONEDDS_URI=file://${INSTALL_PREFIX}/etc/cyclonedds-lwrcl.xml"
+  echo "       iox-roudi"
+fi

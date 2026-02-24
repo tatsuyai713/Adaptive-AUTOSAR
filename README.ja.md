@@ -39,8 +39,60 @@ sudo ./scripts/install_middleware_stack.sh
 sudo ./scripts/install_middleware_stack.sh --install-base-deps
 ```
 
-### QNX800 クロスビルド
-QNX SDP 8.0 向けクロスコンパイル手順は以下を参照してください:
+ミドルウェアスタックは以下の順で導入されます:
+
+| ライブラリ | デフォルトパス | 備考 |
+|---|---|---|
+| iceoryx v2.0.6 | `/opt/iceoryx` | コンテナ環境向け ACL 非対応パッチ適用済み |
+| CycloneDDS 0.10.5 | `/opt/cyclonedds` | iceoryx による SHM を自動有効化; `cyclonedds-lwrcl.xml` を生成 |
+| vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CycloneDDS-CXX から CDR ライブラリ (`liblwrcl_cdr.a`) を抽出してビルド; 実行時に DDS ランタイム不要 |
+
+スクリプト個別実行例:
+
+```bash
+# CycloneDDS を SHM 明示有効化でインストール (iceoryx が未インストールなら自動インストール)
+sudo ./scripts/install_cyclonedds.sh --enable-shm
+
+# vsomeip + CDR のみ (実行時に DDS ランタイム不要)
+sudo ./scripts/install_vsomeip.sh --prefix /opt/vsomeip
+
+# システムパッケージインストールをスキップ (既導入済みの場合)
+sudo ./scripts/install_middleware_stack.sh --skip-system-deps
+```
+
+### QNX 8.0 クロスビルド — ミドルウェアインストール (scripts/)
+
+QNX SDP 8.0 向けには、`scripts/` フォルダに Linux 版と対応するミドルウェア
+インストールスクリプトが含まれています。`qcc`/`q++` を使って QNX 向けにクロスコンパイルします。
+
+**前提条件**: QNX SDP 8.0 がインストール済みで `qnxsdp-env.sh` が sourceable であること。
+
+```bash
+# QNX 環境を source (パスは環境に合わせて調整)
+source ~/qnx800/qnxsdp-env.sh
+
+# aarch64le 向けに全ミドルウェアを一括インストール
+sudo ./scripts/install_middleware_stack_qnx.sh --arch aarch64le --enable-shm
+
+# 個別インストール
+sudo ./scripts/install_iceoryx_qnx.sh install   --arch aarch64le
+sudo ./scripts/install_cyclonedds_qnx.sh install --arch aarch64le --enable-shm
+sudo ./scripts/install_vsomeip_qnx.sh install   --arch aarch64le --boost-prefix /opt/qnx/third_party
+```
+
+QNX ミドルウェアのインストール先 (デフォルト):
+
+| ライブラリ | デフォルトパス |
+|---|---|
+| iceoryx | `/opt/qnx/iceoryx` |
+| CycloneDDS | `/opt/qnx/cyclonedds` |
+| vsomeip + CDR | `/opt/qnx/vsomeip` |
+| Boost (vsomeip 用) | `/opt/qnx/third_party` |
+
+`install_middleware_stack_qnx.sh` は、vsomeip が有効かつ Boost が未導入の場合に
+Boost を自動ビルドします。
+
+QNX 向け AUTOSAR AP ランタイムのフルクロスビルド手順は以下を参照してください:
 - `qnx/README.md`
 - `qnx/env/qnx800.env.example`
 
@@ -352,6 +404,7 @@ python3 tools/arxml_generator/generate_ara_com_binding.py \
 | Raspberry Pi ECU 配備 | `deployment/rpi_ecu/README.md` |
 | Raspberry Pi gPTP 設定（日本語） | `deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md` |
 | QNX 8.0 クロスコンパイル | `qnx/README.md` |
+| QNX ミドルウェアインストールスクリプト | `scripts/install_middleware_stack_qnx.sh` |
 | **ユーザーアプリ・チュートリアル** | |
 | ユーザーアプリのビルドシステム | `user_apps/README.md` |
 | チュートリアル一覧 | `user_apps/tutorials/README.ja.md` |

@@ -39,8 +39,60 @@ Or run everything from one command:
 sudo ./scripts/install_middleware_stack.sh --install-base-deps
 ```
 
-### QNX800 cross-build
-For QNX SDP 8.0 cross-compilation flow, see:
+The middleware stack installs the following in order:
+
+| Library | Default prefix | Notes |
+|---|---|---|
+| iceoryx v2.0.6 | `/opt/iceoryx` | ACL-tolerant patch applied for container environments |
+| CycloneDDS 0.10.5 | `/opt/cyclonedds` | SHM auto-enabled via iceoryx; generates `cyclonedds-lwrcl.xml` |
+| vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CDR lib (`liblwrcl_cdr.a`) extracted from CycloneDDS-CXX; no DDS runtime needed at runtime |
+
+Individual script options (examples):
+
+```bash
+# CycloneDDS with SHM explicitly enabled (iceoryx installed automatically if absent)
+sudo ./scripts/install_cyclonedds.sh --enable-shm
+
+# vsomeip with CDR only (no full CycloneDDS runtime required at runtime)
+sudo ./scripts/install_vsomeip.sh --prefix /opt/vsomeip
+
+# Skip middleware auto-installs (all already present)
+sudo ./scripts/install_middleware_stack.sh --skip-system-deps
+```
+
+### QNX 8.0 cross-build — middleware install (scripts/)
+
+For QNX SDP 8.0, the `scripts/` folder contains standalone middleware install scripts
+that mirror the Linux scripts but cross-compile for QNX using `qcc`/`q++`.
+
+**Prerequisites**: QNX SDP 8.0 installed and `qnxsdp-env.sh` sourceable.
+
+```bash
+# Source QNX environment (adjust path as needed)
+source ~/qnx800/qnxsdp-env.sh
+
+# Install all middleware for QNX aarch64le in one command
+sudo ./scripts/install_middleware_stack_qnx.sh --arch aarch64le --enable-shm
+
+# Or individually
+sudo ./scripts/install_iceoryx_qnx.sh install   --arch aarch64le
+sudo ./scripts/install_cyclonedds_qnx.sh install --arch aarch64le --enable-shm
+sudo ./scripts/install_vsomeip_qnx.sh install   --arch aarch64le --boost-prefix /opt/qnx/third_party
+```
+
+QNX middleware install locations (defaults):
+
+| Library | Default prefix |
+|---|---|
+| iceoryx | `/opt/qnx/iceoryx` |
+| CycloneDDS | `/opt/qnx/cyclonedds` |
+| vsomeip + CDR | `/opt/qnx/vsomeip` |
+| Boost (for vsomeip) | `/opt/qnx/third_party` |
+
+The `install_middleware_stack_qnx.sh` script also builds Boost automatically
+when vsomeip is enabled and Boost is not yet present.
+
+For the full QNX AUTOSAR AP runtime cross-build flow, see:
 - `qnx/README.md`
 - `qnx/env/qnx800.env.example`
 
@@ -354,6 +406,7 @@ Full documentation index: [`docs/README.md`](docs/README.md) | [`docs/README.ja.
 | Raspberry Pi ECU deployment | `deployment/rpi_ecu/README.md` |
 | Raspberry Pi gPTP setup (Japanese) | `deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md` |
 | QNX 8.0 cross-compilation | `qnx/README.md` |
+| QNX middleware install scripts | `scripts/install_middleware_stack_qnx.sh` |
 | **User apps & tutorials** | |
 | User app build system | `user_apps/README.md` |
 | Tutorial index | `user_apps/tutorials/README.md` |

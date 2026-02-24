@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
+# ===========================================================================
+# install_vsomeip.sh – Build and install vsomeip (SOME/IP) + CDR library
+# ===========================================================================
+# This script installs:
+#   1. vsomeip (SOME/IP transport)
+#   2. CDR serialization library extracted from cyclonedds-cxx (no DDS runtime)
+#   3. Stub CMake configs so CycloneDDS find_package() resolves to the CDR lib
+#
+# Dependencies: Boost >= 1.66, cmake, g++ with C++17 support
+# ===========================================================================
 set -euo pipefail
 
-VSOMEIP_TAG="3.6.1"
+VSOMEIP_TAG="3.4.10"
+CYCLONEDDS_CXX_TAG="0.10.5"
 INSTALL_PREFIX="/opt/vsomeip"
 BUILD_DIR="${HOME}/build-vsomeip"
 _nproc="$(nproc 2>/dev/null || echo 4)"
@@ -13,6 +24,23 @@ JOBS=$(( _nproc < _mem_jobs ? _nproc : _mem_jobs ))
 SKIP_SYSTEM_DEPS="OFF"
 FORCE_REINSTALL="OFF"
 
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  --prefix <path>       Install prefix (default: ${INSTALL_PREFIX})
+  --tag <version>       vsomeip version (default: ${VSOMEIP_TAG})
+  --cxx-tag <version>   CycloneDDS-CXX version for CDR (default: ${CYCLONEDDS_CXX_TAG})
+  --build-dir <path>    Build directory (default: \${HOME}/build-vsomeip)
+  --jobs <N>            Parallel build jobs (default: auto)
+  --skip-system-deps    Skip installing system dependencies
+  --force               Force reinstall even if already present
+  --help                Show this help message
+EOF
+  exit 0
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --prefix)
@@ -21,6 +49,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --tag)
       VSOMEIP_TAG="$2"
+      shift 2
+      ;;
+    --cxx-tag)
+      CYCLONEDDS_CXX_TAG="$2"
       shift 2
       ;;
     --build-dir)
@@ -39,6 +71,9 @@ while [[ $# -gt 0 ]]; do
       FORCE_REINSTALL="ON"
       shift
       ;;
+    --help)
+      usage
+      ;;
     *)
       echo "[ERROR] Unknown argument: $1" >&2
       exit 1
@@ -46,8 +81,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "${FORCE_REINSTALL}" != "ON" ]] && [[ -f "${INSTALL_PREFIX}/lib/libvsomeip3.so" || -f "${INSTALL_PREFIX}/lib64/libvsomeip3.so" ]]; then
-  echo "[INFO] vsomeip already installed at ${INSTALL_PREFIX}. Skipping (use --force to reinstall)."
+if [[ "${FORCE_REINSTALL}" != "ON" ]] && [[ -f "${INSTALL_PREFIX}/lib/libvsomeip3.so" ]] && [[ -f "${INSTALL_PREFIX}/lib/liblwrcl_cdr.a" ]]; then
+  echo "[INFO] vsomeip + CDR already installed at ${INSTALL_PREFIX}. Skipping (use --force to reinstall)."
   exit 0
 fi
 
@@ -61,60 +96,424 @@ if [[ "${EUID}" -ne 0 ]]; then
   fi
 fi
 
-if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; then
-  ${SUDO} apt-get update -qq
-  ${SUDO} apt-get install -y --no-install-recommends \
-    libboost-system-dev \
-    libboost-thread-dev \
-    libboost-log-dev \
-    libboost-filesystem-dev \
-    libboost-program-options-dev
+echo "=== Installing vsomeip ${VSOMEIP_TAG} + CDR library to ${INSTALL_PREFIX} ==="
+
+# ---------------------------------------------------------------------------
+# 1. Install system dependencies
+# ---------------------------------------------------------------------------
+if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]]; then
+  if command -v apt-get &>/dev/null; then
+    echo "--- Installing system dependencies (apt) ---"
+    ${SUDO} apt-get update -qq
+    # Boost/build tools – always needed
+    ${SUDO} apt-get install -y --no-install-recommends \
+        build-essential git \
+        libboost-system-dev libboost-thread-dev libboost-log-dev \
+        libboost-filesystem-dev libboost-program-options-dev
+    # cmake: skip if already present (e.g. Kitware PPA version) to avoid
+    # dependency conflicts with distro-provided cmake-data.
+    if ! command -v cmake &>/dev/null; then
+      ${SUDO} apt-get install -y --no-install-recommends cmake
+    else
+      echo "  cmake $(cmake --version | head -1 | awk '{print $3}') already installed – skipping."
+    fi
+  elif command -v pacman &>/dev/null; then
+    echo "--- Installing system dependencies (pacman) ---"
+    ${SUDO} pacman -Sy --noconfirm base-devel cmake git boost
+  else
+    echo "[WARN] Unknown package manager. Ensure cmake, git, and boost are installed."
+  fi
 fi
 
+# ---------------------------------------------------------------------------
+# 2. Create install directory
+# ---------------------------------------------------------------------------
 ${SUDO} mkdir -p "${INSTALL_PREFIX}"
+${SUDO} chmod 777 -R "${INSTALL_PREFIX}"
 
+# ---------------------------------------------------------------------------
+# 3. Clone and build vsomeip
+# ---------------------------------------------------------------------------
 rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
+cd "${BUILD_DIR}"
 
-git clone --depth 1 --branch "${VSOMEIP_TAG}" https://github.com/COVESA/vsomeip.git "${BUILD_DIR}/vsomeip"
+if [ ! -d vsomeip ]; then
+    git clone https://github.com/COVESA/vsomeip.git
+fi
+cd vsomeip
+git checkout "${VSOMEIP_TAG}"
 
-cmake -S "${BUILD_DIR}/vsomeip" -B "${BUILD_DIR}/vsomeip-build" \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
-  -DBUILD_SHARED_LIBS=ON \
-  -DENABLE_SIGNAL_HANDLING=1 \
-  -DENABLE_MULTIPLE_ROUTING_MANAGERS=1
+mkdir -p build && cd build
 
-cmake --build "${BUILD_DIR}/vsomeip-build" -j"${JOBS}"
-${SUDO} cmake --install "${BUILD_DIR}/vsomeip-build"
+cmake .. \
+    -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_SIGNAL_HANDLING=1 \
+    -DBUILD_SHARED_LIBS=ON \
+    -DENABLE_MULTIPLE_ROUTING_MANAGERS=1 \
+    -DCMAKE_CXX_FLAGS="-Wno-stringop-overflow"
 
+make -j"${JOBS}"
+${SUDO} make install
+
+# Re-apply permissions after ${SUDO} make install (which creates root-owned dirs)
+${SUDO} chmod 777 -R "${INSTALL_PREFIX}"
+
+# ---------------------------------------------------------------------------
+# 4. Create default vsomeip configuration
+# ---------------------------------------------------------------------------
 ${SUDO} mkdir -p "${INSTALL_PREFIX}/etc"
-${SUDO} tee "${INSTALL_PREFIX}/etc/vsomeip-autosar.json" >/dev/null << 'CFG'
+cat <<'VSOMEIP_CFG' | ${SUDO} tee "${INSTALL_PREFIX}/etc/vsomeip-autosar.json" > /dev/null
 {
-  "unicast": "127.0.0.1",
-  "logging": {
-    "level": "info",
-    "console": "true",
-    "file": { "enable": "false" },
-    "dlt": "false"
-  },
-  "applications": [],
-  "services": [],
-  "routing": "adaptive_autosar_routing",
-  "service-discovery": {
-    "enable": "true",
-    "multicast": "224.244.224.245",
-    "port": "30490",
-    "protocol": "udp",
-    "initial_delay_min": "10",
-    "initial_delay_max": "100",
-    "repetitions_base_delay": "200",
-    "repetitions_max": "3",
-    "ttl": "3",
-    "cyclic_offer_delay": "2000",
-    "request_response_delay": "1500"
-  }
+    "unicast": "127.0.0.1",
+    "logging": {
+        "level": "info",
+        "console": "true",
+        "file": { "enable": "false" },
+        "dlt": "false"
+    },
+    "applications": [],
+    "services": [],
+    "routing": "adaptive_autosar_routing",
+    "service-discovery": {
+        "enable": "true",
+        "multicast": "224.244.224.245",
+        "port": "30490",
+        "protocol": "udp",
+        "initial_delay_min": "10",
+        "initial_delay_max": "100",
+        "repetitions_base_delay": "200",
+        "repetitions_max": "3",
+        "ttl": "3",
+        "cyclic_offer_delay": "2000",
+        "request_response_delay": "1500"
+    }
 }
-CFG
+VSOMEIP_CFG
 
-echo "[OK] Installed vsomeip ${VSOMEIP_TAG} to ${INSTALL_PREFIX}"
+# ---------------------------------------------------------------------------
+# 5. Build CDR serialization library from cyclonedds-cxx (no DDS runtime)
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Building CDR serialization library ==="
+
+cd "${BUILD_DIR}"
+if [ ! -d cyclonedds-cxx ]; then
+    git clone https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git
+fi
+cd cyclonedds-cxx
+git checkout "${CYCLONEDDS_CXX_TAG}"
+
+CDR_SRC_BASE="src/ddscxx"
+CDR_INC="${CDR_SRC_BASE}/include"
+CDR_CPP="${CDR_SRC_BASE}/src/org/eclipse/cyclonedds/core/cdr"
+
+# --- 5a. Install CDR headers from cyclonedds-cxx ---
+echo "--- Installing CDR headers ---"
+for HDR in \
+    "org/eclipse/cyclonedds/core/cdr/cdr_enums.hpp" \
+    "org/eclipse/cyclonedds/core/cdr/entity_properties.hpp" \
+    "org/eclipse/cyclonedds/core/cdr/cdr_stream.hpp" \
+    "org/eclipse/cyclonedds/core/cdr/basic_cdr_ser.hpp" \
+    "org/eclipse/cyclonedds/core/cdr/extended_cdr_v1_ser.hpp" \
+    "org/eclipse/cyclonedds/core/cdr/extended_cdr_v2_ser.hpp" \
+    "org/eclipse/cyclonedds/core/type_helpers.hpp"
+do
+    HDR_DIR=$(dirname "${HDR}")
+    ${SUDO} mkdir -p "${INSTALL_PREFIX}/include/${HDR_DIR}"
+    ${SUDO} cp "${CDR_INC}/${HDR}" "${INSTALL_PREFIX}/include/${HDR}"
+done
+
+# Patch cdr_stream.hpp: add missing #include <cstring> for memcpy
+CDR_STREAM_HDR="${INSTALL_PREFIX}/include/org/eclipse/cyclonedds/core/cdr/cdr_stream.hpp"
+if ! grep -q '<cstring>' "${CDR_STREAM_HDR}" 2>/dev/null; then
+    ${SUDO} sed -i 's|#include <cassert>|#include <cassert>\n#include <cstring>|' "${CDR_STREAM_HDR}"
+    echo "  Patched cdr_stream.hpp: added #include <cstring>"
+fi
+
+# --- 5b. Create stub headers for external CycloneDDS dependencies ---
+echo "--- Creating stub headers ---"
+
+# dds/ddsrt/endian.h – Platform endianness detection (pure preprocessor)
+${SUDO} mkdir -p "${INSTALL_PREFIX}/include/dds/ddsrt"
+cat <<'ENDIAN_H' | ${SUDO} tee "${INSTALL_PREFIX}/include/dds/ddsrt/endian.h" > /dev/null
+/*
+ * Stub endian.h – standalone replacement for CycloneDDS ddsrt/endian.h
+ * Provides DDSRT_ENDIAN, DDSRT_LITTLE_ENDIAN, DDSRT_BIG_ENDIAN macros.
+ */
+#ifndef DDSRT_ENDIAN_H
+#define DDSRT_ENDIAN_H
+
+#define DDSRT_LITTLE_ENDIAN 1
+#define DDSRT_BIG_ENDIAN    2
+
+#if defined(__BYTE_ORDER__)
+  #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define DDSRT_ENDIAN DDSRT_LITTLE_ENDIAN
+  #else
+    #define DDSRT_ENDIAN DDSRT_BIG_ENDIAN
+  #endif
+#elif defined(_WIN32) || defined(__x86_64__) || defined(__i386__) \
+      || defined(__aarch64__) || defined(__arm__)
+  #define DDSRT_ENDIAN DDSRT_LITTLE_ENDIAN
+#else
+  #define DDSRT_ENDIAN DDSRT_BIG_ENDIAN
+#endif
+
+#endif /* DDSRT_ENDIAN_H */
+ENDIAN_H
+
+# dds/core/macros.hpp – OMG_DDS_API / warning macros
+${SUDO} mkdir -p "${INSTALL_PREFIX}/include/dds/core"
+cat <<'MACROS_HPP' | ${SUDO} tee "${INSTALL_PREFIX}/include/dds/core/macros.hpp" > /dev/null
+/*
+ * Stub macros.hpp – standalone replacement for CycloneDDS dds/core/macros.hpp
+ */
+#ifndef OMG_DDS_CORE_MACROS_HPP_
+#define OMG_DDS_CORE_MACROS_HPP_
+
+#define OMG_DDS_API
+#define DDSCXX_WARNING_MSVC_OFF(x)
+#define DDSCXX_WARNING_MSVC_ON(x)
+
+#endif /* OMG_DDS_CORE_MACROS_HPP_ */
+MACROS_HPP
+
+# dds/topic/TopicTraits.hpp – stub for generated data type headers
+${SUDO} mkdir -p "${INSTALL_PREFIX}/include/dds/topic"
+cat <<'TOPICTRAITS_HPP' | ${SUDO} tee "${INSTALL_PREFIX}/include/dds/topic/TopicTraits.hpp" > /dev/null
+/*
+ * Stub TopicTraits.hpp – standalone replacement for CDR-only builds.
+ * Provides all declarations that idlc-generated code specializes.
+ */
+#ifndef OMG_DDS_TOPIC_TOPIC_TRAITS_HPP_
+#define OMG_DDS_TOPIC_TOPIC_TRAITS_HPP_
+
+#include <string>
+#include <cstdint>
+#include <cstddef>
+
+#include "org/eclipse/cyclonedds/core/cdr/basic_cdr_ser.hpp"
+#include "org/eclipse/cyclonedds/core/cdr/cdr_enums.hpp"
+
+/* ------------------------------------------------------------------ */
+/* org::eclipse::cyclonedds::topic::TopicTraits<TOPIC>                */
+/* ------------------------------------------------------------------ */
+namespace org { namespace eclipse { namespace cyclonedds { namespace topic {
+
+using core::cdr::extensibility;
+using core::cdr::encoding_version;
+using core::cdr::allowable_encodings_t;
+
+template <class TOPIC> class TopicTraits {
+public:
+    static constexpr bool isKeyless() { return false; }
+    static constexpr bool defaultToXCDR2Encoding() { return false; }
+    static constexpr const char* getTypeName() { return ""; }
+    static constexpr size_t getSampleSize() { return sizeof(TOPIC); }
+    static constexpr bool isSelfContained() { return true; }
+    static constexpr allowable_encodings_t allowableEncodings() { return 0xFFFFFFFFu; }
+    static constexpr extensibility getExtensibility() { return extensibility::ext_final; }
+};
+
+} } } }
+
+/* ------------------------------------------------------------------ */
+/* dds::topic – is_topic_type, topic_type_name, topic_type_support    */
+/* ------------------------------------------------------------------ */
+namespace dds { namespace topic {
+
+template <typename T>
+struct is_topic_type { enum { value = 0 }; };
+
+template <typename T>
+struct topic_type_support { };
+
+template <typename T>
+struct topic_type_name {
+    static std::string value() { return "Undefined"; }
+};
+
+} }
+
+#define REGISTER_TOPIC_TYPE(TOPIC_TYPE) \
+    namespace dds { namespace topic { \
+    template<> struct is_topic_type<TOPIC_TYPE> { \
+        enum { value = 1 }; \
+    }; } }
+
+#endif /* OMG_DDS_TOPIC_TOPIC_TRAITS_HPP_ */
+TOPICTRAITS_HPP
+
+# org/eclipse/cyclonedds/topic/datatopic.hpp – empty stub
+${SUDO} mkdir -p "${INSTALL_PREFIX}/include/org/eclipse/cyclonedds/topic"
+cat <<'DATATOPIC_HPP' | ${SUDO} tee "${INSTALL_PREFIX}/include/org/eclipse/cyclonedds/topic/datatopic.hpp" > /dev/null
+/*
+ * Stub datatopic.hpp – empty replacement for CDR-only builds.
+ * The real datatopic.hpp provides DDS transport serdata functions
+ * which are not needed for SOME/IP transport.
+ */
+#ifndef CYCLONEDDS_TOPIC_DATATOPIC_HPP_
+#define CYCLONEDDS_TOPIC_DATATOPIC_HPP_
+
+/**
+ * No-op stub for CDR-only (SOME/IP) builds.
+ * idlc -l cxx emits DDSCXX_IMPL_TYPE(T) at the end of generated .cpp
+ * files; with SOME/IP transport the DDS topic registration is unused,
+ * so we define the macro as a no-op.
+ */
+#define DDSCXX_IMPL_TYPE(T)
+
+#endif /* CYCLONEDDS_TOPIC_DATATOPIC_HPP_ */
+DATATOPIC_HPP
+
+# dds/dds.hpp – stub for snake_case wrapper headers
+${SUDO} mkdir -p "${INSTALL_PREFIX}/include/dds"
+cat <<'DDS_HPP' | ${SUDO} tee "${INSTALL_PREFIX}/include/dds/dds.hpp" > /dev/null
+/*
+ * Stub dds/dds.hpp – standalone replacement for CDR-only builds.
+ * The real dds/dds.hpp pulls in the entire CycloneDDS-CXX API.
+ * This stub only provides the TopicTraits header which is needed
+ * by idlc-generated data type headers.
+ */
+#ifndef DDS_DDS_HPP_
+#define DDS_DDS_HPP_
+
+#include "dds/topic/TopicTraits.hpp"
+
+#endif /* DDS_DDS_HPP_ */
+DDS_HPP
+
+# --- 5c. Build CDR static library ---
+echo "--- Building CDR static library ---"
+
+CDR_BUILD_DIR="${BUILD_DIR}/cdr-build"
+mkdir -p "${CDR_BUILD_DIR}"
+
+# Resolve absolute paths for use inside CMakeLists.txt heredoc
+CDR_CPP_ABS="${BUILD_DIR}/cyclonedds-cxx/${CDR_CPP}"
+
+# Create a minimal CMakeLists.txt for building the CDR library
+cat > "${CDR_BUILD_DIR}/CMakeLists.txt" <<CDR_CMAKE
+cmake_minimum_required(VERSION 3.14)
+project(lwrcl_cdr LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+add_library(lwrcl_cdr STATIC
+    ${CDR_CPP_ABS}/entity_properties.cpp
+    ${CDR_CPP_ABS}/cdr_stream.cpp
+    ${CDR_CPP_ABS}/basic_cdr_ser.cpp
+    ${CDR_CPP_ABS}/extended_cdr_v1_ser.cpp
+    ${CDR_CPP_ABS}/extended_cdr_v2_ser.cpp
+)
+
+target_include_directories(lwrcl_cdr PUBLIC
+    ${INSTALL_PREFIX}/include
+)
+
+target_compile_definitions(lwrcl_cdr PUBLIC
+    DDSCXX_NO_STD_OPTIONAL
+)
+
+install(TARGETS lwrcl_cdr
+        ARCHIVE DESTINATION lib)
+CDR_CMAKE
+
+cd "${CDR_BUILD_DIR}"
+cmake . \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+
+make -j"${JOBS}"
+${SUDO} make install
+
+# --- 5d. Create CMake config stubs for CycloneDDS / CycloneDDS-CXX ---
+# These allow find_package(CycloneDDS) to resolve to the CDR-only library
+# when building data types for the vsomeip backend.
+echo "--- Creating CMake config stubs ---"
+
+${SUDO} mkdir -p "${INSTALL_PREFIX}/lib/cmake/CycloneDDS"
+cat <<'CYCLONE_CFG' | ${SUDO} tee "${INSTALL_PREFIX}/lib/cmake/CycloneDDS/CycloneDDSConfig.cmake" > /dev/null
+# ===========================================================================
+# Stub CycloneDDSConfig.cmake – CDR-only build (no DDS runtime)
+# ===========================================================================
+# This config provides the CycloneDDS::ddsc imported target pointing to the
+# standalone CDR serialization library (liblwrcl_cdr.a).
+# ===========================================================================
+if(TARGET CycloneDDS::ddsc)
+    return()
+endif()
+
+get_filename_component(_CDR_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+
+add_library(CycloneDDS::ddsc STATIC IMPORTED GLOBAL)
+set_target_properties(CycloneDDS::ddsc PROPERTIES
+    IMPORTED_LOCATION "${_CDR_PREFIX}/lib/liblwrcl_cdr.a"
+    INTERFACE_INCLUDE_DIRECTORIES "${_CDR_PREFIX}/include"
+)
+
+# Handle COMPONENTS (lifecycle_msgs etc. request COMPONENTS CXX)
+foreach(_comp ${CycloneDDS_FIND_COMPONENTS})
+    set(CycloneDDS_${_comp}_FOUND TRUE)
+endforeach()
+
+set(CycloneDDS_FOUND TRUE)
+unset(_CDR_PREFIX)
+CYCLONE_CFG
+
+cat <<'CYCLONE_VER' | ${SUDO} tee "${INSTALL_PREFIX}/lib/cmake/CycloneDDS/CycloneDDSConfigVersion.cmake" > /dev/null
+set(PACKAGE_VERSION "0.10.5")
+set(PACKAGE_VERSION_COMPATIBLE TRUE)
+set(PACKAGE_VERSION_EXACT FALSE)
+CYCLONE_VER
+
+${SUDO} mkdir -p "${INSTALL_PREFIX}/lib/cmake/CycloneDDS-CXX"
+cat <<'CYCLONECXX_CFG' | ${SUDO} tee "${INSTALL_PREFIX}/lib/cmake/CycloneDDS-CXX/CycloneDDS-CXXConfig.cmake" > /dev/null
+# ===========================================================================
+# Stub CycloneDDS-CXXConfig.cmake – CDR-only build (no DDS runtime)
+# ===========================================================================
+if(TARGET CycloneDDS-CXX::ddscxx)
+    return()
+endif()
+
+get_filename_component(_CDR_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+
+add_library(CycloneDDS-CXX::ddscxx STATIC IMPORTED GLOBAL)
+set_target_properties(CycloneDDS-CXX::ddscxx PROPERTIES
+    IMPORTED_LOCATION "${_CDR_PREFIX}/lib/liblwrcl_cdr.a"
+    INTERFACE_INCLUDE_DIRECTORIES "${_CDR_PREFIX}/include"
+)
+
+set(CycloneDDS-CXX_FOUND TRUE)
+unset(_CDR_PREFIX)
+CYCLONECXX_CFG
+
+cat <<'CYCLONECXX_VER' | ${SUDO} tee "${INSTALL_PREFIX}/lib/cmake/CycloneDDS-CXX/CycloneDDS-CXXConfigVersion.cmake" > /dev/null
+set(PACKAGE_VERSION "0.10.5")
+set(PACKAGE_VERSION_COMPATIBLE TRUE)
+set(PACKAGE_VERSION_EXACT FALSE)
+CYCLONECXX_VER
+
+# ---------------------------------------------------------------------------
+# 6. Verify installation
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== vsomeip ${VSOMEIP_TAG} + CDR installation complete ==="
+echo "  Install prefix: ${INSTALL_PREFIX}"
+echo "  Libraries:      ${INSTALL_PREFIX}/lib/"
+echo "  Headers:        ${INSTALL_PREFIX}/include/"
+echo "  CDR library:    ${INSTALL_PREFIX}/lib/liblwrcl_cdr.a"
+echo "  CMake configs:  ${INSTALL_PREFIX}/lib/cmake/"
+echo "  Config:         ${INSTALL_PREFIX}/etc/vsomeip-autosar.json"
+echo ""
+echo "Set the following environment variables before using:"
+echo "  export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:\${LD_LIBRARY_PATH:-}"
+echo "  export VSOMEIP_CONFIGURATION=${INSTALL_PREFIX}/etc/vsomeip-autosar.json"
+echo ""
+echo "NOTE: CycloneDDS is NO LONGER needed at runtime."
+echo "      idlc from CycloneDDS is still needed at build time for data type generation."
