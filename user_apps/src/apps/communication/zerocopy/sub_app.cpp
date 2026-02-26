@@ -5,7 +5,6 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <thread>
 
 #include <ara/core/initialization.h>
 #include <ara/log/logging_framework.h>
@@ -33,31 +32,6 @@ namespace
         std::signal(SIGINT, HandleSignal);
         std::signal(SIGTERM, HandleSignal);
     }
-
-    std::uint32_t ParsePollMs(int argc, char *argv[], std::uint32_t fallback)
-    {
-        const std::string prefix{"--poll-ms="};
-        for (int i = 1; i < argc; ++i)
-        {
-            const std::string arg{argv[i]};
-            if (arg.find(prefix) != 0U)
-            {
-                continue;
-            }
-
-            try
-            {
-                return static_cast<std::uint32_t>(
-                    std::stoul(arg.substr(prefix.size())));
-            }
-            catch (const std::exception &)
-            {
-                return fallback;
-            }
-        }
-
-        return fallback;
-    }
 } // namespace
 
 int main(int argc, char *argv[])
@@ -70,8 +44,9 @@ int main(int argc, char *argv[])
               << std::endl;
     return 0;
 #else
+    (void)argc;
+    (void)argv;
     RegisterSignalHandlers();
-    const std::uint32_t pollMs{ParsePollMs(argc, argv, 20U)};
 
     // 1) Initialize runtime.
     auto initResult{ara::core::Initialize()};
@@ -119,26 +94,28 @@ int main(int argc, char *argv[])
     std::uint32_t receiveCount{0U};
     while (gRunning.load())
     {
+        // Wait for new data (up to 500 ms) — event-driven, no busy-wait.
+        subscriber.WaitForData(std::chrono::milliseconds{500U});
+
         ara::com::zerocopy::ReceivedSample sample;
 
-        // 5) Poll one sample without copying payload.
+        // Try to receive one sample without copying payload.
         auto takeResult{subscriber.TryTake(sample)};
         if (!takeResult.HasValue())
         {
             auto stream{logger.WithLevel(ara::log::LogLevel::kWarn)};
             stream << "TryTake failed: " << takeResult.Error().Message();
             logging->Log(logger, ara::log::LogLevel::kWarn, stream);
-            std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
             continue;
         }
 
         if (!takeResult.Value())
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
+            // WaitForData woke but no sample is ready (spurious wake or timeout).
             continue;
         }
 
-        // 6) Deserialize fixed-size payload from shared memory region.
+        // Deserialize fixed-size payload from shared memory region.
         if (sample.Size() >= sizeof(ZeroCopyFrame))
         {
             ZeroCopyFrame frame{};
@@ -154,8 +131,6 @@ int main(int argc, char *argv[])
                 logging->Log(logger, ara::log::LogLevel::kInfo, stream);
             }
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
     }
 
     (void)ara::core::Deinitialize();

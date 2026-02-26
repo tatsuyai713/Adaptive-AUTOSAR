@@ -17,6 +17,7 @@
 #include <iceoryx_posh/popo/subscriber_options.hpp>
 #include <iceoryx_posh/popo/untyped_publisher.hpp>
 #include <iceoryx_posh/popo/untyped_subscriber.hpp>
+#include <iceoryx_posh/popo/wait_set.hpp>
 #include <iceoryx_posh/runtime/posh_runtime.hpp>
 #endif
 
@@ -396,11 +397,15 @@ namespace ara
             public:
 #if defined(ARA_COM_USE_ICEORYX) && (ARA_COM_USE_ICEORYX == 1)
                 std::shared_ptr<iox::popo::UntypedSubscriber> Subscriber;
+                iox::popo::WaitSet<1U> WaitSet;
 
                 explicit Impl(
                     std::shared_ptr<iox::popo::UntypedSubscriber> subscriber) noexcept : Subscriber{
                                                                                               std::move(subscriber)}
                 {
+                    WaitSet
+                        .attachState(*Subscriber, iox::popo::SubscriberState::HAS_DATA)
+                        .or_else([](auto &) {});
                 }
 #else
                 Impl() noexcept
@@ -496,6 +501,25 @@ namespace ara
                 return core::Result<bool>::FromValue(true);
 #else
                 return MakeComBoolErrorResult(ComErrc::kCommunicationStackError);
+#endif
+            }
+
+            bool ZeroCopySubscriber::WaitForData(std::chrono::milliseconds timeout) noexcept
+            {
+#if defined(ARA_COM_USE_ICEORYX) && (ARA_COM_USE_ICEORYX == 1)
+                if (!IsBindingActive())
+                {
+                    return false;
+                }
+
+                const auto notifs{
+                    mImpl->WaitSet.timedWait(
+                        iox::units::Duration::fromMilliseconds(
+                            static_cast<uint64_t>(timeout.count())))};
+                return !notifs.empty();
+#else
+                (void)timeout;
+                return false;
 #endif
             }
         }

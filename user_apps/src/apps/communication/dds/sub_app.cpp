@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-#include <thread>
 
 #include <ara/core/initialization.h>
 #include <ara/log/logging_framework.h>
@@ -31,31 +30,6 @@ namespace
         std::signal(SIGINT, HandleSignal);
         std::signal(SIGTERM, HandleSignal);
     }
-
-    std::uint32_t ParsePollMs(int argc, char *argv[], std::uint32_t fallback)
-    {
-        const std::string prefix{"--poll-ms="};
-        for (int i = 1; i < argc; ++i)
-        {
-            const std::string arg{argv[i]};
-            if (arg.find(prefix) != 0U)
-            {
-                continue;
-            }
-
-            try
-            {
-                return static_cast<std::uint32_t>(
-                    std::stoul(arg.substr(prefix.size())));
-            }
-            catch (const std::exception &)
-            {
-                return fallback;
-            }
-        }
-
-        return fallback;
-    }
 } // namespace
 
 int main(int argc, char *argv[])
@@ -75,8 +49,9 @@ int main(int argc, char *argv[])
               << std::endl;
     return 0;
 #else
+    (void)argc;
+    (void)argv;
     RegisterSignalHandlers();
-    const std::uint32_t pollMs{ParsePollMs(argc, argv, 20U)};
 
     // 1) Initialize runtime.
     auto initResult{ara::core::Initialize()};
@@ -117,7 +92,10 @@ int main(int argc, char *argv[])
     std::uint32_t receiveCount{0U};
     while (gRunning.load())
     {
-        // 4) Poll and handle up to N DDS samples each cycle.
+        // Wait for new DDS data (up to 500 ms) — event-driven, no busy-wait.
+        subscriber.WaitForData(std::chrono::milliseconds{500U});
+
+        // Take up to N DDS samples each time data arrives.
         auto takeResult{subscriber.Take(
             32U,
             [&logging, &logger, &receiveCount](
@@ -140,8 +118,6 @@ int main(int argc, char *argv[])
             stream << "DDS take failed: " << takeResult.Error().Message();
             logging->Log(logger, ara::log::LogLevel::kWarn, stream);
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
     }
 
     (void)ara::core::Deinitialize();

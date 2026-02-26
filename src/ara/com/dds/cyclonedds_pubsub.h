@@ -5,6 +5,7 @@
 #ifndef ARA_COM_DDS_CYCLONEDDS_PUBSUB_H
 #define ARA_COM_DDS_CYCLONEDDS_PUBSUB_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -172,6 +173,8 @@ namespace ara
                     ::dds::sub::Subscriber Subscriber;
                     ::dds::topic::Topic<SampleType> Topic;
                     ::dds::sub::DataReader<SampleType> Reader;
+                    ::dds::sub::cond::ReadCondition ReadCondition;
+                    ::dds::core::cond::WaitSet WaitSet;
 
                     Binding(
                         const std::string &topicName,
@@ -181,8 +184,12 @@ namespace ara
                                                   Reader{
                                                       Subscriber,
                                                       Topic,
-                                                      CreateReaderQos(Subscriber)}
+                                                      CreateReaderQos(Subscriber)},
+                                                  ReadCondition{
+                                                      Reader,
+                                                      ::dds::sub::status::DataState::new_data()}
                     {
+                        WaitSet.attach_condition(ReadCondition);
                     }
 
                 private:
@@ -310,6 +317,40 @@ namespace ara
 #else
                     return core::Result<std::int32_t>::FromError(
                         MakeErrorCode(ComErrc::kCommunicationStackError));
+#endif
+                }
+
+                /// @brief Block until new data is available or the timeout expires.
+                /// @details Uses the DDS WaitSet mechanism — no busy-wait or sleep.
+                /// @param timeout Maximum time to wait.
+                /// @returns true when data is available, false on timeout or error.
+                bool WaitForData(std::chrono::milliseconds timeout) noexcept
+                {
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                    if (!IsBindingActive())
+                    {
+                        return false;
+                    }
+
+                    try
+                    {
+                        const auto cDuration{
+                            ::dds::core::Duration::from_millisecs(
+                                static_cast<int64_t>(timeout.count()))};
+                        mBinding->WaitSet.wait(cDuration);
+                        return true;
+                    }
+                    catch (const ::dds::core::TimeoutError &)
+                    {
+                        return false;
+                    }
+                    catch (const ::dds::core::Exception &)
+                    {
+                        return false;
+                    }
+#else
+                    (void)timeout;
+                    return false;
 #endif
                 }
             };

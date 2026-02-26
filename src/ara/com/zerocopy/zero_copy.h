@@ -5,6 +5,8 @@
 #ifndef ARA_COM_ZEROCOPY_ZERO_COPY_H
 #define ARA_COM_ZEROCOPY_ZERO_COPY_H
 
+#include <chrono>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -145,6 +147,12 @@ namespace ara
                 /// @param[out] sample Received sample wrapper (overwritten on success)
                 /// @returns Result with 'true' when a sample is available, 'false' when no data is available
                 core::Result<bool> TryTake(ReceivedSample &sample) noexcept;
+
+                /// @brief Block until new data is available or the timeout expires.
+                /// @details Uses the iceoryx WaitSet mechanism — no busy-wait or sleep.
+                /// @param timeout Maximum time to wait.
+                /// @returns true when data is available, false on timeout or error.
+                bool WaitForData(std::chrono::milliseconds timeout) noexcept;
             };
         }
     }
