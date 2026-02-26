@@ -261,13 +261,9 @@ namespace ara
                     try
                     {
                         std::size_t _consumed{0U};
-                        auto _samples{mBinding->Reader.take()};
+                        auto _samples{mBinding->Reader.select().max_samples(static_cast<uint32_t>(maxSamples)).take()};
                         for (const auto &cSample : _samples)
                         {
-                            if (_consumed >= maxSamples)
-                            {
-                                break;
-                            }
                             if (!cSample.info().valid())
                             {
                                 continue;
