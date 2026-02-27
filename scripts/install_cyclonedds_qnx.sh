@@ -220,10 +220,16 @@ if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; th
   if [[ "${EUID}" -ne 0 ]]; then
     SUDO="sudo"
   fi
-  log_info "Installing build dependencies (libssl-dev, bison, flex, git, cmake, make, gcc, g++)..."
+  log_info "Installing build dependencies (libssl-dev, bison, flex, git, cmake 3.x, make, gcc, g++)..."
   ${SUDO} apt-get update -q
-  ${SUDO} apt-get install -y --no-install-recommends \
-    libssl-dev bison flex git cmake make gcc g++ pkg-config
+  _cmake3=$(apt-cache policy cmake 2>/dev/null | grep -oP '\s+\K3\.[0-9]+\.[0-9]+[^\s]*' | head -1)
+  if [[ -n "${_cmake3}" ]]; then
+    ${SUDO} apt-get install -y --no-install-recommends \
+      libssl-dev bison flex git "cmake=${_cmake3}" "cmake-data=${_cmake3}" make gcc g++ pkg-config
+  else
+    ${SUDO} apt-get install -y --no-install-recommends \
+      libssl-dev bison flex git cmake make gcc g++ pkg-config
+  fi
 fi
 
 # ---------------------------------------------------------------------------

@@ -201,9 +201,14 @@ if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; th
   if [[ "${EUID}" -ne 0 ]]; then
     SUDO="sudo"
   fi
-  log_info "Installing build dependencies (git, cmake, make, python3)..."
+  log_info "Installing build dependencies (git, cmake 3.x, make, python3)..."
   ${SUDO} apt-get update -q
-  ${SUDO} apt-get install -y --no-install-recommends git cmake make python3
+  _cmake3=$(apt-cache policy cmake 2>/dev/null | grep -oP '\s+\K3\.[0-9]+\.[0-9]+[^\s]*' | head -1)
+  if [[ -n "${_cmake3}" ]]; then
+    ${SUDO} apt-get install -y --no-install-recommends git "cmake=${_cmake3}" "cmake-data=${_cmake3}" make python3
+  else
+    ${SUDO} apt-get install -y --no-install-recommends git cmake make python3
+  fi
 fi
 
 mkdir -p "${INSTALL_PREFIX}"
