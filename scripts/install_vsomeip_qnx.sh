@@ -201,7 +201,8 @@ if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; th
   if [[ "${EUID}" -ne 0 ]]; then
     SUDO="sudo"
   fi
-  ${SUDO} apt-get update -qq
+  log_info "Installing build dependencies (git, cmake, make, python3)..."
+  ${SUDO} apt-get update -q
   ${SUDO} apt-get install -y --no-install-recommends git cmake make python3
 fi
 
@@ -222,6 +223,7 @@ log_info "  prefix=${INSTALL_PREFIX} boost=${BOOST_PREFIX}"
 SOURCE_DIR="${BUILD_DIR}/vsomeip"
 BUILD_QNX_DIR="${BUILD_DIR}/build-qnx"
 
+log_info "Cloning vsomeip ${VSOMEIP_TAG}..."
 git clone --depth 1 --branch "${VSOMEIP_TAG}" https://github.com/COVESA/vsomeip.git "${SOURCE_DIR}"
 
 # Apply QNX support patch (idempotent) if available
@@ -231,6 +233,7 @@ if [[ -f "${QNX_PATCH_SCRIPT}" ]]; then
   python3 "${QNX_PATCH_SCRIPT}" "${SOURCE_DIR}/CMakeLists.txt"
 fi
 
+log_info "Configuring cmake build (vsomeip)..."
 cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -248,9 +251,11 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DCMAKE_EXE_LINKER_FLAGS="-lsocket" \
   -DCMAKE_CXX_FLAGS="-DSA_RESTART=0x0040"
 
+log_info "Building vsomeip (jobs=${JOBS})..."
 cmake --build "${BUILD_QNX_DIR}" -j"${JOBS}"
 
 if [[ "${ACTION}" == "install" ]]; then
+  log_info "Installing vsomeip to ${INSTALL_PREFIX}..."
   cmake --install "${BUILD_QNX_DIR}"
 fi
 
@@ -292,6 +297,7 @@ log_info "Building CDR serialization library for QNX"
 CXX_SOURCE_DIR="${BUILD_DIR}/cyclonedds-cxx"
 CDR_BUILD_QNX_DIR="${BUILD_DIR}/cdr-build-qnx"
 
+log_info "Cloning cyclonedds-cxx ${CYCLONEDDS_CXX_TAG}..."
 git clone --depth 1 --branch "${CYCLONEDDS_CXX_TAG}" \
   https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git "${CXX_SOURCE_DIR}"
 
@@ -489,6 +495,7 @@ install(TARGETS lwrcl_cdr
         ARCHIVE DESTINATION lib)
 CDR_CMAKE
 
+log_info "Configuring cmake build (CDR library)..."
 cmake "${CDR_BUILD_QNX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -497,7 +504,9 @@ cmake "${CDR_BUILD_QNX_DIR}" \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -B "${CDR_BUILD_QNX_DIR}/build"
 
+log_info "Building CDR library (jobs=${JOBS})..."
 cmake --build "${CDR_BUILD_QNX_DIR}/build" -j"${JOBS}"
+log_info "Installing CDR library to ${INSTALL_PREFIX}..."
 cmake --install "${CDR_BUILD_QNX_DIR}/build"
 
 # --- 2d. Create CMake config stubs ---

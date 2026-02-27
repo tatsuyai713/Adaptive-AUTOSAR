@@ -220,7 +220,8 @@ if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; th
   if [[ "${EUID}" -ne 0 ]]; then
     SUDO="sudo"
   fi
-  ${SUDO} apt-get update -qq
+  log_info "Installing build dependencies (libssl-dev, bison, flex, git, cmake, make, gcc, g++)..."
+  ${SUDO} apt-get update -q
   ${SUDO} apt-get install -y --no-install-recommends \
     libssl-dev bison flex git cmake make gcc g++ pkg-config
 fi
@@ -274,6 +275,7 @@ log_info "  tags: C=${CYCLONEDDS_TAG} C++=${CYCLONEDDS_CXX_TAG} arch=${ARCH}"
 log_info "  prefix=${INSTALL_PREFIX} shm=${ENABLE_SHM}"
 
 # --- CycloneDDS C library ---
+log_info "Cloning CycloneDDS C ${CYCLONEDDS_TAG}..."
 git clone --depth 1 --branch "${CYCLONEDDS_TAG}" \
   https://github.com/eclipse-cyclonedds/cyclonedds.git "${SOURCE_DIR}"
 
@@ -303,6 +305,7 @@ if [[ "${ENABLE_SHM}" == "ON" ]]; then
   )
 fi
 
+log_info "Configuring cmake build (CycloneDDS C)..."
 cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -320,11 +323,14 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DOPENSSL_INCLUDE_DIR="${QNX_TARGET}/usr/include" \
   "${CORE_EXTRA_ARGS[@]}"
 
+log_info "Building CycloneDDS C (jobs=${JOBS})..."
 cmake --build "${BUILD_QNX_DIR}" -j"${JOBS}"
 # C library must always be installed so C++ binding can find it
+log_info "Installing CycloneDDS C to ${INSTALL_PREFIX}..."
 cmake --install "${BUILD_QNX_DIR}"
 
 # --- CycloneDDS C++ binding ---
+log_info "Cloning CycloneDDS C++ ${CYCLONEDDS_CXX_TAG}..."
 git clone --depth 1 --branch "${CYCLONEDDS_CXX_TAG}" \
   https://github.com/eclipse-cyclonedds/cyclonedds-cxx.git "${SOURCE_CXX_DIR}"
 
@@ -333,6 +339,7 @@ if [[ "${ENABLE_SHM}" == "ON" ]]; then
   CXX_PREFIX_PATH="${INSTALL_PREFIX};${ICEORYX_PREFIX};${ICEORYX_PREFIX}/lib/cmake"
 fi
 
+log_info "Configuring cmake build (CycloneDDS C++)..."
 cmake -S "${SOURCE_CXX_DIR}" -B "${BUILD_CXX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -345,9 +352,11 @@ cmake -S "${SOURCE_CXX_DIR}" -B "${BUILD_CXX_DIR}" \
   -DDDSCXX_NO_STD_OPTIONAL=ON \
   -DENABLE_TOPIC_DISCOVERY=OFF
 
+log_info "Building CycloneDDS C++ (jobs=${JOBS})..."
 cmake --build "${BUILD_CXX_DIR}" -j"${JOBS}"
 
 if [[ "${ACTION}" == "install" ]]; then
+  log_info "Installing CycloneDDS C++ to ${INSTALL_PREFIX}..."
   cmake --install "${BUILD_CXX_DIR}"
 fi
 
@@ -355,6 +364,7 @@ fi
 if [[ "${BUILD_HOST_IDLC}" == "ON" ]]; then
   log_info "Build host idlc and install into ${INSTALL_PREFIX}/bin/idlc"
 
+  log_info "Configuring cmake build (host idlc)..."
   cmake -S "${SOURCE_DIR}" -B "${BUILD_HOST_IDLC_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${HOST_TOOLS_PREFIX}" \
@@ -366,7 +376,9 @@ if [[ "${BUILD_HOST_IDLC}" == "ON" ]]; then
     -DENABLE_SHM=OFF \
     -DENABLE_SOURCE_SPECIFIC_MULTICAST=OFF
 
+  log_info "Building host idlc..."
   cmake --build "${BUILD_HOST_IDLC_DIR}" --target idlc -j"${JOBS}"
+  log_info "Installing host idlc to ${HOST_TOOLS_PREFIX}..."
   cmake --install "${BUILD_HOST_IDLC_DIR}"
 
   mkdir -p "${INSTALL_PREFIX}/bin"

@@ -170,7 +170,8 @@ if [[ "${SKIP_SYSTEM_DEPS}" != "ON" ]] && command -v apt-get >/dev/null 2>&1; th
   if [[ "${EUID}" -ne 0 ]]; then
     SUDO="sudo"
   fi
-  ${SUDO} apt-get update -qq
+  log_info "Installing build dependencies (git, cmake, make)..."
+  ${SUDO} apt-get update -q
   ${SUDO} apt-get install -y --no-install-recommends git cmake make
 fi
 
@@ -186,8 +187,10 @@ log_info "Build iceoryx for QNX"
 log_info "  tag=${ICEORYX_TAG} arch=${ARCH}"
 log_info "  prefix=${INSTALL_PREFIX}"
 
+log_info "Cloning iceoryx ${ICEORYX_TAG}..."
 git clone --depth 1 --branch "${ICEORYX_TAG}" https://github.com/eclipse-iceoryx/iceoryx.git "${SOURCE_DIR}"
 
+log_info "Configuring cmake build..."
 cmake -S "${SOURCE_DIR}/iceoryx_meta" -B "${BUILD_QNX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -199,9 +202,11 @@ cmake -S "${SOURCE_DIR}/iceoryx_meta" -B "${BUILD_QNX_DIR}" \
   -DBUILD_DOC=OFF \
   -DEXAMPLES=OFF
 
+log_info "Building iceoryx (jobs=${JOBS})..."
 cmake --build "${BUILD_QNX_DIR}" -j"${JOBS}"
 
 if [[ "${ACTION}" == "install" ]]; then
+  log_info "Installing iceoryx to ${INSTALL_PREFIX}..."
   cmake --install "${BUILD_QNX_DIR}"
 fi
 
