@@ -7,7 +7,7 @@ set -euo pipefail
 #   ./scripts/install_iceoryx_qnx.sh install --arch aarch64le
 #   ./scripts/install_iceoryx_qnx.sh clean
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DEFAULT_TOOLCHAIN_FILE="${SCRIPT_DIR}/cmake/qnx_toolchain.cmake"
 
 ACTION="build"
@@ -140,7 +140,7 @@ if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then
     exit 1
   fi
   # shellcheck disable=SC1090
-  source "${QNX_ENV_FILE}"
+  _SAVED_SCRIPT_DIR="${SCRIPT_DIR}"; source "${QNX_ENV_FILE}"; SCRIPT_DIR="${_SAVED_SCRIPT_DIR}"
 fi
 
 if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then

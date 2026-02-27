@@ -13,7 +13,7 @@ set -euo pipefail
 #   ./scripts/install_middleware_stack_qnx.sh --without-vsomeip
 # ===========================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # ---------------------------------------------------------------------------
@@ -153,7 +153,7 @@ if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then
     exit 1
   fi
   # shellcheck disable=SC1090
-  source "${QNX_ENV_FILE}"
+  _SAVED_SCRIPT_DIR="${SCRIPT_DIR}"; source "${QNX_ENV_FILE}"; SCRIPT_DIR="${_SAVED_SCRIPT_DIR}"
 fi
 
 if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then

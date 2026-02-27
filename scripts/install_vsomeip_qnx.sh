@@ -18,7 +18,7 @@
 # ===========================================================================
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # Resolve the repo root relative to this script (scripts/ is one level below root)
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEFAULT_TOOLCHAIN_FILE="${SCRIPT_DIR}/cmake/qnx_toolchain.cmake"
@@ -166,7 +166,7 @@ if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then
     exit 1
   fi
   # shellcheck disable=SC1090
-  source "${QNX_ENV_FILE}"
+  _SAVED_SCRIPT_DIR="${SCRIPT_DIR}"; source "${QNX_ENV_FILE}"; SCRIPT_DIR="${_SAVED_SCRIPT_DIR}"
 fi
 
 if [[ -z "${QNX_HOST:-}" || -z "${QNX_TARGET:-}" ]]; then
