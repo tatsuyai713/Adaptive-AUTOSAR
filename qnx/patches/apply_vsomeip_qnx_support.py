@@ -263,6 +263,246 @@ int __wrap_open(const char* pathname, int flags, mode_t mode) {{
         f.write(new_content)
 
 
+def patch_so_bindtodevice(filepath: str) -> None:
+    """Fix SO_BINDTODEVICE guards in TCP/UDP endpoint implementation files.
+
+    QNX does not have SO_BINDTODEVICE (Linux-specific). Upstream guards
+    SO_BINDTODEVICE calls with:
+        #if defined(__linux__) || defined(ANDROID) || defined(__QNX__)
+
+    Remove __QNX__ from only those specific guards that contain SO_BINDTODEVICE,
+    leaving other QNX-inclusive guards intact.
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    if "SO_BINDTODEVICE" not in content:
+        print(f"[INFO] {filepath}: no SO_BINDTODEVICE usage, skipping.")
+        return
+
+    OLD_GUARD = "#if defined(__linux__) || defined(ANDROID) || defined(__QNX__)"
+    NEW_GUARD = "#if defined(__linux__) || defined(ANDROID)"
+
+    if OLD_GUARD not in content:
+        print(f"[INFO] {filepath}: target guard not found, skipping.")
+        return
+
+    # Split on the guard and fix only blocks that contain SO_BINDTODEVICE
+    parts = content.split(OLD_GUARD)
+    changed = False
+    new_parts = [parts[0]]
+    for part in parts[1:]:
+        # Find the matching #endif for this guard (at start of line)
+        endif_pos = part.find("\n#endif")
+        if endif_pos != -1 and "SO_BINDTODEVICE" in part[:endif_pos]:
+            new_parts.append(NEW_GUARD + part)
+            changed = True
+        else:
+            new_parts.append(OLD_GUARD + part)
+
+    if not changed:
+        print(f"[INFO] {filepath}: SO_BINDTODEVICE not inside target guard, skipping.")
+        return
+
+    new_content = "".join(new_parts)
+    new_content = f"// {MARKER}\n" + new_content
+
+    print(f"[INFO] Patching {filepath}: removing __QNX__ from SO_BINDTODEVICE guard")
+    with open(filepath, "w") as f:
+        f.write(new_content)
+
+
+def patch_server_endpoint_impl(filepath: str) -> None:
+    """Fix server_endpoint_impl.cpp QNX template instantiation block.
+
+    The QNX-specific template instantiation block unconditionally uses
+    stream_protocol_ext regardless of the Boost version, while the Linux
+    block correctly guards it with VSOMEIP_BOOST_VERSION < 106600.
+    With Boost >= 1.66 (e.g. 1.86), stream_protocol_ext does not exist
+    in the standard Boost installation; the file is only present in the
+    vsomeip helper/ directory for older Boost builds.
+
+    Replace:
+        #ifdef __QNX__
+        template class server_endpoint_impl<boost::asio::local::stream_protocol_ext>;
+        #endif
+
+    With:
+        #ifdef __QNX__
+        #if VSOMEIP_BOOST_VERSION < 106600
+        template class server_endpoint_impl<boost::asio::local::stream_protocol_ext>;
+        #else
+        template class server_endpoint_impl<boost::asio::local::stream_protocol>;
+        #endif
+        #endif
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    old_block = (
+        "#ifdef __QNX__\n"
+        "template class server_endpoint_impl<boost::asio::local::stream_protocol_ext>;\n"
+        "#endif"
+    )
+
+    if old_block not in content:
+        print(f"[INFO] {filepath}: QNX stream_protocol_ext block not found, skipping.")
+        return
+
+    new_block = (
+        "#ifdef __QNX__\n"
+        "#if VSOMEIP_BOOST_VERSION < 106600\n"
+        "template class server_endpoint_impl<boost::asio::local::stream_protocol_ext>;\n"
+        "#else\n"
+        "template class server_endpoint_impl<boost::asio::local::stream_protocol>;\n"
+        "#endif\n"
+        "#endif"
+    )
+
+    content = content.replace(old_block, new_block, 1)
+    content = f"// {MARKER}\n" + content
+
+    print(f"[INFO] Patching {filepath}: adding VSOMEIP_BOOST_VERSION guard to QNX stream_protocol_ext block")
+    with open(filepath, "w") as f:
+        f.write(content)
+
+
+def patch_udp_pktinfo(filepath: str) -> None:
+    """Patch udp_server_endpoint_impl_receive_op.hpp for QNX.
+
+    QNX lacks struct in_pktinfo and IP_PKTINFO (Linux/Windows-specific IPv4
+    packet info). QNX supports IPv6 pktinfo (in6_pktinfo / IPV6_PKTINFO) but
+    not the IPv4 equivalent. Provide stubs so the file compiles on QNX.
+    The IPv4 destination address detection will be silently non-functional at
+    runtime on QNX (setsockopt with IP_PKTINFO will fail gracefully; no
+    IP_PKTINFO cmsgs will be received), which is acceptable for AUTOSAR targets.
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    if "in_pktinfo" not in content and "IP_PKTINFO" not in content:
+        print(f"[INFO] {filepath}: no in_pktinfo/IP_PKTINFO usage, skipping.")
+        return
+
+    compat_block = (
+        "#ifdef __QNX__\n"
+        "// QNX compatibility: struct in_pktinfo and IP_PKTINFO are Linux/Windows-specific.\n"
+        "// QNX supports IPv6 pktinfo but not IPv4 pktinfo. These stubs allow compilation;\n"
+        "// IPv4 destination address detection will be silently non-functional at runtime.\n"
+        "#ifndef IP_PKTINFO\n"
+        "#  define IP_PKTINFO 26\n"
+        "#endif\n"
+        "#ifndef __in_pktinfo_defined\n"
+        "#  define __in_pktinfo_defined\n"
+        "struct in_pktinfo {\n"
+        "    unsigned int   ipi_ifindex;\n"
+        "    struct in_addr ipi_spec_dst;\n"
+        "    struct in_addr ipi_addr;\n"
+        "};\n"
+        "#endif\n"
+        "#endif // __QNX__\n"
+        "\n"
+    )
+
+    # Inject after the include guard opening
+    lines = content.splitlines(keepends=True)
+    insert_idx = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(("#ifndef", "#define", "#pragma once", "//")):
+            insert_idx = i + 1
+        elif stripped == "":
+            continue
+        else:
+            break
+
+    lines.insert(insert_idx, compat_block)
+    new_content = f"// {MARKER}\n" + "".join(lines)
+
+    print(f"[INFO] Patching {filepath}: adding struct in_pktinfo/IP_PKTINFO stubs for QNX")
+    with open(filepath, "w") as f:
+        f.write(new_content)
+
+
+def patch_local_server_receive_op(filepath: str) -> None:
+    """Patch local_server_endpoint_impl_receive_op.hpp for QNX.
+
+    QNX lacks struct ucred and SCM_CREDENTIALS (Linux-specific credential
+    passing via Unix domain sockets). Provide compatibility stubs so the
+    file compiles on QNX. Credential passing will be silently non-functional
+    at runtime on QNX, which is acceptable for embedded targets.
+    """
+    if not os.path.exists(filepath):
+        return
+
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    if _is_patched(content):
+        print(f"[INFO] {filepath} already patched for QNX, skipping.")
+        return
+
+    if "SCM_CREDENTIALS" not in content and "struct ucred" not in content:
+        print(f"[INFO] {filepath}: no SCM_CREDENTIALS/ucred usage, skipping.")
+        return
+
+    compat_block = (
+        "#ifdef __QNX__\n"
+        "// QNX compatibility: struct ucred and SCM_CREDENTIALS are Linux-specific.\n"
+        "// On QNX, credential passing via Unix domain sockets is not supported;\n"
+        "// these stubs allow compilation; credential auth is skipped at runtime.\n"
+        "#ifndef SCM_CREDENTIALS\n"
+        "#  define SCM_CREDENTIALS 0x02\n"
+        "#endif\n"
+        "#ifndef __ucred_defined\n"
+        "#  define __ucred_defined\n"
+        "struct ucred { unsigned int uid; unsigned int gid; unsigned int pid; };\n"
+        "#endif\n"
+        "#endif // __QNX__\n"
+        "\n"
+    )
+
+    # Inject after the include guard opening (first #ifndef/#define pair or #pragma once)
+    lines = content.splitlines(keepends=True)
+    insert_idx = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith(("#ifndef", "#define", "#pragma once", "//")):
+            insert_idx = i + 1
+        elif stripped == "":
+            continue
+        else:
+            break
+
+    lines.insert(insert_idx, compat_block)
+    new_content = f"// {MARKER}\n" + "".join(lines)
+
+    print(f"[INFO] Patching {filepath}: adding struct ucred/SCM_CREDENTIALS stubs for QNX")
+    with open(filepath, "w") as f:
+        f.write(new_content)
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <CMakeLists.txt>", file=sys.stderr)
@@ -283,4 +523,42 @@ if __name__ == "__main__":
     # Patch wrappers_qnx.cpp for QNX SDP 8.0 (sys/sockmsg.h removed)
     patch_wrappers_qnx(
         os.path.join(vsomeip_root, "implementation/utility/src/wrappers_qnx.cpp")
+    )
+
+    # Patch TCP/UDP endpoint .cpp files: remove __QNX__ from SO_BINDTODEVICE guards
+    # (SO_BINDTODEVICE is Linux-only and not available on QNX)
+    for src in [
+        "implementation/endpoints/src/tcp_client_endpoint_impl.cpp",
+        "implementation/endpoints/src/tcp_server_endpoint_impl.cpp",
+        "implementation/endpoints/src/udp_client_endpoint_impl.cpp",
+        "implementation/endpoints/src/udp_server_endpoint_impl.cpp",
+    ]:
+        patch_so_bindtodevice(os.path.join(vsomeip_root, src))
+
+    # Patch server_endpoint_impl.cpp: add VSOMEIP_BOOST_VERSION guard to QNX
+    # template instantiation block (upstream uses stream_protocol_ext unconditionally
+    # on QNX, but Boost >= 1.66 does not have stream_protocol_ext in the standard path)
+    patch_server_endpoint_impl(
+        os.path.join(
+            vsomeip_root,
+            "implementation/endpoints/src/server_endpoint_impl.cpp",
+        )
+    )
+
+    # Patch udp_server_endpoint_impl_receive_op.hpp for QNX
+    # (struct in_pktinfo / IP_PKTINFO are Linux/Windows-specific)
+    patch_udp_pktinfo(
+        os.path.join(
+            vsomeip_root,
+            "implementation/endpoints/include/udp_server_endpoint_impl_receive_op.hpp",
+        )
+    )
+
+    # Patch local_server_endpoint_impl_receive_op.hpp for QNX
+    # (struct ucred / SCM_CREDENTIALS are Linux-specific)
+    patch_local_server_receive_op(
+        os.path.join(
+            vsomeip_root,
+            "implementation/endpoints/include/local_server_endpoint_impl_receive_op.hpp",
+        )
     )

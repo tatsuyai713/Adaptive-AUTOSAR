@@ -239,6 +239,16 @@ if [[ -f "${QNX_PATCH_SCRIPT}" ]]; then
 fi
 
 log_info "Configuring cmake build (vsomeip)..."
+BOOST_VERSION_STRING="$(ls "${BOOST_PREFIX}/include/" 2>/dev/null | grep -oP 'boost-\K[\d_]+' | head -1 || true)"
+if [[ -n "${BOOST_VERSION_STRING}" ]]; then
+  # Convert "1_86_0" → 108600
+  IFS='_' read -r _bmaj _bmin _bpat <<< "${BOOST_VERSION_STRING}"
+  BOOST_VERSION_INT=$(( ${_bmaj:-1} * 100000 + ${_bmin:-0} * 100 + ${_bpat:-0} ))
+else
+  BOOST_VERSION_INT=108600  # default: 1.86.0
+fi
+log_info "Using Boost version integer: ${BOOST_VERSION_INT}"
+
 cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
   -DQNX_ARCH="${ARCH}" \
@@ -249,12 +259,13 @@ cmake -S "${SOURCE_DIR}" -B "${BUILD_QNX_DIR}" \
   -DBoost_INCLUDE_DIR="${BOOST_PREFIX}/include" \
   -DBoost_LIBRARY_DIR="${BOOST_LIBDIR}" \
   -DBOOST_LIBRARYDIR="${BOOST_LIBDIR}" \
+  -DBoost_VERSION="${BOOST_VERSION_INT}" \
   -DCONFIG_DIR="${SOURCE_DIR}" \
   -DBUILD_SHARED_LIBS=OFF \
   -DENABLE_SIGNAL_HANDLING=OFF \
   -DDISABLE_DLT=ON \
   -DCMAKE_EXE_LINKER_FLAGS="-lsocket" \
-  -DCMAKE_CXX_FLAGS="-DSA_RESTART=0x0040"
+  -DCMAKE_CXX_FLAGS="-DSA_RESTART=0x0040 -DBOOST_ASIO_DISABLE_STD_EXPERIMENTAL_STRING_VIEW"
 
 log_info "Building vsomeip (jobs=${JOBS})..."
 cmake --build "${BUILD_QNX_DIR}" -j"${JOBS}"
