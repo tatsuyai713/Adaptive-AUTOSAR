@@ -6,6 +6,8 @@
 #include <functional>
 #include <stdexcept>
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -178,3 +180,5 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP

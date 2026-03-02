@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./exec_error_domain.h"
+#include "./exec_exception.h"
 
 namespace ara
 {
@@ -64,6 +65,11 @@ namespace ara
             return core::ErrorCode{
                 static_cast<core::ErrorDomain::CodeType>(code),
                 cDomain};
+        }
+
+        void ExecErrorDomain::ThrowAsException(const core::ErrorCode &ec) const
+        {
+            throw ExecException{ec};
         }
     }
 }

@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <string>
 #include <vector>
 #include "../../core/result.h"
 #include "./secoc_error_domain.h"
@@ -115,6 +116,20 @@ namespace ara
                 /// @brief Reset a counter to zero (e.g., after ECU power-on).
                 /// @param pduId PDU identifier.
                 ara::core::Result<void> ResetCounter(PduId pduId);
+
+                /// @brief Persist all counter values to a file.
+                /// @details Enables NVM-like counter persistence across ECU resets.
+                ///          Format: one entry per line — "<pduId> <counter>\n".
+                /// @param filePath Output file path.
+                /// @returns Ok, or SecOcErrc::kNotInitialized on I/O error.
+                ara::core::Result<void> SaveToFile(const std::string &filePath) const;
+
+                /// @brief Restore counter values from a persisted file.
+                /// @details Only updates PDUs that are already registered.
+                ///          Unknown PDU IDs in the file are silently skipped.
+                /// @param filePath Input file path.
+                /// @returns Ok, or SecOcErrc::kNotInitialized on I/O / parse error.
+                ara::core::Result<void> LoadFromFile(const std::string &filePath);
 
             private:
                 struct Entry

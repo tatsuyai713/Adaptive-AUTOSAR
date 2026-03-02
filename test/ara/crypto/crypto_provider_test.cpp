@@ -279,5 +279,237 @@ namespace ara
                 static_cast<CryptoErrc>(_result.Error().Value()),
                 CryptoErrc::kInvalidArgument);
         }
+
+        // --- AES-GCM tests ---
+
+        TEST(CryptoProviderTest, AesGcmEncryptDecryptRoundTrip128)
+        {
+            const std::vector<std::uint8_t> cPlaintext{
+                'H', 'e', 'l', 'l', 'o', ' ', 'G', 'C', 'M', '!'};
+            const auto _keyResult = GenerateSymmetricKey(16U);
+            ASSERT_TRUE(_keyResult.HasValue());
+            const auto &_key = _keyResult.Value();
+
+            const auto _ivResult = GenerateRandomBytes(12U);
+            ASSERT_TRUE(_ivResult.HasValue());
+            const auto &_iv = _ivResult.Value();
+
+            const auto _encResult = AesGcmEncrypt(cPlaintext, _key, _iv);
+            ASSERT_TRUE(_encResult.HasValue());
+            EXPECT_EQ(_encResult.Value().Ciphertext.size(), cPlaintext.size());
+            EXPECT_EQ(_encResult.Value().Tag.size(), 16U);
+            EXPECT_NE(_encResult.Value().Ciphertext, cPlaintext);
+
+            const auto _decResult = AesGcmDecrypt(
+                _encResult.Value().Ciphertext, _key, _iv, _encResult.Value().Tag);
+            ASSERT_TRUE(_decResult.HasValue());
+            EXPECT_EQ(_decResult.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, AesGcmEncryptDecryptRoundTrip256WithAad)
+        {
+            const std::vector<std::uint8_t> cPlaintext{
+                'S', 'e', 'c', 'r', 'e', 't', ' ', 'D', 'a', 't', 'a'};
+            const std::vector<std::uint8_t> cAad{
+                'A', 'D', 'D', 'I', 'T', 'I', 'O', 'N', 'A', 'L'};
+            const auto _keyResult = GenerateSymmetricKey(32U);
+            ASSERT_TRUE(_keyResult.HasValue());
+            const auto &_key = _keyResult.Value();
+
+            const auto _ivResult = GenerateRandomBytes(12U);
+            ASSERT_TRUE(_ivResult.HasValue());
+            const auto &_iv = _ivResult.Value();
+
+            const auto _encResult = AesGcmEncrypt(cPlaintext, _key, _iv, cAad);
+            ASSERT_TRUE(_encResult.HasValue());
+
+            const auto _decResult = AesGcmDecrypt(
+                _encResult.Value().Ciphertext, _key, _iv,
+                _encResult.Value().Tag, cAad);
+            ASSERT_TRUE(_decResult.HasValue());
+            EXPECT_EQ(_decResult.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, AesGcmDecryptWrongTagFails)
+        {
+            const std::vector<std::uint8_t> cPlaintext{'a', 'b', 'c'};
+            const std::vector<std::uint8_t> cKey(16U, 0x42);
+            const std::vector<std::uint8_t> cIv(12U, 0x01);
+
+            const auto _encResult = AesGcmEncrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encResult.HasValue());
+
+            std::vector<std::uint8_t> _wrongTag(16U, 0xFF);
+            const auto _decResult = AesGcmDecrypt(
+                _encResult.Value().Ciphertext, cKey, cIv, _wrongTag);
+            ASSERT_FALSE(_decResult.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_decResult.Error().Value()),
+                CryptoErrc::kDecryptionFailure);
+        }
+
+        TEST(CryptoProviderTest, AesGcmDecryptTamperedAadFails)
+        {
+            const std::vector<std::uint8_t> cPlaintext{'d', 'a', 't', 'a'};
+            const std::vector<std::uint8_t> cAad{'g', 'o', 'o', 'd'};
+            const std::vector<std::uint8_t> cBadAad{'e', 'v', 'i', 'l'};
+            const std::vector<std::uint8_t> cKey(16U, 0x77);
+            const std::vector<std::uint8_t> cIv(12U, 0x55);
+
+            const auto _encResult = AesGcmEncrypt(cPlaintext, cKey, cIv, cAad);
+            ASSERT_TRUE(_encResult.HasValue());
+
+            const auto _decResult = AesGcmDecrypt(
+                _encResult.Value().Ciphertext, cKey, cIv,
+                _encResult.Value().Tag, cBadAad);
+            ASSERT_FALSE(_decResult.HasValue());
+        }
+
+        TEST(CryptoProviderTest, AesGcmEncryptInvalidKeySize)
+        {
+            const std::vector<std::uint8_t> cPlaintext{'x'};
+            const std::vector<std::uint8_t> cBadKey(24U, 0x00);
+            const std::vector<std::uint8_t> cIv(12U, 0x00);
+
+            const auto _result = AesGcmEncrypt(cPlaintext, cBadKey, cIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidKeySize);
+        }
+
+        TEST(CryptoProviderTest, AesGcmEncryptEmptyIvFails)
+        {
+            const std::vector<std::uint8_t> cPlaintext{'x'};
+            const std::vector<std::uint8_t> cKey(16U, 0x00);
+            const std::vector<std::uint8_t> cEmptyIv;
+
+            const auto _result = AesGcmEncrypt(cPlaintext, cKey, cEmptyIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
+
+        TEST(CryptoProviderTest, AesGcmEncryptEmptyPlaintext)
+        {
+            const std::vector<std::uint8_t> cPlaintext;
+            const std::vector<std::uint8_t> cKey(16U, 0xAB);
+            const std::vector<std::uint8_t> cIv(12U, 0xCD);
+
+            const auto _encResult = AesGcmEncrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encResult.HasValue());
+            EXPECT_TRUE(_encResult.Value().Ciphertext.empty());
+            EXPECT_EQ(_encResult.Value().Tag.size(), 16U);
+
+            const auto _decResult = AesGcmDecrypt(
+                _encResult.Value().Ciphertext, cKey, cIv, _encResult.Value().Tag);
+            ASSERT_TRUE(_decResult.HasValue());
+            EXPECT_TRUE(_decResult.Value().empty());
+        }
+
+        // --- PBKDF2 tests ---
+
+        TEST(CryptoProviderTest, DeriveKeyPbkdf2KnownVector)
+        {
+            // RFC 6070 test vector: password="password", salt="salt", iterations=1, dkLen=20
+            const std::vector<std::uint8_t> cPassword{
+                'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
+            const std::vector<std::uint8_t> cSalt{
+                's', 'a', 'l', 't'};
+
+            const auto _result = DeriveKeyPbkdf2(
+                cPassword, cSalt, 1U, 20U, DigestAlgorithm::kSha1);
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(
+                BytesToHex(_result.Value()),
+                "0c60c80f961f0e71f3a9b524af6012062fe037a6");
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyPbkdf2Sha256ProducesCorrectLength)
+        {
+            const std::vector<std::uint8_t> cPassword{'k', 'e', 'y'};
+            const std::vector<std::uint8_t> cSalt{'s', 'a', 'l', 't', '1', '2', '3', '4'};
+
+            const auto _result = DeriveKeyPbkdf2(cPassword, cSalt, 1000U, 32U);
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value().size(), 32U);
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyPbkdf2EmptySaltFails)
+        {
+            const std::vector<std::uint8_t> cPassword{'k', 'e', 'y'};
+            const std::vector<std::uint8_t> cEmptySalt;
+
+            const auto _result = DeriveKeyPbkdf2(cPassword, cEmptySalt, 1000U, 32U);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyPbkdf2ZeroIterationsFails)
+        {
+            const std::vector<std::uint8_t> cPassword{'k', 'e', 'y'};
+            const std::vector<std::uint8_t> cSalt{'s', 'a', 'l', 't'};
+
+            const auto _result = DeriveKeyPbkdf2(cPassword, cSalt, 0U, 32U);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
+
+        // --- HKDF tests ---
+
+        TEST(CryptoProviderTest, DeriveKeyHkdfProducesCorrectLength)
+        {
+            const std::vector<std::uint8_t> cIkm{'s', 'e', 'c', 'r', 'e', 't'};
+            const std::vector<std::uint8_t> cSalt{'s', 'a', 'l', 't'};
+            const std::vector<std::uint8_t> cInfo{'v', '1'};
+
+            const auto _result = DeriveKeyHkdf(cIkm, cSalt, cInfo, 32U);
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value().size(), 32U);
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyHkdfDifferentInfoProducesDifferentKeys)
+        {
+            const std::vector<std::uint8_t> cIkm{'s', 'e', 'c', 'r', 'e', 't'};
+            const std::vector<std::uint8_t> cSalt{'s', 'a', 'l', 't'};
+            const std::vector<std::uint8_t> cInfo1{'e', 'n', 'c'};
+            const std::vector<std::uint8_t> cInfo2{'a', 'u', 't', 'h'};
+
+            const auto _result1 = DeriveKeyHkdf(cIkm, cSalt, cInfo1, 32U);
+            const auto _result2 = DeriveKeyHkdf(cIkm, cSalt, cInfo2, 32U);
+
+            ASSERT_TRUE(_result1.HasValue());
+            ASSERT_TRUE(_result2.HasValue());
+            EXPECT_NE(_result1.Value(), _result2.Value());
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyHkdfEmptyIkmFails)
+        {
+            const std::vector<std::uint8_t> cEmptyIkm;
+            const std::vector<std::uint8_t> cSalt{'s', 'a', 'l', 't'};
+            const std::vector<std::uint8_t> cInfo;
+
+            const auto _result = DeriveKeyHkdf(cEmptyIkm, cSalt, cInfo, 32U);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
+
+        TEST(CryptoProviderTest, DeriveKeyHkdfNoSaltAllowed)
+        {
+            const std::vector<std::uint8_t> cIkm{'k', 'e', 'y'};
+            const std::vector<std::uint8_t> cEmptySalt;
+            const std::vector<std::uint8_t> cInfo{'c', 't', 'x'};
+
+            const auto _result = DeriveKeyHkdf(cIkm, cEmptySalt, cInfo, 16U);
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value().size(), 16U);
+        }
     }
 }

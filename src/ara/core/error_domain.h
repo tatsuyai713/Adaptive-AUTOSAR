@@ -12,8 +12,12 @@ namespace ara
     /// @brief ARA basic core types namespace
     namespace core
     {
+        // Forward declaration for ThrowAsException
+        class ErrorCode;
+
         /// @brief A class that defines the domain of an ErrorCode to avoid code interferences
         /// @note The class is literal type and it is recommended that derived classes be literal type as well.
+        /// @see SWS_CORE_00110
         class ErrorDomain
         {
         public:
@@ -21,6 +25,8 @@ namespace ara
             using IdType = uint64_t;
             /// @brief Unsigned integral type used as raw error code value.
             using CodeType = uint32_t;
+            /// @brief Unsigned integral type for additional error information (SWS_CORE_00113).
+            using SupportDataType = uint32_t;
 
         private:
             IdType mId;
@@ -33,7 +39,7 @@ namespace ara
             }
 
             /// @brief Destructor.
-            ~ErrorDomain() noexcept = default;
+            virtual ~ErrorDomain() noexcept = default;
 
             ErrorDomain(const ErrorDomain &) = delete;
             ErrorDomain(ErrorDomain &&) = delete;
@@ -67,6 +73,12 @@ namespace ara
             /// @param errorCode Error code of interest
             /// @returns Error code message in this domain
             virtual const char *Message(CodeType errorCode) const noexcept = 0;
+
+            /// @brief Throw the error code value as an exception (SWS_CORE_00114).
+            /// @param errorCode The ErrorCode instance to throw
+            /// @note Derived error domains shall override this to throw their
+            ///       domain-specific exception type.
+            virtual void ThrowAsException(const ErrorCode &errorCode) const = 0;
         };
     }
 }

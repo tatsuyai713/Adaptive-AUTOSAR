@@ -45,6 +45,8 @@ namespace ara
 
             const char *Message(
                 core::ErrorDomain::CodeType errorCode) const noexcept override;
+
+            void ThrowAsException(const core::ErrorCode &ec) const override;
         };
 
         /// @brief Create ara::core::ErrorCode in ara::crypto domain.

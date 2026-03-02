@@ -131,8 +131,8 @@ namespace ara
                 }
             }
 
-            /// @brief Throw the appropriate exception type for this error code.
-            void ThrowAsException(const ErrorCode &ec) const
+            /// @brief Throw the appropriate exception type for this error code (SWS_CORE_10950).
+            void ThrowAsException(const ErrorCode &ec) const override
             {
                 switch (static_cast<CoreErrc>(ec.Value()))
                 {

@@ -14,6 +14,8 @@
 #include "../vsomeip_application.h"
 #include "./someip_sd_agent.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -78,5 +80,7 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP
 
 #endif

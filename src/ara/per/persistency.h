@@ -59,6 +59,10 @@ namespace ara
         /// @returns Void Result on success
         core::Result<void> UpdatePersistency(
             const core::InstanceSpecifier &specifier);
+
+        /// @brief Reset all persistent data for this application (SWS_PER_00457)
+        /// @returns Void Result on success
+        core::Result<void> ResetPersistency();
     }
 }
 

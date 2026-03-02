@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <map>
 #include <string>
 #include <type_traits>
@@ -22,12 +23,25 @@ namespace ara
         /// @brief Key-value persistent storage per AUTOSAR AP SWS_PER
         ///        Stores typed values associated with string keys.
         ///        Changes are buffered in memory until SyncToStorage() is called.
+        ///
+        /// ### Change Observation
+        /// Per-key or global observers are notified synchronously when a key
+        /// is created, updated, or removed. Observers are called after the
+        /// internal data map is updated, before the function returns.
         class KeyValueStorage
         {
+        public:
+            /// @brief Callback invoked with the key name when a key is mutated.
+            using KeyObserverCallback = std::function<void(const std::string &key)>;
+
         private:
             std::string mFilePath;
             std::map<std::string, std::vector<std::uint8_t>> mData;
             std::map<std::string, std::vector<std::uint8_t>> mCommittedData;
+
+            std::map<std::string, KeyObserverCallback> mKeyObservers;
+            KeyObserverCallback mGlobalObserver;
+            std::size_t mPendingChanges{0U};
 
             void LoadFromFile();
             void SaveToFile() const;
@@ -36,6 +50,8 @@ namespace ara
                 const std::vector<std::uint8_t> &data);
             static std::vector<std::uint8_t> DecodeBase64(
                 const std::string &encoded);
+
+            void notifyObservers(const std::string &key) const;
 
         public:
             /// @brief Constructor
@@ -47,10 +63,11 @@ namespace ara
             KeyValueStorage(const KeyValueStorage &) = delete;
             KeyValueStorage &operator=(const KeyValueStorage &) = delete;
 
+            // ----------------------------------------------------------------
+            // Read operations
+            // ----------------------------------------------------------------
+
             /// @brief Get a value by key (trivially copyable types)
-            /// @tparam T Value type (must be trivially copyable)
-            /// @param key Key string
-            /// @returns The stored value, or error if key not found
             template <typename T>
             typename std::enable_if<
                 std::is_trivially_copyable<T>::value,
@@ -77,16 +94,14 @@ namespace ara
             }
 
             /// @brief Get a string value by key
-            /// @param key Key string
-            /// @returns The stored string, or error
             core::Result<std::string> GetStringValue(
                 const std::string &key) const;
 
+            // ----------------------------------------------------------------
+            // Write operations
+            // ----------------------------------------------------------------
+
             /// @brief Set a value by key (trivially copyable types)
-            /// @tparam T Value type (must be trivially copyable)
-            /// @param key Key string
-            /// @param value Value to store
-            /// @returns Void Result on success
             template <typename T>
             typename std::enable_if<
                 std::is_trivially_copyable<T>::value,
@@ -96,36 +111,133 @@ namespace ara
                 std::vector<std::uint8_t> bytes(sizeof(T));
                 std::memcpy(bytes.data(), &value, sizeof(T));
                 mData[key] = std::move(bytes);
+                ++mPendingChanges;
+                notifyObservers(key);
                 return core::Result<void>::FromValue();
             }
 
             /// @brief Set a string value by key
-            /// @param key Key string
-            /// @param value String value to store
-            /// @returns Void Result on success
             core::Result<void> SetStringValue(
                 const std::string &key, const std::string &value);
 
             /// @brief Remove a key-value pair
-            /// @param key Key string to remove
-            /// @returns Void Result on success, error if key not found
             core::Result<void> RemoveKey(const std::string &key);
 
+            // ----------------------------------------------------------------
+            // Query operations
+            // ----------------------------------------------------------------
+
             /// @brief Check if a key exists
-            /// @param key Key string
-            /// @returns True if the key exists
             bool HasKey(const std::string &key) const;
 
             /// @brief Get all keys in the storage
-            /// @returns Vector of key strings
             core::Result<std::vector<std::string>> GetAllKeys() const;
 
+            /// @brief Get number of pending (uncommitted) changes since last sync.
+            std::size_t GetPendingChangeCount() const noexcept;
+
+            // ----------------------------------------------------------------
+            // Persistence operations
+            // ----------------------------------------------------------------
+
             /// @brief Persist all pending changes to storage
-            /// @returns Void Result on success
             core::Result<void> SyncToStorage();
 
             /// @brief Discard all pending (uncommitted) changes
             void DiscardPendingChanges();
+
+            // ----------------------------------------------------------------
+            // Observer registration
+            // ----------------------------------------------------------------
+
+            /// @brief Register a per-key observer for the given key.
+            /// @param key      Key to observe.
+            /// @param callback Callback invoked with the key name on change.
+            void SetKeyObserver(const std::string &key,
+                                KeyObserverCallback callback);
+
+            /// @brief Remove the per-key observer for the given key.
+            void RemoveKeyObserver(const std::string &key);
+
+            /// @brief Register a global observer called on every key mutation.
+            /// @param callback Callback; pass nullptr to clear.
+            void SetGlobalObserver(KeyObserverCallback callback);
+
+            /// @brief Remove the global observer.
+            void ClearGlobalObserver() noexcept;
+
+            // ----------------------------------------------------------------
+            // Batch operations
+            // ----------------------------------------------------------------
+
+            /// @brief Set multiple key-value pairs in a single call.
+            ///
+            /// All entries are applied atomically to the in-memory map.
+            /// Observers are notified for each key after all entries have been
+            /// applied.
+            /// @param entries  Map of key -> value pairs.
+            template <typename T>
+            typename std::enable_if<
+                std::is_trivially_copyable<T>::value,
+                core::Result<void>>::type
+            SetValues(const std::map<std::string, T> &entries)
+            {
+                std::vector<std::string> changedKeys;
+                changedKeys.reserve(entries.size());
+                for (const auto &kv : entries)
+                {
+                    std::vector<std::uint8_t> bytes(sizeof(T));
+                    std::memcpy(bytes.data(), &kv.second, sizeof(T));
+                    mData[kv.first] = std::move(bytes);
+                    ++mPendingChanges;
+                    changedKeys.push_back(kv.first);
+                }
+                for (const auto &key : changedKeys)
+                {
+                    notifyObservers(key);
+                }
+                return core::Result<void>::FromValue();
+            }
+
+            /// @brief Set multiple string values in a single call.
+            core::Result<void> SetStringValues(
+                const std::map<std::string, std::string> &entries);
+
+            /// @brief Remove multiple keys in a single call.
+            ///
+            /// Keys that do not exist are silently skipped.
+            /// @param keys  List of keys to remove.
+            /// @returns Number of keys actually removed.
+            core::Result<std::size_t> RemoveKeys(
+                const std::vector<std::string> &keys);
+
+            /// @brief Get multiple values in a single call (trivially copyable).
+            ///
+            /// Keys not found in storage are omitted from the result.
+            template <typename T>
+            typename std::enable_if<
+                std::is_trivially_copyable<T>::value,
+                core::Result<std::map<std::string, T>>>::type
+            GetValues(const std::vector<std::string> &keys) const
+            {
+                std::map<std::string, T> result;
+                for (const auto &key : keys)
+                {
+                    auto it = mData.find(key);
+                    if (it != mData.end() && it->second.size() >= sizeof(T))
+                    {
+                        T value;
+                        std::memcpy(&value, it->second.data(), sizeof(T));
+                        result[key] = value;
+                    }
+                }
+                return core::Result<std::map<std::string, T>>::FromValue(
+                    std::move(result));
+            }
+
+            /// @brief Get multiple string values in a single call.
+            core::Result<std::map<std::string, std::string>> GetStringValues(
+                const std::vector<std::string> &keys) const;
         };
     }
 }

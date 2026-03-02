@@ -5,6 +5,7 @@
 #ifndef HEALTH_CHANNEL_H
 #define HEALTH_CHANNEL_H
 
+#include <functional>
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
 #include "./phm_error_domain.h"
@@ -27,10 +28,15 @@ namespace ara
         ///       to report their operational health status to Platform Health Management.
         class HealthChannel
         {
+        public:
+            /// @brief Callback type for health status change notification
+            using HealthStatusCallback = std::function<void(HealthStatus)>;
+
         private:
             const core::InstanceSpecifier mInstance;
             HealthStatus mLastReportedStatus;
             bool mOffered;
+            HealthStatusCallback mHealthStatusCallback;
 
         public:
             /// @brief Constructor
@@ -62,6 +68,10 @@ namespace ara
             /// @brief Get the last reported health status
             /// @returns The last health status that was reported
             HealthStatus GetLastReportedStatus() const noexcept;
+
+            /// @brief Register a callback for health status changes (SWS_PHM_01180)
+            /// @param callback Callback to be invoked on health status changes
+            void SetHealthStatusCallback(HealthStatusCallback callback);
         };
     }
 }

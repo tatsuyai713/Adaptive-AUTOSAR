@@ -14,7 +14,8 @@ namespace ara
         SupervisedEntity::SupervisedEntity(
             const core::InstanceSpecifier &instance,
             CheckpointCommunicator *communicator) : mInstance{instance},
-                                                    mCommunicator{communicator}
+                                                    mCommunicator{communicator},
+                                                    mEnabled{true}
         {
             if (mCommunicator == nullptr)
             {
@@ -25,8 +26,21 @@ namespace ara
 
         SupervisedEntity::SupervisedEntity(
             SupervisedEntity &&se) noexcept : mInstance{std::move(se.mInstance)},
-                                              mCommunicator{se.mCommunicator}
+                                              mCommunicator{se.mCommunicator},
+                                              mEnabled{se.mEnabled}
         {
+        }
+
+        core::Result<void> SupervisedEntity::Enable()
+        {
+            mEnabled = true;
+            return core::Result<void>{};
+        }
+
+        core::Result<void> SupervisedEntity::Disable()
+        {
+            mEnabled = false;
+            return core::Result<void>{};
         }
     }
 }

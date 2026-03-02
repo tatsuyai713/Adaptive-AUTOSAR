@@ -10,6 +10,8 @@
 #include "../vsomeip_application.h"
 #include "./rpc_client.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace AsyncBsdSocketLib
 {
     /// @brief Forward declaration of async socket poller.
@@ -66,5 +68,7 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP
 
 #endif

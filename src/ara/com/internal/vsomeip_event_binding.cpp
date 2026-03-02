@@ -7,6 +7,8 @@
 #include <utility>
 #include "./vsomeip_event_binding.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -347,3 +349,5 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP

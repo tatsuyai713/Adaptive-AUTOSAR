@@ -58,6 +58,12 @@ namespace ara
                 std::uint16_t serviceId,
                 std::uint16_t instanceId = 0xFFFF);
 
+            /// @brief One-shot service discovery via InstanceSpecifier (SWS_CM_00122).
+            /// @param specifier InstanceSpecifier that resolves to a port prototype
+            /// @returns Container of matching service handles
+            static core::Result<ServiceHandleContainer<ServiceHandleType>>
+            FindService(const core::InstanceSpecifier &specifier);
+
             /// @brief Start continuous service discovery
             /// @param handler Callback invoked when availability changes
             /// @param serviceId Service ID to find

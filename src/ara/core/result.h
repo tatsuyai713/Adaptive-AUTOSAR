@@ -384,6 +384,77 @@ namespace ara
                     return _result;
                 }
             }
+
+            /// @brief Monadic chain: apply a callable if value exists, propagate error otherwise.
+            /// @tparam F Callable type that takes T and returns Result<U, E>
+            /// @param f Callable to invoke with the instance value
+            /// @returns Result of calling f, or a Result with the copied error
+            template <typename F>
+            auto AndThen(F &&f) const -> decltype(f(Value()))
+            {
+                using ReturnType = decltype(f(Value()));
+                if (HasValue())
+                {
+                    return f(Value());
+                }
+                else
+                {
+                    return ReturnType{Error()};
+                }
+            }
+
+            /// @brief Monadic chain: apply a callable if error exists, propagate value otherwise.
+            /// @tparam F Callable type that takes E and returns Result<T, E>
+            /// @param f Callable to invoke with the instance error
+            /// @returns Result of calling f, or the original value Result
+            template <typename F>
+            Result OrElse(F &&f) const
+            {
+                if (!HasValue())
+                {
+                    return f(Error());
+                }
+                else
+                {
+                    return *this;
+                }
+            }
+
+            /// @brief Transform the value: apply a callable to the value, propagate error.
+            /// @tparam F Callable type that takes T and returns U
+            /// @param f Transform function applied to the value
+            /// @returns Result<U, E> with transformed value, or the original error
+            template <typename F>
+            auto Map(F &&f) const -> Result<decltype(f(Value())), E>
+            {
+                using U = decltype(f(Value()));
+                if (HasValue())
+                {
+                    return Result<U, E>{f(Value())};
+                }
+                else
+                {
+                    return Result<U, E>{Error()};
+                }
+            }
+
+            /// @brief Transform the error: apply a callable to the error, propagate value.
+            /// @tparam F Callable type that takes E and returns G
+            /// @param f Transform function applied to the error
+            /// @returns Result<T, G> with original value, or transformed error
+            template <typename F>
+            auto MapError(F &&f) const -> Result<T, decltype(f(Error()))>
+            {
+                using G = decltype(f(Error()));
+                if (HasValue())
+                {
+                    return Result<T, G>{Value()};
+                }
+                else
+                {
+                    return Result<T, G>{f(Error())};
+                }
+            }
         };
 
         template <typename T, typename E>
@@ -786,6 +857,77 @@ namespace ara
                 {
                     Result<decltype(f()), E> _result{f()};
                     return _result;
+                }
+            }
+
+            /// @brief Monadic chain: invoke a callable if no error, propagate error otherwise.
+            /// @tparam F Callable type that takes no arguments and returns Result<U, E>
+            /// @param f Callable to invoke when this Result has no error
+            /// @returns Result of calling f, or a Result with the copied error
+            template <typename F>
+            auto AndThen(F &&f) const -> decltype(f())
+            {
+                using ReturnType = decltype(f());
+                if (!hasError())
+                {
+                    return f();
+                }
+                else
+                {
+                    return ReturnType{Error()};
+                }
+            }
+
+            /// @brief Monadic chain: apply a callable if error exists, propagate void value otherwise.
+            /// @tparam F Callable type that takes E and returns Result<void, E>
+            /// @param f Callable to invoke with the instance error
+            /// @returns Result of calling f, or an ok void Result
+            template <typename F>
+            Result OrElse(F &&f) const
+            {
+                if (hasError())
+                {
+                    return f(Error());
+                }
+                else
+                {
+                    return Result::FromValue();
+                }
+            }
+
+            /// @brief Transform: apply a callable producing a value Result (void → U).
+            /// @tparam F Callable type that takes no arguments and returns U
+            /// @param f Transform function invoked when no error
+            /// @returns Result<U, E> with transformed value, or the original error
+            template <typename F>
+            auto Map(F &&f) const -> Result<decltype(f()), E>
+            {
+                using U = decltype(f());
+                if (!hasError())
+                {
+                    return Result<U, E>{f()};
+                }
+                else
+                {
+                    return Result<U, E>{Error()};
+                }
+            }
+
+            /// @brief Transform the error: apply a callable to the error, propagate void value.
+            /// @tparam F Callable type that takes E and returns G
+            /// @param f Transform function applied to the error
+            /// @returns Result<void, G> with no error, or transformed error
+            template <typename F>
+            auto MapError(F &&f) const -> Result<void, decltype(f(Error()))>
+            {
+                using G = decltype(f(Error()));
+                if (!hasError())
+                {
+                    return Result<void, G>::FromValue();
+                }
+                else
+                {
+                    return Result<void, G>{f(Error())};
                 }
             }
         };

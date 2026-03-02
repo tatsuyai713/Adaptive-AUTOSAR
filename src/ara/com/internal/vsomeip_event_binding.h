@@ -13,6 +13,8 @@
 #include "../com_error_domain.h"
 #include "../someip/vsomeip_application.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -85,5 +87,7 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP
 
 #endif

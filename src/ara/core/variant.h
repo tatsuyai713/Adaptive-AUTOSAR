@@ -197,6 +197,50 @@ namespace ara
         static constexpr std::size_t variant_npos = static_cast<std::size_t>(-1);
 
         // -----------------------------------------------------------------------
+        // Helper: TypeAt — get the N-th type from a pack
+        // -----------------------------------------------------------------------
+        namespace detail
+        {
+            template <std::size_t I, typename... Types>
+            struct TypeAt;
+
+            template <std::size_t I, typename First, typename... Rest>
+            struct TypeAt<I, First, Rest...> : TypeAt<I - 1, Rest...> {};
+
+            template <typename First, typename... Rest>
+            struct TypeAt<0, First, Rest...>
+            {
+                using type = First;
+            };
+        } // namespace detail
+
+        // Forward declaration for type traits
+        template <typename... Types>
+        class Variant;
+
+        // -----------------------------------------------------------------------
+        // variant_size / variant_alternative type traits (SWS_CORE_09251-09252)
+        // -----------------------------------------------------------------------
+        template <typename V>
+        struct variant_size;
+
+        template <typename... Types>
+        struct variant_size<Variant<Types...>>
+            : std::integral_constant<std::size_t, sizeof...(Types)> {};
+
+        template <std::size_t I, typename V>
+        struct variant_alternative;
+
+        template <std::size_t I, typename... Types>
+        struct variant_alternative<I, Variant<Types...>>
+        {
+            using type = typename detail::TypeAt<I, Types...>::type;
+        };
+
+        template <std::size_t I, typename V>
+        using variant_alternative_t = typename variant_alternative<I, V>::type;
+
+        // -----------------------------------------------------------------------
         // Variant<Types...>
         // -----------------------------------------------------------------------
         /// @brief Type-safe discriminated union (AUTOSAR SWS_CORE_01601).
@@ -331,6 +375,24 @@ namespace ara
                 return mTypeIndex == variant_npos;
             }
 
+            /// @brief In-place construct a new value of type T (SWS_CORE_01640).
+            template <typename T, typename... Args>
+            T &Emplace(Args &&... args)
+            {
+                destroyActive();
+                mTypeIndex = detail::TypeIndex<T, Types...>::value;
+                auto *ptr = new (&mStorage) T(std::forward<Args>(args)...);
+                return *ptr;
+            }
+
+            /// @brief Swap contents with another variant (SWS_CORE_01650).
+            void Swap(Variant &other) noexcept
+            {
+                Variant tmp{std::move(*this)};
+                *this = std::move(other);
+                other = std::move(tmp);
+            }
+
             // Internal access (used by Get/GetIf/HoldsAlternative/Visit friends)
             void *storage() noexcept { return &mStorage; }
             const void *storage() const noexcept { return &mStorage; }
@@ -395,6 +457,33 @@ namespace ara
                 throw std::bad_cast();
             }
             return std::move(*reinterpret_cast<T *>(v.storage()));
+        }
+
+        // -----------------------------------------------------------------------
+        // Get<I>(variant) — index-based access (SWS_CORE_01660)
+        // -----------------------------------------------------------------------
+        template <std::size_t I, typename... Types>
+        auto Get(Variant<Types...> &v)
+            -> typename detail::TypeAt<I, Types...>::type &
+        {
+            using T = typename detail::TypeAt<I, Types...>::type;
+            return Get<T>(v);
+        }
+
+        template <std::size_t I, typename... Types>
+        auto Get(const Variant<Types...> &v)
+            -> const typename detail::TypeAt<I, Types...>::type &
+        {
+            using T = typename detail::TypeAt<I, Types...>::type;
+            return Get<T>(v);
+        }
+
+        template <std::size_t I, typename... Types>
+        auto Get(Variant<Types...> &&v)
+            -> typename detail::TypeAt<I, Types...>::type &&
+        {
+            using T = typename detail::TypeAt<I, Types...>::type;
+            return Get<T>(std::move(v));
         }
 
         // -----------------------------------------------------------------------

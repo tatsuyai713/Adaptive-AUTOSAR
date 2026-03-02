@@ -217,6 +217,8 @@ namespace ara
         {
             mData[key] = std::vector<std::uint8_t>(
                 value.begin(), value.end());
+            ++mPendingChanges;
+            notifyObservers(key);
             return core::Result<void>::FromValue();
         }
 
@@ -231,6 +233,8 @@ namespace ara
             }
 
             mData.erase(it);
+            ++mPendingChanges;
+            notifyObservers(key);
             return core::Result<void>::FromValue();
         }
 
@@ -262,6 +266,105 @@ namespace ara
         void KeyValueStorage::DiscardPendingChanges()
         {
             mData = mCommittedData;
+        }
+
+        // ── Observer helpers ─────────────────────────────────
+
+        void KeyValueStorage::notifyObservers(const std::string &key) const
+        {
+            auto it = mKeyObservers.find(key);
+            if (it != mKeyObservers.end() && it->second)
+            {
+                it->second(key);
+            }
+            if (mGlobalObserver)
+            {
+                mGlobalObserver(key);
+            }
+        }
+
+        void KeyValueStorage::SetKeyObserver(
+            const std::string &key,
+            KeyObserverCallback callback)
+        {
+            mKeyObservers[key] = std::move(callback);
+        }
+
+        void KeyValueStorage::RemoveKeyObserver(const std::string &key)
+        {
+            mKeyObservers.erase(key);
+        }
+
+        void KeyValueStorage::SetGlobalObserver(KeyObserverCallback callback)
+        {
+            mGlobalObserver = std::move(callback);
+        }
+
+        void KeyValueStorage::ClearGlobalObserver() noexcept
+        {
+            mGlobalObserver = nullptr;
+        }
+
+        // ── Batch operations ─────────────────────────────────
+
+        core::Result<void> KeyValueStorage::SetStringValues(
+            const std::map<std::string, std::string> &entries)
+        {
+            std::vector<std::string> changedKeys;
+            changedKeys.reserve(entries.size());
+            for (const auto &kv : entries)
+            {
+                mData[kv.first] = std::vector<std::uint8_t>(
+                    kv.second.begin(), kv.second.end());
+                ++mPendingChanges;
+                changedKeys.push_back(kv.first);
+            }
+            for (const auto &key : changedKeys)
+            {
+                notifyObservers(key);
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<std::size_t> KeyValueStorage::RemoveKeys(
+            const std::vector<std::string> &keys)
+        {
+            std::size_t removed{0U};
+            std::vector<std::string> removedKeys;
+            for (const auto &key : keys)
+            {
+                auto it = mData.find(key);
+                if (it != mData.end())
+                {
+                    mData.erase(it);
+                    ++mPendingChanges;
+                    ++removed;
+                    removedKeys.push_back(key);
+                }
+            }
+            for (const auto &key : removedKeys)
+            {
+                notifyObservers(key);
+            }
+            return core::Result<std::size_t>::FromValue(removed);
+        }
+
+        core::Result<std::map<std::string, std::string>>
+        KeyValueStorage::GetStringValues(
+            const std::vector<std::string> &keys) const
+        {
+            std::map<std::string, std::string> result;
+            for (const auto &key : keys)
+            {
+                auto it = mData.find(key);
+                if (it != mData.end())
+                {
+                    result[key] = std::string(
+                        it->second.begin(), it->second.end());
+                }
+            }
+            return core::Result<std::map<std::string, std::string>>::FromValue(
+                std::move(result));
         }
     }
 }

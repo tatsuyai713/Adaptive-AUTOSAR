@@ -53,6 +53,10 @@ namespace ara
             /// @returns Constant message string for logging and diagnostics.
             const char *Message(
                 core::ErrorDomain::CodeType errorCode) const noexcept override;
+
+            /// @brief Throw the error code value as an exception.
+            /// @param ec The ErrorCode instance to throw.
+            void ThrowAsException(const core::ErrorCode &ec) const override;
         };
 
         /// @brief Creates an `ara::core::ErrorCode` in the `ComErrorDomain`.

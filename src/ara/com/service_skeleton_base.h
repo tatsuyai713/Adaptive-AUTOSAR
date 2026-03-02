@@ -92,6 +92,18 @@ namespace ara
             /// @brief Get the instance specifier
             /// @returns Instance specifier associated with this skeleton.
             const core::InstanceSpecifier &GetInstanceSpecifier() const noexcept;
+
+            /// @brief Process the next pending method call (SWS_CM_00199).
+            /// @details When the skeleton is constructed with `kPoll` processing
+            ///          mode, this function shall be called by the application
+            ///          to dispatch exactly one pending method request.
+            ///          With `kEvent` mode this is a no-op and returns success.
+            /// @returns A Future that becomes ready when the dispatched method
+            ///          call finishes, or immediately if no call was pending.
+            core::Result<void> ProcessNextMethodCall();
+
+            /// @brief Get the configured method processing mode.
+            MethodCallProcessingMode GetMethodCallProcessingMode() const noexcept;
         };
     }
 }

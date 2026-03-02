@@ -177,6 +177,25 @@ namespace ara
             return mStateTransitionFuture;
         }
 
+        core::Result<FunctionGroupState> StateClient::GetState(
+            const FunctionGroup &functionGroup) const noexcept
+        {
+            // Attempt to create a FunctionGroupState with the default/current state
+            // In a full implementation, this would query EM via RPC for the actual state.
+            const std::string cDefaultState{"Running"};
+            auto _stateResult{FunctionGroupState::Create(functionGroup, cDefaultState)};
+            if (_stateResult.HasValue())
+            {
+                return _stateResult;
+            }
+
+            const ExecErrc cExecErrc{ExecErrc::kFailed};
+            auto _errorValue{static_cast<core::ErrorDomain::CodeType>(cExecErrc)};
+            core::ErrorCode _errorCode{_errorValue, cErrorDomain};
+            core::Result<FunctionGroupState> _result{_errorCode};
+            return _result;
+        }
+
         core::Result<ExecutionErrorEvent> StateClient::GetExecutionError(
             const FunctionGroup &functionGroup) noexcept
         {

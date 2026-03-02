@@ -58,9 +58,28 @@ namespace ara
             /// @returns True if the file exists
             bool FileExists(const std::string &fileName) const;
 
+            /// @brief Open a file for writing only (SWS_PER_00144)
+            /// @param fileName Name of the file (relative to storage directory)
+            /// @returns ReadWriteAccessor (write-only mode) on success, error otherwise
+            core::Result<UniqueHandle<ReadWriteAccessor>> OpenFileWriteOnly(
+                const std::string &fileName);
+
             /// @brief Get all file names in storage
             /// @returns Vector of file names, or error
             core::Result<std::vector<std::string>> GetAllFileNames() const;
+
+            /// @brief Recover a single file from a backup (SWS_PER_00337)
+            /// @param fileName Name of the file to recover
+            /// @returns Void Result on success
+            core::Result<void> RecoverFile(const std::string &fileName);
+
+            /// @brief Recover all files inside this storage (SWS_PER_00419)
+            /// @returns Void Result on success
+            core::Result<void> RecoverAllFiles();
+
+            /// @brief Get the total size consumed by all files in this storage (SWS_PER_00409)
+            /// @returns Total size in bytes, or error
+            core::Result<uint64_t> GetCurrentFileStorageSize() const;
         };
     }
 }

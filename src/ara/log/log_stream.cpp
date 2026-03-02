@@ -210,5 +210,20 @@ namespace ara
         {
             return mLogs;
         }
+
+        LogStream &LogStream::operator<<(core::Span<const core::Byte> data)
+        {
+            std::stringstream _stringstream;
+            _stringstream << std::hex << std::setfill('0');
+            for (std::size_t i = 0; i < data.size(); ++i)
+            {
+                _stringstream << std::setw(2)
+                              << static_cast<unsigned>(
+                                     core::to_integer<std::uint8_t>(data[i]));
+            }
+            std::string _valueString = _stringstream.str();
+            concat(std::move(_valueString));
+            return *this;
+        }
     }
 }

@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./tsync_error_domain.h"
+#include <stdexcept>
 
 namespace ara
 {
@@ -44,6 +45,11 @@ namespace ara
             return core::ErrorCode{
                 static_cast<core::ErrorDomain::CodeType>(code),
                 cDomain};
+        }
+
+        void TsyncErrorDomain::ThrowAsException(const core::ErrorCode &ec) const
+        {
+            throw std::runtime_error(ec.Domain().Message(ec.Value()));
         }
     }
 }

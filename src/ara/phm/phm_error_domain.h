@@ -39,6 +39,10 @@ namespace ara
             /// @brief Message conversion for PHM error codes.
             const char *Message(
                 core::ErrorDomain::CodeType errorCode) const noexcept override;
+
+            /// @brief Throw the error code value as an exception.
+            /// @param ec The ErrorCode instance to throw.
+            void ThrowAsException(const core::ErrorCode &ec) const override;
         };
 
         /// @brief Create `ara::core::ErrorCode` in PHM domain.

@@ -10,6 +10,9 @@
 #include <utility>
 #include "../core/error_code.h"
 #include "../core/instance_specifier.h"
+#include "../core/byte.h"
+#include "../core/span.h"
+#include "../core/string.h"
 #include "./common.h"
 #include "./argument.h"
 
@@ -114,6 +117,9 @@ namespace ara
             /// @param value Data byte vector
             /// @returns Reference to the current log stream
             LogStream &operator<<(std::vector<std::uint8_t> value);
+
+            /// @brief Insert a raw-byte span as hexadecimal (SWS_LOG_00101).
+            LogStream &operator<<(core::Span<const core::Byte> data);
 
             /// @brief Log stream at a certian file and a certian line within the file
             /// @param file File name

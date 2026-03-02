@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./diag_error_domain.h"
+#include <stdexcept>
 
 namespace ara
 {
@@ -80,6 +81,11 @@ namespace ara
         {
             auto _codeType{static_cast<ara::core::ErrorDomain::CodeType>(code)};
             return ara::core::ErrorCode(_codeType, GetDiagErrorDomain());
+        }
+
+        void DiagErrorDomain::ThrowAsException(const ara::core::ErrorCode &ec) const
+        {
+            throw std::runtime_error(ec.Domain().Message(ec.Value()));
         }
     }
 }

@@ -24,6 +24,7 @@ namespace ara
         private:
             const core::InstanceSpecifier &mInstance;
             CheckpointCommunicator *const mCommunicator;
+            bool mEnabled;
 
         public:
             /// @brief Constructor
@@ -54,6 +55,11 @@ namespace ara
                     "Checkpoint enum underlying type must be uint32_t.");
 
                 const auto checkpoint{static_cast<std::uint32_t>(checkpointId)};
+                if (!mEnabled)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PhmErrc::kCheckpointCommunicationError));
+                }
                 const bool reported{mCommunicator->TrySend(checkpoint)};
                 if (!reported)
                 {
@@ -63,6 +69,14 @@ namespace ara
 
                 return core::Result<void>{};
             }
+
+            /// @brief Enable supervision for this entity (SWS_PHM_01140)
+            /// @returns Void Result on success
+            core::Result<void> Enable();
+
+            /// @brief Disable supervision for this entity (SWS_PHM_01141)
+            /// @returns Void Result on success
+            core::Result<void> Disable();
         };
     }
 }

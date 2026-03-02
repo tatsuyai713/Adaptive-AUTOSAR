@@ -135,14 +135,16 @@ namespace ara
         HealthChannel::HealthChannel(
             core::InstanceSpecifier instance) : mInstance{std::move(instance)},
                                                 mLastReportedStatus{HealthStatus::kOk},
-                                                mOffered{false}
+                                                mOffered{false},
+                                                mHealthStatusCallback{nullptr}
         {
         }
 
         HealthChannel::HealthChannel(HealthChannel &&other) noexcept
             : mInstance{std::move(other.mInstance)},
               mLastReportedStatus{other.mLastReportedStatus},
-              mOffered{other.mOffered}
+              mOffered{other.mOffered},
+              mHealthStatusCallback{std::move(other.mHealthStatusCallback)}
         {
             other.mOffered = false;
         }
@@ -178,6 +180,12 @@ namespace ara
 
             mLastReportedStatus = status;
 
+            // Notify callback if registered
+            if (mHealthStatusCallback)
+            {
+                mHealthStatusCallback(status);
+            }
+
             const std::string statusFilePath{BuildHealthFilePath(mInstance)};
             const auto separator{statusFilePath.rfind('/')};
             if (separator != std::string::npos)
@@ -202,6 +210,12 @@ namespace ara
         HealthStatus HealthChannel::GetLastReportedStatus() const noexcept
         {
             return mLastReportedStatus;
+        }
+
+        void HealthChannel::SetHealthStatusCallback(
+            HealthStatusCallback callback)
+        {
+            mHealthStatusCallback = std::move(callback);
         }
     }
 }

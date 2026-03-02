@@ -9,7 +9,9 @@
 #include <memory>
 #include "./event_binding.h"
 #include "./method_binding.h"
+#if ARA_COM_USE_VSOMEIP
 #include "./vsomeip_event_binding.h"
+#endif
 #include "../com_error_domain.h"
 
 namespace ara
@@ -38,8 +40,10 @@ namespace ara
                 {
                     switch (transport)
                     {
+#if ARA_COM_USE_VSOMEIP
                     case TransportBinding::kVsomeip:
                         return std::make_unique<VsomeipProxyEventBinding>(config);
+#endif
                     default:
                         return nullptr;
                     }
@@ -52,8 +56,10 @@ namespace ara
                 {
                     switch (transport)
                     {
+#if ARA_COM_USE_VSOMEIP
                     case TransportBinding::kVsomeip:
                         return std::make_unique<VsomeipSkeletonEventBinding>(config);
+#endif
                     default:
                         return nullptr;
                     }

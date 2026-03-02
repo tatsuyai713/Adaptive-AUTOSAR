@@ -12,6 +12,8 @@
 #include "../someip/rpc/rpc_client.h"
 #include "../someip/rpc/rpc_server.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -68,5 +70,7 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP
 
 #endif

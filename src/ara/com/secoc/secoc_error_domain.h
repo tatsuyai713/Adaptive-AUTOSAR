@@ -78,25 +78,24 @@ namespace ara
                     }
                 }
 
-                void ThrowAsException(const ara::core::ErrorCode &errorCode) const noexcept(false) override
+                void ThrowAsException(const ara::core::ErrorCode &errorCode) const override
                 {
                     throw errorCode;
                 }
             };
 
-            namespace internal
+            inline const ara::core::ErrorDomain &GetSecOcErrorDomain() noexcept
             {
-                constexpr SecOcErrorDomain cSecOcErrorDomain;
+                static const SecOcErrorDomain sDomain;
+                return sDomain;
             }
 
             /// @brief Create an ErrorCode for SecOC errors.
-            constexpr ara::core::ErrorCode MakeErrorCode(
-                SecOcErrc code,
-                ara::core::ErrorDomain::SupportDataType data = 0) noexcept
+            inline ara::core::ErrorCode MakeErrorCode(
+                SecOcErrc code) noexcept
             {
                 return {static_cast<ara::core::ErrorDomain::CodeType>(code),
-                        internal::cSecOcErrorDomain,
-                        data};
+                        GetSecOcErrorDomain()};
             }
 
         } // namespace secoc

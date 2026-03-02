@@ -523,5 +523,57 @@ namespace ara
 
             return core::Result<void>::FromValue();
         }
+
+        core::Result<void> ResetPersistency()
+        {
+            if (!PathExists(cStorageRoot))
+            {
+                return core::Result<void>::FromValue();
+            }
+
+            // Remove all subdirectories (each is a storage) under the root
+            DIR *dir = ::opendir(cStorageRoot.c_str());
+            if (!dir)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            bool anyError{false};
+            struct dirent *entry;
+            while ((entry = ::readdir(dir)) != nullptr)
+            {
+                std::string name = entry->d_name;
+                if (name == "." || name == "..")
+                {
+                    continue;
+                }
+
+                const std::string fullPath{cStorageRoot + "/" + name};
+                if (IsDirectory(fullPath))
+                {
+                    if (!RemoveRegularFilesInDirectory(fullPath))
+                    {
+                        anyError = true;
+                    }
+                }
+                else
+                {
+                    if (::remove(fullPath.c_str()) != 0)
+                    {
+                        anyError = true;
+                    }
+                }
+            }
+            ::closedir(dir);
+
+            if (anyError)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<void>::FromValue();
+        }
     }
 }

@@ -3,6 +3,9 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./freshness_manager.h"
+
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
 
 namespace ara
@@ -183,6 +186,80 @@ namespace ara
                 }
                 it->second.counter = 0;
                 return {};
+            }
+
+            // -----------------------------------------------------------------------
+            // SaveToFile
+            // -----------------------------------------------------------------------
+            ara::core::Result<void> FreshnessManager::SaveToFile(
+                const std::string &filePath) const
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+
+                std::ofstream ofs{filePath};
+                if (!ofs)
+                {
+                    return ara::core::Result<void>::FromError(
+                        MakeErrorCode(SecOcErrc::kNotInitialized));
+                }
+
+                for (const auto &kv : mEntries)
+                {
+                    ofs << static_cast<uint32_t>(kv.first) << " "
+                        << kv.second.counter << "\n";
+                }
+
+                if (!ofs)
+                {
+                    return ara::core::Result<void>::FromError(
+                        MakeErrorCode(SecOcErrc::kNotInitialized));
+                }
+
+                return ara::core::Result<void>::FromValue();
+            }
+
+            // -----------------------------------------------------------------------
+            // LoadFromFile
+            // -----------------------------------------------------------------------
+            ara::core::Result<void> FreshnessManager::LoadFromFile(
+                const std::string &filePath)
+            {
+                std::ifstream ifs{filePath};
+                if (!ifs)
+                {
+                    return ara::core::Result<void>::FromError(
+                        MakeErrorCode(SecOcErrc::kNotInitialized));
+                }
+
+                std::lock_guard<std::mutex> lock(mMutex);
+
+                std::string line;
+                while (std::getline(ifs, line))
+                {
+                    if (line.empty() || line[0] == '#')
+                    {
+                        continue;
+                    }
+
+                    std::istringstream iss{line};
+                    uint32_t pduIdRaw{0};
+                    uint64_t counter{0};
+                    if (!(iss >> pduIdRaw >> counter))
+                    {
+                        return ara::core::Result<void>::FromError(
+                            MakeErrorCode(SecOcErrc::kConfigurationError));
+                    }
+
+                    const PduId pduId{static_cast<PduId>(pduIdRaw)};
+                    auto it = mEntries.find(pduId);
+                    if (it != mEntries.end())
+                    {
+                        it->second.counter = counter;
+                    }
+                    // Unknown PDU IDs are silently ignored
+                }
+
+                return ara::core::Result<void>::FromValue();
             }
 
         } // namespace secoc

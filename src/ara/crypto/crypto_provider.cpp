@@ -4,10 +4,18 @@
 
 #include "./crypto_provider.h"
 
+#include <cstring>
 #include <limits>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#include <openssl/opensslv.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/kdf.h>
+#include <openssl/core_names.h>
+#include <openssl/params.h>
+#endif
 
 namespace ara
 {
@@ -49,6 +57,24 @@ namespace ara
                     return nullptr;
                 }
             }
+
+            const EVP_CIPHER *ResolveAesGcmCipher(std::size_t keyLength)
+            {
+                if (keyLength == 16U)
+                {
+                    return EVP_aes_128_gcm();
+                }
+                else if (keyLength == 32U)
+                {
+                    return EVP_aes_256_gcm();
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
+
+            const std::size_t cAesGcmTagSize{16U};
         }
 
         core::Result<std::vector<std::uint8_t>> ComputeDigest(
@@ -310,6 +336,379 @@ namespace ara
             _plaintext.resize(static_cast<std::size_t>(_totalLength));
             return core::Result<std::vector<std::uint8_t>>::FromValue(
                 std::move(_plaintext));
+        }
+
+        core::Result<AesGcmResult> AesGcmEncrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv,
+            const std::vector<std::uint8_t> &aad)
+        {
+            const EVP_CIPHER *_cipher{ResolveAesGcmCipher(key.size())};
+            if (_cipher == nullptr)
+            {
+                return core::Result<AesGcmResult>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidKeySize));
+            }
+
+            if (iv.empty())
+            {
+                return core::Result<AesGcmResult>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            EVP_CIPHER_CTX *_context{EVP_CIPHER_CTX_new()};
+            if (_context == nullptr)
+            {
+                return core::Result<AesGcmResult>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            std::vector<std::uint8_t> _ciphertext(plaintext.size());
+            std::vector<std::uint8_t> _tag(cAesGcmTagSize);
+            int _outLength{0};
+
+            bool _success{true};
+            _success = _success &&
+                       (EVP_EncryptInit_ex(_context, _cipher, nullptr, nullptr, nullptr) == 1);
+            _success = _success &&
+                       (EVP_CIPHER_CTX_ctrl(_context, EVP_CTRL_GCM_SET_IVLEN,
+                                            static_cast<int>(iv.size()), nullptr) == 1);
+            _success = _success &&
+                       (EVP_EncryptInit_ex(_context, nullptr, nullptr,
+                                           key.data(), iv.data()) == 1);
+
+            if (_success && !aad.empty())
+            {
+                _success = _success &&
+                           (EVP_EncryptUpdate(_context, nullptr, &_outLength,
+                                              aad.data(), static_cast<int>(aad.size())) == 1);
+            }
+
+            if (_success && !plaintext.empty())
+            {
+                _success = _success &&
+                           (EVP_EncryptUpdate(_context, _ciphertext.data(), &_outLength,
+                                              plaintext.data(),
+                                              static_cast<int>(plaintext.size())) == 1);
+            }
+
+            if (_success)
+            {
+                _success = _success &&
+                           (EVP_EncryptFinal_ex(_context, _ciphertext.data() + _outLength,
+                                                &_outLength) == 1);
+            }
+
+            if (_success)
+            {
+                _success = _success &&
+                           (EVP_CIPHER_CTX_ctrl(_context, EVP_CTRL_GCM_GET_TAG,
+                                                static_cast<int>(cAesGcmTagSize),
+                                                _tag.data()) == 1);
+            }
+
+            EVP_CIPHER_CTX_free(_context);
+
+            if (!_success)
+            {
+                return core::Result<AesGcmResult>::FromError(
+                    MakeErrorCode(CryptoErrc::kEncryptionFailure));
+            }
+
+            AesGcmResult _result;
+            _result.Ciphertext = std::move(_ciphertext);
+            _result.Tag = std::move(_tag);
+            return core::Result<AesGcmResult>::FromValue(std::move(_result));
+        }
+
+        core::Result<std::vector<std::uint8_t>> AesGcmDecrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv,
+            const std::vector<std::uint8_t> &tag,
+            const std::vector<std::uint8_t> &aad)
+        {
+            const EVP_CIPHER *_cipher{ResolveAesGcmCipher(key.size())};
+            if (_cipher == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidKeySize));
+            }
+
+            if (iv.empty())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            if (tag.size() != cAesGcmTagSize)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            EVP_CIPHER_CTX *_context{EVP_CIPHER_CTX_new()};
+            if (_context == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            std::vector<std::uint8_t> _plaintext(ciphertext.size());
+            int _outLength{0};
+            int _totalLength{0};
+
+            bool _success{true};
+            _success = _success &&
+                       (EVP_DecryptInit_ex(_context, _cipher, nullptr, nullptr, nullptr) == 1);
+            _success = _success &&
+                       (EVP_CIPHER_CTX_ctrl(_context, EVP_CTRL_GCM_SET_IVLEN,
+                                            static_cast<int>(iv.size()), nullptr) == 1);
+            _success = _success &&
+                       (EVP_DecryptInit_ex(_context, nullptr, nullptr,
+                                           key.data(), iv.data()) == 1);
+
+            if (_success && !aad.empty())
+            {
+                _success = _success &&
+                           (EVP_DecryptUpdate(_context, nullptr, &_outLength,
+                                              aad.data(), static_cast<int>(aad.size())) == 1);
+            }
+
+            if (_success && !ciphertext.empty())
+            {
+                _success = _success &&
+                           (EVP_DecryptUpdate(_context, _plaintext.data(), &_outLength,
+                                              ciphertext.data(),
+                                              static_cast<int>(ciphertext.size())) == 1);
+                _totalLength = _outLength;
+            }
+
+            // Set expected tag before final
+            if (_success)
+            {
+                std::vector<std::uint8_t> _tagCopy(tag);
+                _success = _success &&
+                           (EVP_CIPHER_CTX_ctrl(_context, EVP_CTRL_GCM_SET_TAG,
+                                                static_cast<int>(cAesGcmTagSize),
+                                                _tagCopy.data()) == 1);
+            }
+
+            if (_success)
+            {
+                const int _finalResult = EVP_DecryptFinal_ex(
+                    _context, _plaintext.data() + _totalLength, &_outLength);
+                if (_finalResult != 1)
+                {
+                    EVP_CIPHER_CTX_free(_context);
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kDecryptionFailure));
+                }
+                _totalLength += _outLength;
+            }
+
+            EVP_CIPHER_CTX_free(_context);
+
+            if (!_success)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kDecryptionFailure));
+            }
+
+            _plaintext.resize(static_cast<std::size_t>(_totalLength));
+            return core::Result<std::vector<std::uint8_t>>::FromValue(
+                std::move(_plaintext));
+        }
+
+        core::Result<std::vector<std::uint8_t>> DeriveKeyPbkdf2(
+            const std::vector<std::uint8_t> &password,
+            const std::vector<std::uint8_t> &salt,
+            std::uint32_t iterations,
+            std::size_t keyLength,
+            DigestAlgorithm algorithm)
+        {
+            if (salt.empty())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            if (iterations == 0U)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            if (keyLength == 0U)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            const EVP_MD *_md{ResolveDigestAlgorithm(algorithm)};
+            if (_md == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kUnsupportedAlgorithm));
+            }
+
+            std::vector<std::uint8_t> _derivedKey(keyLength);
+
+            const int _result = PKCS5_PBKDF2_HMAC(
+                reinterpret_cast<const char *>(password.empty() ? nullptr : password.data()),
+                static_cast<int>(password.size()),
+                salt.data(),
+                static_cast<int>(salt.size()),
+                static_cast<int>(iterations),
+                _md,
+                static_cast<int>(keyLength),
+                _derivedKey.data());
+
+            if (_result != 1)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            return core::Result<std::vector<std::uint8_t>>::FromValue(
+                std::move(_derivedKey));
+        }
+
+        core::Result<std::vector<std::uint8_t>> DeriveKeyHkdf(
+            const std::vector<std::uint8_t> &inputKey,
+            const std::vector<std::uint8_t> &salt,
+            const std::vector<std::uint8_t> &info,
+            std::size_t keyLength,
+            DigestAlgorithm algorithm)
+        {
+            if (inputKey.empty())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            if (keyLength == 0U)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            const EVP_MD *_md{ResolveDigestAlgorithm(algorithm)};
+            if (_md == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kUnsupportedAlgorithm));
+            }
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            // OpenSSL 3.0+ EVP_KDF API
+            EVP_KDF *_kdf{EVP_KDF_fetch(nullptr, "HKDF", nullptr)};
+            if (_kdf == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            EVP_KDF_CTX *_kctx{EVP_KDF_CTX_new(_kdf)};
+            EVP_KDF_free(_kdf);
+            if (_kctx == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            const char *_digestName{EVP_MD_get0_name(_md)};
+            OSSL_PARAM _params[5];
+            int _paramIdx{0};
+            _params[_paramIdx++] = OSSL_PARAM_construct_utf8_string(
+                OSSL_KDF_PARAM_DIGEST,
+                const_cast<char *>(_digestName), 0);
+            _params[_paramIdx++] = OSSL_PARAM_construct_octet_string(
+                OSSL_KDF_PARAM_KEY,
+                const_cast<std::uint8_t *>(inputKey.data()),
+                inputKey.size());
+            if (!salt.empty())
+            {
+                _params[_paramIdx++] = OSSL_PARAM_construct_octet_string(
+                    OSSL_KDF_PARAM_SALT,
+                    const_cast<std::uint8_t *>(salt.data()),
+                    salt.size());
+            }
+            if (!info.empty())
+            {
+                _params[_paramIdx++] = OSSL_PARAM_construct_octet_string(
+                    OSSL_KDF_PARAM_INFO,
+                    const_cast<std::uint8_t *>(info.data()),
+                    info.size());
+            }
+            _params[_paramIdx] = OSSL_PARAM_construct_end();
+
+            std::vector<std::uint8_t> _derivedKey(keyLength);
+            bool _success{EVP_KDF_derive(
+                _kctx, _derivedKey.data(), keyLength, _params) == 1};
+
+            EVP_KDF_CTX_free(_kctx);
+#else
+            // OpenSSL 1.x EVP_PKEY HKDF API
+            EVP_PKEY_CTX *_context{EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr)};
+            if (_context == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            bool _success{true};
+            _success = _success && (EVP_PKEY_derive_init(_context) == 1);
+            _success = _success &&
+                       (EVP_PKEY_CTX_set_hkdf_md(_context, _md) == 1);
+            _success = _success &&
+                       (EVP_PKEY_CTX_set1_hkdf_key(
+                           _context,
+                           inputKey.data(),
+                           static_cast<int>(inputKey.size())) == 1);
+
+            if (_success)
+            {
+                if (!salt.empty())
+                {
+                    _success = _success &&
+                               (EVP_PKEY_CTX_set1_hkdf_salt(
+                                   _context,
+                                   salt.data(),
+                                   static_cast<int>(salt.size())) == 1);
+                }
+            }
+
+            if (_success && !info.empty())
+            {
+                _success = _success &&
+                           (EVP_PKEY_CTX_add1_hkdf_info(
+                               _context,
+                               info.data(),
+                               static_cast<int>(info.size())) == 1);
+            }
+
+            std::vector<std::uint8_t> _derivedKey(keyLength);
+
+            if (_success)
+            {
+                std::size_t _outLen{keyLength};
+                _success = _success &&
+                           (EVP_PKEY_derive(_context, _derivedKey.data(), &_outLen) == 1);
+            }
+
+            EVP_PKEY_CTX_free(_context);
+#endif
+
+            if (!_success)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            return core::Result<std::vector<std::uint8_t>>::FromValue(
+                std::move(_derivedKey));
         }
     }
 }

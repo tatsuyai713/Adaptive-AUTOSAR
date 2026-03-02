@@ -73,6 +73,67 @@ namespace ara
             const std::vector<std::uint8_t> &ciphertext,
             const std::vector<std::uint8_t> &key,
             const std::vector<std::uint8_t> &iv);
+
+        /// @brief Result type for AES-GCM encryption (ciphertext + authentication tag).
+        struct AesGcmResult
+        {
+            std::vector<std::uint8_t> Ciphertext; ///< Encrypted bytes.
+            std::vector<std::uint8_t> Tag;        ///< 16-byte GCM authentication tag.
+        };
+
+        /// @brief Encrypt plaintext using AES-GCM (authenticated encryption).
+        /// @param plaintext Input data.
+        /// @param key AES key (16 bytes for AES-128 or 32 bytes for AES-256).
+        /// @param iv Initialization vector (12 bytes recommended for GCM).
+        /// @param aad Additional authenticated data (not encrypted, integrity-protected).
+        /// @returns AesGcmResult containing ciphertext and 16-byte tag, or error.
+        core::Result<AesGcmResult> AesGcmEncrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv,
+            const std::vector<std::uint8_t> &aad = {});
+
+        /// @brief Decrypt and verify ciphertext using AES-GCM.
+        /// @param ciphertext Encrypted data.
+        /// @param key AES key (16 bytes for AES-128 or 32 bytes for AES-256).
+        /// @param iv Initialization vector (must match the one used for encryption).
+        /// @param tag 16-byte authentication tag produced during encryption.
+        /// @param aad Additional authenticated data (must match the one used for encryption).
+        /// @returns Plaintext bytes or error if authentication or decryption fails.
+        core::Result<std::vector<std::uint8_t>> AesGcmDecrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv,
+            const std::vector<std::uint8_t> &tag,
+            const std::vector<std::uint8_t> &aad = {});
+
+        /// @brief Derive a key using PBKDF2 (Password-Based Key Derivation Function 2).
+        /// @param password Password bytes (PKCS#5 §5.2 input).
+        /// @param salt Salt bytes (must not be empty; 16+ bytes recommended).
+        /// @param iterations Iteration count (must be >= 1; 10000+ recommended for passwords).
+        /// @param keyLength Desired output key length in bytes (16 or 32 for AES keys).
+        /// @param algorithm Underlying HMAC digest algorithm.
+        /// @returns Derived key bytes or error.
+        core::Result<std::vector<std::uint8_t>> DeriveKeyPbkdf2(
+            const std::vector<std::uint8_t> &password,
+            const std::vector<std::uint8_t> &salt,
+            std::uint32_t iterations,
+            std::size_t keyLength,
+            DigestAlgorithm algorithm = DigestAlgorithm::kSha256);
+
+        /// @brief Derive a key using HKDF (HMAC-based Key Derivation Function, RFC 5869).
+        /// @param inputKey Input keying material (IKM).
+        /// @param salt Optional salt bytes (empty = use zero-filled salt of hash length).
+        /// @param info Optional context/application-specific information.
+        /// @param keyLength Desired output key length in bytes (max 255 * hash_len).
+        /// @param algorithm Underlying HMAC digest algorithm.
+        /// @returns Derived key bytes or error.
+        core::Result<std::vector<std::uint8_t>> DeriveKeyHkdf(
+            const std::vector<std::uint8_t> &inputKey,
+            const std::vector<std::uint8_t> &salt,
+            const std::vector<std::uint8_t> &info,
+            std::size_t keyLength,
+            DigestAlgorithm algorithm = DigestAlgorithm::kSha256);
     }
 }
 

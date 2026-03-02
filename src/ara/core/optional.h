@@ -13,6 +13,16 @@ namespace ara
 {
     namespace core
     {
+        /// @brief Tag type for constructing an empty Optional (SWS_CORE_01031).
+        struct nullopt_t
+        {
+            struct Tag {};
+            constexpr explicit nullopt_t(Tag) noexcept {}
+        };
+
+        /// @brief Sentinel value for constructing or assigning an empty Optional.
+        constexpr nullopt_t nullopt{nullopt_t::Tag{}};
+
         /// @brief A wrapper around a possible value
         /// @tparam T Possible value type
         template <typename T>
@@ -23,6 +33,11 @@ namespace ara
 
         public:
             constexpr Optional() noexcept : mValuePtr{nullptr}
+            {
+            }
+
+            /// @brief Construct an empty Optional from nullopt (SWS_CORE_01032).
+            constexpr Optional(nullopt_t) noexcept : mValuePtr{nullptr}
             {
             }
 
@@ -101,6 +116,13 @@ namespace ara
                 Reset();
                 mValuePtr = new T{static_cast<T &&>(value)};
 
+                return *this;
+            }
+
+            /// @brief Reset the optional value on nullopt assignment (SWS_CORE_01033).
+            constexpr Optional &operator=(nullopt_t) noexcept
+            {
+                Reset();
                 return *this;
             }
 
@@ -309,6 +331,47 @@ namespace ara
             }
 
             return _result;
+        }
+
+        // --- Comparison with nullopt (SWS_CORE_01080-01086) ---
+        template <typename T>
+        inline bool operator==(const Optional<T> &lhs, nullopt_t) noexcept
+        {
+            return !lhs.HasValue();
+        }
+
+        template <typename T>
+        inline bool operator==(nullopt_t, const Optional<T> &rhs) noexcept
+        {
+            return !rhs.HasValue();
+        }
+
+        template <typename T>
+        inline bool operator!=(const Optional<T> &lhs, nullopt_t) noexcept
+        {
+            return lhs.HasValue();
+        }
+
+        template <typename T>
+        inline bool operator!=(nullopt_t, const Optional<T> &rhs) noexcept
+        {
+            return rhs.HasValue();
+        }
+
+        /// @brief Factory function to create an Optional from a value (SWS_CORE_01040).
+        template <typename T>
+        Optional<typename std::decay<T>::type> make_optional(T &&value)
+        {
+            return Optional<typename std::decay<T>::type>(std::forward<T>(value));
+        }
+
+        /// @brief Factory function to construct an Optional in-place (SWS_CORE_01041).
+        template <typename T, typename... Args>
+        Optional<T> make_optional(Args &&... args)
+        {
+            Optional<T> opt;
+            opt.Emplace(std::forward<Args>(args)...);
+            return opt;
         }
     }
 }

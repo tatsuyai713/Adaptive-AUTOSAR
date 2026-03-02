@@ -74,6 +74,12 @@ namespace ara
             /// @returns Void future unless an error occurs
             std::shared_future<void> GetInitialMachineStateTransitionResult();
 
+            /// @brief Get the current state of a function group
+            /// @param functionGroup Function group of interest
+            /// @returns Result containing the current FunctionGroupState if the function group is known, otherwise a Failed Result
+            core::Result<FunctionGroupState> GetState(
+                const FunctionGroup &functionGroup) const noexcept;
+
             /// @brief Get the execution error made the state of function group undefined
             /// @param functionGroup Function group of interest
             /// @returns Result containing the execution error if the Undefined Function Group State exist, otherwise Failed Result

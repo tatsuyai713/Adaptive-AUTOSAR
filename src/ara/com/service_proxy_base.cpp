@@ -13,7 +13,9 @@
 
 #include "./service_proxy_base.h"
 #include "./com_error_domain.h"
+#if ARA_COM_USE_VSOMEIP
 #include "./someip/vsomeip_application.h"
+#endif
 
 namespace
 {
@@ -173,6 +175,7 @@ namespace ara
 
             if (shouldRegister)
             {
+#if ARA_COM_USE_VSOMEIP
                 auto app{someip::VsomeipApplication::GetClientApplication()};
                 const auto requestedInstance{
                     instanceId == 0xFFFFU
@@ -253,6 +256,7 @@ namespace ara
                 app->request_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
+#endif // ARA_COM_USE_VSOMEIP
             }
             else if (hasInitialHandles)
             {
@@ -322,6 +326,7 @@ namespace ara
 
             if (shouldUnregister)
             {
+#if ARA_COM_USE_VSOMEIP
                 auto app{someip::VsomeipApplication::GetClientApplication()};
                 const auto requestedInstance{
                     instanceId == 0xFFFFU
@@ -334,6 +339,7 @@ namespace ara
                 app->release_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
+#endif // ARA_COM_USE_VSOMEIP
             }
 
             return core::Result<void>::FromValue();
@@ -357,6 +363,29 @@ namespace ara
             {
                 (void)StopFindService(FindServiceHandle{handleId});
             }
+        }
+
+        core::Result<ServiceHandleContainer<ServiceHandleType>>
+        ServiceProxyBase::FindService(const core::InstanceSpecifier &specifier)
+        {
+            // Per SWS_CM_00122, resolve the InstanceSpecifier to service/instance IDs.
+            // In a full deployment the InstanceSpecifier would be looked up in the
+            // service instance manifest (ARXML).  For this educational implementation
+            // we derive a deterministic (service, instance) pair from the specifier
+            // string by hashing. Real deployments should use proper manifest lookup.
+            const std::string path{specifier.ToString()};
+            std::uint32_t hash{0x811c9dc5U};
+            for (const char ch : path)
+            {
+                hash ^= static_cast<std::uint32_t>(ch);
+                hash *= 0x01000193U;
+            }
+            const std::uint16_t serviceId{
+                static_cast<std::uint16_t>((hash >> 16) & 0xFFFFU)};
+            const std::uint16_t instanceId{
+                static_cast<std::uint16_t>(hash & 0xFFFFU)};
+
+            return FindService(serviceId, instanceId);
         }
     }
 }

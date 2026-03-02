@@ -6,6 +6,7 @@
 #define NM_ERROR_DOMAIN_H
 
 #include <cstdint>
+#include <stdexcept>
 #include "../core/error_code.h"
 #include "../core/error_domain.h"
 
@@ -69,16 +70,17 @@ namespace ara
                     return "Unknown NM error";
                 }
             }
+
+            void ThrowAsException(const core::ErrorCode &ec) const override
+            {
+                throw std::runtime_error(ec.Domain().Message(ec.Value()));
+            }
         };
 
-        namespace internal
+        inline const core::ErrorDomain &GetNmErrorDomain() noexcept
         {
-            inline constexpr NmErrorDomain gNmErrorDomain{};
-        }
-
-        inline constexpr const core::ErrorDomain &GetNmErrorDomain() noexcept
-        {
-            return internal::gNmErrorDomain;
+            static const NmErrorDomain sDomain{};
+            return sDomain;
         }
 
         inline core::ErrorCode MakeErrorCode(NmErrc code) noexcept

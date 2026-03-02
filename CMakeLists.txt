@@ -58,6 +58,28 @@ FetchContent_MakeAvailable(
 # Restore build_tests for this project
 set(build_tests ${build_tests_BACKUP} CACHE BOOL "" FORCE)
 
+########################################################################
+# Platform patches for cross-compiled third-party dependencies
+########################################################################
+
+# --- Async-BSD-Socket-Lib: replace Linux epoll poller with POSIX poll() on QNX ---
+FetchContent_GetProperties(Async-BSD-Socket-Lib SOURCE_DIR _absock_src)
+if(CMAKE_SYSTEM_NAME STREQUAL "QNX" AND TARGET async_bsd_socket_lib)
+  # Remove the original epoll-based poller.cpp and use the POSIX poll() version
+  get_target_property(_absock_sources async_bsd_socket_lib SOURCES)
+  list(FILTER _absock_sources EXCLUDE REGEX "poller\\.cpp$")
+  list(APPEND _absock_sources "${CMAKE_SOURCE_DIR}/qnx/patches/poller_posix.cpp")
+  set_target_properties(async_bsd_socket_lib PROPERTIES SOURCES "${_absock_sources}")
+  message(STATUS "QNX: Replaced async_bsd_socket_lib epoll poller with POSIX poll() backend")
+endif()
+
+# --- OBD-II-Emulator: exclude from QNX builds (uses Linux signalfd/termios2) ---
+FetchContent_GetProperties(OBD-II-Emulator SOURCE_DIR _obdii_src)
+if(CMAKE_SYSTEM_NAME STREQUAL "QNX" AND TARGET obd_ii_emulator)
+  set_target_properties(obd_ii_emulator PROPERTIES EXCLUDE_FROM_ALL TRUE)
+  message(STATUS "QNX: Excluded obd_ii_emulator (uses Linux-only signalfd/termios2)")
+endif()
+
 # GoogleTest is needed for this project's tests
 FetchContent_MakeAvailable(
   googletest
@@ -65,14 +87,11 @@ FetchContent_MakeAvailable(
 
 # Normalize Async-BSD-Socket-Lib include usage so exported install targets
 # do not keep build-tree absolute include paths.
-FetchContent_GetProperties(
-  Async-BSD-Socket-Lib
-  SOURCE_DIR ASYNC_BSD_SOCKET_LIB_SOURCE_DIR)
 if(TARGET async_bsd_socket_lib)
   set_property(
     TARGET async_bsd_socket_lib
     PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-      "$<BUILD_INTERFACE:${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+      "$<BUILD_INTERFACE:${_absock_src}/include>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 endif()
 
 ########################################################################
@@ -286,6 +305,9 @@ set(source_ara_com_someip_pubsub_dir
 set(source_ara_com_someip_pubsub_fsm_dir
   "${CMAKE_SOURCE_DIR}/src/ara/com/someip/pubsub/fsm")
 
+set(source_ara_com_secoc_dir
+  "${CMAKE_SOURCE_DIR}/src/ara/com/secoc")
+
 set(source_ara_exec_dir
   "${CMAKE_SOURCE_DIR}/src/ara/exec")
 
@@ -390,6 +412,9 @@ set(test_ara_com_someip_pubsub_dir
 set(test_ara_com_someip_pubsub_fsm_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/someip/pubsub/fsm")
 
+set(test_ara_com_secoc_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/com/secoc")
+
 set(test_ara_com_someip_rpc_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/someip/rpc")
 
@@ -459,6 +484,7 @@ add_library(
   ${source_ara_core_dir}/ap_release_info.cpp
   ${source_ara_core_dir}/optional.h
   ${source_ara_core_dir}/result.h
+  ${source_ara_core_dir}/byte.h
   ${source_ara_core_dir}/future.h
   ${source_ara_core_dir}/promise.h
   ${source_ara_core_dir}/error_domain.h
@@ -477,6 +503,8 @@ add_library(
   ${source_ara_log_dir}/log_stream.cpp
   ${source_ara_log_dir}/logger.h
   ${source_ara_log_dir}/logger.cpp
+  ${source_ara_log_dir}/logging.h
+  ${source_ara_log_dir}/logging.cpp
   ${source_ara_log_dir}/logging_framework.h
   ${source_ara_log_dir}/logging_framework.cpp
   ${source_ara_log_sink_dir}/console_log_sink.h
@@ -489,6 +517,8 @@ add_library(
   ${source_ara_log_sink_dir}/network_log_sink.cpp
   ${source_ara_log_sink_dir}/dlt_log_sink.h
   ${source_ara_log_sink_dir}/dlt_log_sink.cpp
+  ${source_ara_log_sink_dir}/async_log_sink.h
+  ${source_ara_log_sink_dir}/async_log_sink.cpp
 )
 
 add_library(
@@ -514,6 +544,13 @@ add_library(
   ${source_ara_com_zerocopy_dir}/zero_copy_binding.h
   ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.h
   ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.cpp
+  ${source_ara_com_secoc_dir}/secoc_error_domain.h
+  ${source_ara_com_secoc_dir}/freshness_manager.h
+  ${source_ara_com_secoc_dir}/freshness_manager.cpp
+  ${source_ara_com_secoc_dir}/secoc_pdu.h
+  ${source_ara_com_secoc_dir}/secoc_pdu.cpp
+  ${source_ara_com_secoc_dir}/secoc_key_manager.h
+  ${source_ara_com_secoc_dir}/secoc_key_manager.cpp
   ${source_ara_com_cg_dir}/communication_group_client.h
   ${source_ara_com_cg_dir}/communication_group_server.h
   ${source_ara_com_e2e_dir}/profile11.h
@@ -624,6 +661,11 @@ add_library(
   ${source_ara_sm_dir}/machine_state_client.cpp
   ${source_ara_sm_dir}/state_transition_handler.h
   ${source_ara_sm_dir}/state_transition_handler.cpp
+  ${source_ara_sm_dir}/diagnostic_state_handler.h
+  ${source_ara_sm_dir}/diagnostic_state_handler.cpp
+  ${source_ara_sm_dir}/power_mode.h
+  ${source_ara_sm_dir}/function_group_state_machine.h
+  ${source_ara_sm_dir}/function_group_state_machine.cpp
 )
 
 add_library(
@@ -657,6 +699,8 @@ add_library(
   ${source_ara_exec_helper_dir}/modelled_process.cpp
   ${source_ara_exec_helper_dir}/process_watchdog.h
   ${source_ara_exec_helper_dir}/process_watchdog.cpp
+  ${source_ara_exec_dir}/execution_manager.h
+  ${source_ara_exec_dir}/execution_manager.cpp
 )
 
 add_library(
@@ -724,6 +768,10 @@ add_library(
   ${source_ara_phm_dir}/recovery_action.cpp
   ${source_ara_phm_dir}/restart_recovery_action.h
   ${source_ara_phm_dir}/restart_recovery_action.cpp
+  ${source_ara_phm_dir}/function_group_state_recovery_action.h
+  ${source_ara_phm_dir}/function_group_state_recovery_action.cpp
+  ${source_ara_phm_dir}/platform_reset_recovery_action.h
+  ${source_ara_phm_dir}/platform_reset_recovery_action.cpp
   ${source_ara_phm_dir}/recovery_action_dispatcher.h
   ${source_ara_phm_dir}/recovery_action_dispatcher.cpp
   ${source_ara_phm_dir}/health_channel.h
@@ -785,6 +833,8 @@ add_library(
   ${source_ara_iam_dir}/grant_manager.cpp
   ${source_ara_iam_dir}/policy_version.h
   ${source_ara_iam_dir}/policy_version.cpp
+  ${source_ara_iam_dir}/role_manager.h
+  ${source_ara_iam_dir}/role_manager.cpp
 )
 
 add_library(
@@ -798,6 +848,8 @@ add_library(
   ${source_ara_tsync_dir}/ptp_time_base_provider.cpp
   ${source_ara_tsync_dir}/ntp_time_base_provider.h
   ${source_ara_tsync_dir}/ntp_time_base_provider.cpp
+  ${source_ara_tsync_dir}/time_sync_server.h
+  ${source_ara_tsync_dir}/time_sync_server.cpp
 )
 
 add_library(
@@ -810,6 +862,8 @@ add_library(
   ${source_ara_ucm_dir}/campaign_manager.cpp
   ${source_ara_ucm_dir}/update_history.h
   ${source_ara_ucm_dir}/update_history.cpp
+  ${source_ara_ucm_dir}/dependency_checker.h
+  ${source_ara_ucm_dir}/dependency_checker.cpp
 )
 
 add_library(
@@ -821,6 +875,8 @@ add_library(
   ${source_ara_nm_dir}/nm_transport_adapter.h
   ${source_ara_nm_dir}/nm_coordinator.h
   ${source_ara_nm_dir}/nm_coordinator.cpp
+  ${source_ara_nm_dir}/nm_pdu.h
+  ${source_ara_nm_dir}/nm_pdu.cpp
 )
 
 target_link_libraries(
@@ -863,6 +919,7 @@ target_link_libraries(
 target_link_libraries(
   ara_com
   ara_core
+  ara_crypto
   async_bsd_socket_lib
 )
 
@@ -1036,7 +1093,6 @@ if(AUTOSAR_AP_BUILD_PLATFORM_APP)
 
   target_link_libraries(
     adaptive_autosar
-    obd_ii_emulator
     doip_lib
     arxml
     ara_exec
@@ -1044,6 +1100,11 @@ if(AUTOSAR_AP_BUILD_PLATFORM_APP)
     ara_diag
     ara_phm
   )
+
+  # OBD-II emulator only available on Linux (uses signalfd/termios2)
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+    target_link_libraries(adaptive_autosar obd_ii_emulator)
+  endif()
 
   if(ARA_COM_USE_VSOMEIP)
     target_include_directories(
@@ -1602,6 +1663,7 @@ if(build_tests)
     ${test_ara_log_dir}/log_stream_test.cpp
     ${test_ara_log_dir}/logger_test.cpp
     ${test_ara_log_dir}/logging_framework_test.cpp
+    ${test_ara_log_dir}/async_log_sink_test.cpp
     ${test_ara_sm_dir}/trigger_in_test.cpp
     ${test_ara_sm_dir}/trigger_out_test.cpp
     ${test_ara_sm_dir}/trigger_inout_test.cpp
@@ -1610,6 +1672,7 @@ if(build_tests)
     ${test_ara_sm_dir}/network_handle_test.cpp
     ${test_ara_sm_dir}/machine_state_client_test.cpp
     ${test_ara_sm_dir}/state_transition_handler_test.cpp
+    ${test_ara_sm_dir}/function_group_state_machine_test.cpp
     ${test_ara_com_e2e_dir}/profile11_test.cpp
     ${test_ara_com_entry_dir}/eventgroup_entry_test.cpp
     ${test_ara_com_entry_dir}/service_entry_test.cpp
@@ -1639,6 +1702,7 @@ if(build_tests)
     ${test_ara_exec_dir}/exec_exception_test.cpp
     ${test_ara_exec_dir}/state_client_test.cpp
     ${test_ara_exec_dir}/state_server_test.cpp
+    ${test_ara_exec_dir}/execution_manager_test.cpp
     ${test_ara_exec_helper_dir}/atomic_optional_test.cpp
     ${test_ara_exec_helper_dir}/mock_rpc_client.h
     ${test_ara_exec_helper_dir}/mock_rpc_server.h
@@ -1646,6 +1710,7 @@ if(build_tests)
     ${test_ara_core_dir}/optional_test.cpp
     ${test_ara_core_dir}/result_test.cpp
     ${test_ara_core_dir}/result_void_test.cpp
+    ${test_ara_core_dir}/result_monadic_test.cpp
     ${test_ara_core_dir}/error_domain_test.cpp
     ${test_ara_core_dir}/error_code_test.cpp
     ${test_ara_core_dir}/ap_release_info_test.cpp
@@ -1706,6 +1771,7 @@ if(build_tests)
     ${test_ara_per_dir}/file_storage_test.cpp
     ${test_ara_per_dir}/persistency_api_test.cpp
     ${test_ara_per_dir}/read_accessor_test.cpp
+    ${test_ara_per_dir}/key_value_storage_batch_test.cpp
     ${test_ara_crypto_dir}/crypto_error_domain_test.cpp
     ${test_ara_crypto_dir}/crypto_provider_test.cpp
     ${test_ara_iam_dir}/iam_error_domain_test.cpp
@@ -1714,10 +1780,12 @@ if(build_tests)
     ${test_ara_tsync_dir}/time_sync_client_test.cpp
     ${test_ara_tsync_dir}/ptp_time_base_provider_test.cpp
     ${test_ara_tsync_dir}/ntp_time_base_provider_test.cpp
+    ${test_ara_tsync_dir}/time_sync_server_test.cpp
     ${test_ara_ucm_dir}/ucm_error_domain_test.cpp
     ${test_ara_ucm_dir}/update_manager_test.cpp
     ${test_ara_ucm_dir}/campaign_manager_test.cpp
     ${test_ara_ucm_dir}/update_history_test.cpp
+    ${test_ara_ucm_dir}/dependency_checker_test.cpp
     ${test_ara_crypto_dir}/key_slot_test.cpp
     ${test_ara_crypto_dir}/key_storage_provider_test.cpp
     ${test_ara_crypto_dir}/rsa_provider_test.cpp
@@ -1726,8 +1794,11 @@ if(build_tests)
     ${test_ara_iam_dir}/grant_test.cpp
     ${test_ara_iam_dir}/grant_manager_test.cpp
     ${test_ara_iam_dir}/policy_version_test.cpp
+    ${test_ara_iam_dir}/role_manager_test.cpp
+    ${test_ara_com_secoc_dir}/secoc_key_manager_test.cpp
     ${test_ara_nm_dir}/nm_coordinator_test.cpp
     ${test_ara_nm_dir}/nm_transport_adapter_test.cpp
+    ${test_ara_nm_dir}/nm_pdu_test.cpp
   )
 
   target_link_libraries(
@@ -1739,7 +1810,6 @@ if(build_tests)
   target_link_libraries(
     ara_unit_test
     gtest_main
-    obd_ii_emulator
     doip_lib
     ara_log
     ara_sm
@@ -1752,6 +1822,10 @@ if(build_tests)
     ara_ucm
     ara_nm
   )
+
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+    target_link_libraries(ara_unit_test obd_ii_emulator)
+  endif()
 
   if(ARA_COM_USE_VSOMEIP)
     target_include_directories(
@@ -1877,9 +1951,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/configuration")
   )
 endif()
 
-if(DEFINED ASYNC_BSD_SOCKET_LIB_SOURCE_DIR AND EXISTS "${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include")
+if(DEFINED _absock_src AND EXISTS "${_absock_src}/include")
   install(
-    DIRECTORY ${ASYNC_BSD_SOCKET_LIB_SOURCE_DIR}/include/
+    DIRECTORY ${_absock_src}/include/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 endif()

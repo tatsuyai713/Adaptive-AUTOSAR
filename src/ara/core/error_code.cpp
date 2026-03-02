@@ -2,7 +2,6 @@
 /// @brief Implementation for error code.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
-#include <stdexcept>
 #include "./error_code.h"
 
 namespace ara
@@ -17,8 +16,7 @@ namespace ara
 
         void ErrorCode::ThrowAsException() const
         {
-            std::runtime_error _exception{Message()};
-            throw _exception;
+            mDomain.ThrowAsException(*this);
         }
     }
 }

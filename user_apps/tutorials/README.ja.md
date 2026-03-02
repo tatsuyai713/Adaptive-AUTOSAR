@@ -49,7 +49,11 @@
     [`10_vendor_autosar_asset_porting.ja.md`](10_vendor_autosar_asset_porting.ja.md)
 12. `ara::exec` 実行状態報告と監視
     [`12_exec_runtime_monitoring.ja.md`](12_exec_runtime_monitoring.ja.md)
-13. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
+13. ExecutionManager でユーザーアプリを管理・実行する（Raspberry Pi 配備付き）
+    [`13_execution_manager_orchestration.ja.md`](13_execution_manager_orchestration.ja.md)
+14. Raspberry Pi 最小構成 ECU — ライブラリビルドからユーザーアプリ管理まで
+    [`14_rpi_minimal_ecu_user_app_management.ja.md`](14_rpi_minimal_ecu_user_app_management.ja.md)
+15. Ubuntu 側 DoIP/DIAG テスター（host_tools に移動）
     [`../../tools/host_tools/doip_diag_tester/README.ja.md`](../../tools/host_tools/doip_diag_tester/README.ja.md)
 
 ## 関連ツール

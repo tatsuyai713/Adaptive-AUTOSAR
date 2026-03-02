@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include "./someip_sd_server.h"
 
+#if ARA_COM_USE_VSOMEIP
+
 namespace ara
 {
     namespace com
@@ -115,3 +117,5 @@ namespace ara
         }
     }
 }
+
+#endif // ARA_COM_USE_VSOMEIP

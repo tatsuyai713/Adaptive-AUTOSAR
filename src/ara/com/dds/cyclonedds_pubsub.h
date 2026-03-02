@@ -25,6 +25,23 @@ namespace ara
     {
         namespace dds
         {
+            /// @brief DDS QoS profile selection for publisher and subscriber.
+            ///
+            /// Profiles correspond to common AUTOSAR AP communication patterns:
+            /// - kReliable:       Reliable + Volatile + KeepLast(16).
+            ///                    Default for standard event/method communication.
+            /// - kBestEffort:     BestEffort + Volatile + KeepLast(1).
+            ///                    For high-rate sensor streams where occasional loss is
+            ///                    acceptable.
+            /// - kTransientLocal: Reliable + TransientLocal + KeepLast(1).
+            ///                    For field-like topics where late-joining subscribers
+            ///                    receive the last known value on subscription.
+            enum class DdsQosProfile : std::uint32_t
+            {
+                kReliable = 0,      ///< Reliable, Volatile, KeepLast(16)  [default]
+                kBestEffort = 1,    ///< BestEffort, Volatile, KeepLast(1)
+                kTransientLocal = 2 ///< Reliable, TransientLocal, KeepLast(1)
+            };
             /// @brief DDS publisher wrapper backed by Cyclone DDS C++ API.
             template <typename SampleType>
             class CyclonePublisher final
@@ -43,25 +60,42 @@ namespace ara
 
                     Binding(
                         const std::string &topicName,
-                        std::uint32_t domainId) : Participant{domainId},
-                                                  Publisher{Participant},
-                                                  Topic{Participant, topicName},
-                                                  Writer{
-                                                      Publisher,
-                                                      Topic,
-                                                      CreateWriterQos(Publisher)}
+                        std::uint32_t domainId,
+                        DdsQosProfile profile) : Participant{domainId},
+                                                 Publisher{Participant},
+                                                 Topic{Participant, topicName},
+                                                 Writer{
+                                                     Publisher,
+                                                     Topic,
+                                                     CreateWriterQos(Publisher, profile)}
                     {
                     }
 
                 private:
                     static ::dds::pub::qos::DataWriterQos CreateWriterQos(
-                        const ::dds::pub::Publisher &publisher)
+                        const ::dds::pub::Publisher &publisher,
+                        DdsQosProfile profile)
                     {
-                        auto _qos{
-                            publisher.default_datawriter_qos() <<
-                            ::dds::core::policy::Reliability::Reliable() <<
-                            ::dds::core::policy::Durability::Volatile() <<
-                            ::dds::core::policy::History::KeepLast(16)};
+                        auto _qos{publisher.default_datawriter_qos()};
+                        switch (profile)
+                        {
+                        case DdsQosProfile::kBestEffort:
+                            _qos << ::dds::core::policy::Reliability::BestEffort()
+                                 << ::dds::core::policy::Durability::Volatile()
+                                 << ::dds::core::policy::History::KeepLast(1);
+                            break;
+                        case DdsQosProfile::kTransientLocal:
+                            _qos << ::dds::core::policy::Reliability::Reliable()
+                                 << ::dds::core::policy::Durability::TransientLocal()
+                                 << ::dds::core::policy::History::KeepLast(1);
+                            break;
+                        case DdsQosProfile::kReliable:
+                        default:
+                            _qos << ::dds::core::policy::Reliability::Reliable()
+                                 << ::dds::core::policy::Durability::Volatile()
+                                 << ::dds::core::policy::History::KeepLast(16);
+                            break;
+                        }
                         return _qos;
                     }
                 };
@@ -69,10 +103,22 @@ namespace ara
                 std::unique_ptr<Binding> mBinding;
 #endif
 
+                DdsQosProfile mProfile{DdsQosProfile::kReliable};
+
             public:
+                /// @brief Construct with default QoS profile (kReliable).
                 explicit CyclonePublisher(
                     std::string topicName,
-                    std::uint32_t domainId = 0U) noexcept : mTopicName{std::move(topicName)}
+                    std::uint32_t domainId = 0U) noexcept
+                    : CyclonePublisher{std::move(topicName), domainId, DdsQosProfile::kReliable}
+                {
+                }
+
+                /// @brief Construct with an explicit QoS profile.
+                explicit CyclonePublisher(
+                    std::string topicName,
+                    std::uint32_t domainId,
+                    DdsQosProfile profile) noexcept : mTopicName{std::move(topicName)}, mProfile{profile}
                 {
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
                     if (mTopicName.empty())
@@ -84,7 +130,8 @@ namespace ara
                     {
                         mBinding.reset(new Binding{
                             mTopicName,
-                            static_cast<std::uint32_t>(domainId)});
+                            static_cast<std::uint32_t>(domainId),
+                            profile});
                     }
                     catch (const ::dds::core::Exception &)
                     {
@@ -92,6 +139,7 @@ namespace ara
                     }
 #else
                     (void)domainId;
+                    (void)profile;
 #endif
                 }
 
@@ -102,6 +150,12 @@ namespace ara
 #else
                     return false;
 #endif
+                }
+
+                /// @brief Return the QoS profile used by this publisher.
+                DdsQosProfile GetQosProfile() const noexcept
+                {
+                    return mProfile;
                 }
 
                 core::Result<void> Write(const SampleType &sample) noexcept
@@ -178,29 +232,46 @@ namespace ara
 
                     Binding(
                         const std::string &topicName,
-                        std::uint32_t domainId) : Participant{domainId},
-                                                  Subscriber{Participant},
-                                                  Topic{Participant, topicName},
-                                                  Reader{
-                                                      Subscriber,
-                                                      Topic,
-                                                      CreateReaderQos(Subscriber)},
-                                                  ReadCondition{
-                                                      Reader,
-                                                      ::dds::sub::status::DataState::new_data()}
+                        std::uint32_t domainId,
+                        DdsQosProfile profile) : Participant{domainId},
+                                                 Subscriber{Participant},
+                                                 Topic{Participant, topicName},
+                                                 Reader{
+                                                     Subscriber,
+                                                     Topic,
+                                                     CreateReaderQos(Subscriber, profile)},
+                                                 ReadCondition{
+                                                     Reader,
+                                                     ::dds::sub::status::DataState::new_data()}
                     {
                         WaitSet.attach_condition(ReadCondition);
                     }
 
                 private:
                     static ::dds::sub::qos::DataReaderQos CreateReaderQos(
-                        const ::dds::sub::Subscriber &subscriber)
+                        const ::dds::sub::Subscriber &subscriber,
+                        DdsQosProfile profile)
                     {
-                        auto _qos{
-                            subscriber.default_datareader_qos() <<
-                            ::dds::core::policy::Reliability::Reliable() <<
-                            ::dds::core::policy::Durability::Volatile() <<
-                            ::dds::core::policy::History::KeepLast(64)};
+                        auto _qos{subscriber.default_datareader_qos()};
+                        switch (profile)
+                        {
+                        case DdsQosProfile::kBestEffort:
+                            _qos << ::dds::core::policy::Reliability::BestEffort()
+                                 << ::dds::core::policy::Durability::Volatile()
+                                 << ::dds::core::policy::History::KeepLast(1);
+                            break;
+                        case DdsQosProfile::kTransientLocal:
+                            _qos << ::dds::core::policy::Reliability::Reliable()
+                                 << ::dds::core::policy::Durability::TransientLocal()
+                                 << ::dds::core::policy::History::KeepLast(1);
+                            break;
+                        case DdsQosProfile::kReliable:
+                        default:
+                            _qos << ::dds::core::policy::Reliability::Reliable()
+                                 << ::dds::core::policy::Durability::Volatile()
+                                 << ::dds::core::policy::History::KeepLast(64);
+                            break;
+                        }
                         return _qos;
                     }
                 };
@@ -208,10 +279,22 @@ namespace ara
                 std::unique_ptr<Binding> mBinding;
 #endif
 
+                DdsQosProfile mProfile{DdsQosProfile::kReliable};
+
             public:
+                /// @brief Construct with default QoS profile (kReliable).
                 explicit CycloneSubscriber(
                     std::string topicName,
-                    std::uint32_t domainId = 0U) noexcept : mTopicName{std::move(topicName)}
+                    std::uint32_t domainId = 0U) noexcept
+                    : CycloneSubscriber{std::move(topicName), domainId, DdsQosProfile::kReliable}
+                {
+                }
+
+                /// @brief Construct with an explicit QoS profile.
+                explicit CycloneSubscriber(
+                    std::string topicName,
+                    std::uint32_t domainId,
+                    DdsQosProfile profile) noexcept : mTopicName{std::move(topicName)}, mProfile{profile}
                 {
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
                     if (mTopicName.empty())
@@ -223,7 +306,8 @@ namespace ara
                     {
                         mBinding.reset(new Binding{
                             mTopicName,
-                            static_cast<std::uint32_t>(domainId)});
+                            static_cast<std::uint32_t>(domainId),
+                            profile});
                     }
                     catch (const ::dds::core::Exception &)
                     {
@@ -231,6 +315,7 @@ namespace ara
                     }
 #else
                     (void)domainId;
+                    (void)profile;
 #endif
                 }
 
@@ -241,6 +326,12 @@ namespace ara
 #else
                     return false;
 #endif
+                }
+
+                /// @brief Return the QoS profile used by this subscriber.
+                DdsQosProfile GetQosProfile() const noexcept
+                {
+                    return mProfile;
                 }
 
                 core::Result<std::size_t> Take(

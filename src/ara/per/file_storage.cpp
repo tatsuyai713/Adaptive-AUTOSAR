@@ -4,6 +4,7 @@
 
 #include "./file_storage.h"
 #include <dirent.h>
+#include <fstream>
 #include <sys/stat.h>
 #include <cstdio>
 
@@ -116,6 +117,147 @@ namespace ara
 
             return core::Result<std::vector<std::string>>::FromValue(
                 std::move(names));
+        }
+
+        core::Result<UniqueHandle<ReadWriteAccessor>>
+        FileStorage::OpenFileWriteOnly(const std::string &fileName)
+        {
+            std::string fullPath = GetFullPath(fileName);
+
+            // Truncate the file to provide write-only semantics
+            UniqueHandle<ReadWriteAccessor> accessor(
+                new ReadWriteAccessor(fullPath));
+
+            if (!accessor->IsValid())
+            {
+                return core::Result<UniqueHandle<ReadWriteAccessor>>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            // Truncate to zero length for write-only mode
+            accessor->SetFileSize(0);
+
+            return core::Result<UniqueHandle<ReadWriteAccessor>>::FromValue(
+                std::move(accessor));
+        }
+
+        core::Result<void> FileStorage::RecoverFile(
+            const std::string &fileName)
+        {
+            // Backup directory follows naming convention: basePath + ".bak"
+            const std::string backupDir{mBasePath + ".bak"};
+            const std::string backupPath{backupDir + "/" + fileName};
+            const std::string targetPath{GetFullPath(fileName)};
+
+            struct stat st;
+            if (::stat(backupPath.c_str(), &st) != 0)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kKeyNotFound));
+            }
+
+            // Read backup file
+            std::ifstream source(backupPath, std::ios::binary);
+            if (!source.is_open())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            std::ofstream target(targetPath, std::ios::binary | std::ios::trunc);
+            if (!target.is_open())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            target << source.rdbuf();
+            target.flush();
+
+            if (!target.good())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> FileStorage::RecoverAllFiles()
+        {
+            const std::string backupDir{mBasePath + ".bak"};
+
+            DIR *dir = ::opendir(backupDir.c_str());
+            if (!dir)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            bool anyError{false};
+            struct dirent *entry;
+            while ((entry = ::readdir(dir)) != nullptr)
+            {
+                std::string name = entry->d_name;
+                if (name == "." || name == "..")
+                {
+                    continue;
+                }
+
+                std::string backupPath{backupDir + "/" + name};
+                struct stat st;
+                if (::stat(backupPath.c_str(), &st) == 0 &&
+                    S_ISREG(st.st_mode))
+                {
+                    auto result = RecoverFile(name);
+                    if (!result.HasValue())
+                    {
+                        anyError = true;
+                    }
+                }
+            }
+            ::closedir(dir);
+
+            if (anyError)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<uint64_t> FileStorage::GetCurrentFileStorageSize() const
+        {
+            uint64_t totalSize{0};
+
+            DIR *dir = ::opendir(mBasePath.c_str());
+            if (!dir)
+            {
+                return core::Result<uint64_t>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            struct dirent *entry;
+            while ((entry = ::readdir(dir)) != nullptr)
+            {
+                std::string name = entry->d_name;
+                if (name == "." || name == "..")
+                {
+                    continue;
+                }
+
+                std::string fullPath{mBasePath + "/" + name};
+                struct stat st;
+                if (::stat(fullPath.c_str(), &st) == 0 &&
+                    S_ISREG(st.st_mode))
+                {
+                    totalSize += static_cast<uint64_t>(st.st_size);
+                }
+            }
+            ::closedir(dir);
+
+            return core::Result<uint64_t>::FromValue(totalSize);
         }
     }
 }
