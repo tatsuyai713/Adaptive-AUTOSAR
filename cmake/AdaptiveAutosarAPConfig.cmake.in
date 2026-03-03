@@ -2,6 +2,9 @@
 
 include(CMakeFindDependencyMacro)
 
+# ara_crypto links against OpenSSL::Crypto
+find_dependency(OpenSSL REQUIRED)
+
 # Optional transport dependencies are resolved only when enabled in the
 # installed AUTOSAR AP build.
 if(@ARA_COM_USE_ICEORYX@)
