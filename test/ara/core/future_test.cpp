@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
+#include <stdexcept>
 #include "../../../src/ara/core/future.h"
 #include "../../../src/ara/core/promise.h"
 
@@ -58,6 +59,10 @@ namespace ara
                 TestErrorDomain(IdType id) : ErrorDomain{id} {}
                 const char *Name() const noexcept override { return "Test"; }
                 const char *Message(CodeType) const noexcept override { return "test error"; }
+                void ThrowAsException(const ErrorCode &ec) const override
+                {
+                    throw std::runtime_error(Message(ec.Value()));
+                }
             };
 
             TestErrorDomain _domain{cDomainId};

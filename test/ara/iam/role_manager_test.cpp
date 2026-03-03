@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include "../../../src/ara/iam/role_manager.h"
@@ -7,15 +8,14 @@ namespace ara
 {
     namespace iam
     {
-        // Helper: build an AccessControl with a single allow policy for a role.
-        AccessControl MakeAcForRole(
+        // Helper: configure an AccessControl with a single allow policy for a role.
+        void InitAcForRole(
+            AccessControl &ac,
             const std::string &role,
             const std::string &resource,
             const std::string &action)
         {
-            AccessControl _ac;
-            (void)_ac.SetPolicy(role, resource, action, PermissionDecision::kAllow);
-            return _ac;
+            (void)ac.SetPolicy(role, resource, action, PermissionDecision::kAllow);
         }
 
         TEST(RoleManagerTest, AddAndCheckRole)
@@ -131,7 +131,8 @@ namespace ara
             ASSERT_TRUE(_rm.AddRole("ops").HasValue());
             ASSERT_TRUE(_rm.AssignRole("frank", "ops").HasValue());
 
-            AccessControl _ac{MakeAcForRole("ops", "service_A", "read")};
+            AccessControl _ac;
+            InitAcForRole(_ac, "ops", "service_A", "read");
 
             const auto _result{_rm.IsAllowedViaRole("frank", "service_A", "read", _ac)};
             ASSERT_TRUE(_result.HasValue());
@@ -146,7 +147,8 @@ namespace ara
             ASSERT_TRUE(_rm.AssignRole("grace", "superviewer").HasValue());
 
             // Policy is on "viewer", not "superviewer"
-            AccessControl _ac{MakeAcForRole("viewer", "log", "read")};
+            AccessControl _ac;
+            InitAcForRole(_ac, "viewer", "log", "read");
 
             const auto _result{_rm.IsAllowedViaRole("grace", "log", "read", _ac)};
             ASSERT_TRUE(_result.HasValue());
@@ -159,7 +161,8 @@ namespace ara
             ASSERT_TRUE(_rm.AddRole("guest").HasValue());
             ASSERT_TRUE(_rm.AssignRole("henry", "guest").HasValue());
 
-            AccessControl _ac{MakeAcForRole("admin", "secrets", "write")};
+            AccessControl _ac;
+            InitAcForRole(_ac, "admin", "secrets", "write");
 
             const auto _result{_rm.IsAllowedViaRole("henry", "secrets", "write", _ac)};
             ASSERT_TRUE(_result.HasValue());

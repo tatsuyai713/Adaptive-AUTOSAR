@@ -48,9 +48,9 @@ namespace ara
 
             auto &vals = getResult.Value();
             EXPECT_EQ(vals.size(), 3U);
-            EXPECT_EQ(vals["a"], 10);
-            EXPECT_EQ(vals["b"], 20);
-            EXPECT_EQ(vals["c"], 30);
+            EXPECT_EQ(vals.at("a"), 10);
+            EXPECT_EQ(vals.at("b"), 20);
+            EXPECT_EQ(vals.at("c"), 30);
             EXPECT_EQ(vals.find("nonexistent"), vals.end());
         }
 

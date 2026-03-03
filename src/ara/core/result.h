@@ -40,11 +40,15 @@ namespace ara
             {
             }
 
+            template <typename E2 = E,
+                      typename std::enable_if<!std::is_same<T, E2>::value, int>::type = 0>
             explicit Result(const E &e) noexcept(
                 std::is_nothrow_copy_constructible<E>::value) : mError{e}
             {
             }
 
+            template <typename E2 = E,
+                      typename std::enable_if<!std::is_same<T, E2>::value, int>::type = 0>
             explicit Result(E &&e) noexcept(
                 std::is_nothrow_move_constructible<E>::value) : mError{std::move(e)}
             {

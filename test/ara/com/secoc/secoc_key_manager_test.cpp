@@ -10,12 +10,12 @@ namespace ara
         {
             namespace
             {
-                // Build a minimal KeyStorageProvider with one exportable symmetric slot.
-                ara::crypto::KeyStorageProvider MakeProvider(
+                // Populate a KeyStorageProvider with one exportable symmetric slot.
+                void InitProvider(
+                    ara::crypto::KeyStorageProvider &ksp,
                     const std::string &slotId,
                     const std::vector<std::uint8_t> &keyBytes)
                 {
-                    ara::crypto::KeyStorageProvider ksp;
                     ara::crypto::KeySlotMetadata md;
                     md.SlotId = slotId;
                     md.Type = ara::crypto::KeySlotType::kSymmetric;
@@ -23,14 +23,14 @@ namespace ara
                     md.Exportable = true;
                     (void)ksp.CreateSlot(md);
                     (void)ksp.StoreKey(slotId, keyBytes);
-                    return ksp;
                 }
             }
 
             TEST(SecOcKeyManagerTest, RegisterAndGetKey)
             {
                 const std::vector<std::uint8_t> cKey(16U, 0xAB);
-                auto _ksp{MakeProvider("slot_0x100", cKey)};
+                ara::crypto::KeyStorageProvider _ksp;
+                InitProvider(_ksp, "slot_0x100", cKey);
                 SecOcKeyManager _km{_ksp};
 
                 ASSERT_TRUE(_km.RegisterKey(0x100, "slot_0x100").HasValue());
@@ -44,7 +44,8 @@ namespace ara
             TEST(SecOcKeyManagerTest, GetKeyCachesOnSecondCall)
             {
                 const std::vector<std::uint8_t> cKey(32U, 0x77);
-                auto _ksp{MakeProvider("slot_enc", cKey)};
+                ara::crypto::KeyStorageProvider _ksp;
+                InitProvider(_ksp, "slot_enc", cKey);
                 SecOcKeyManager _km{_ksp};
 
                 ASSERT_TRUE(_km.RegisterKey(0x01, "slot_enc").HasValue());
@@ -70,7 +71,8 @@ namespace ara
             TEST(SecOcKeyManagerTest, RegisterDuplicatePduFails)
             {
                 const std::vector<std::uint8_t> cKey(16U, 0x01);
-                auto _ksp{MakeProvider("slot_dup", cKey)};
+                ara::crypto::KeyStorageProvider _ksp;
+                InitProvider(_ksp, "slot_dup", cKey);
                 SecOcKeyManager _km{_ksp};
 
                 ASSERT_TRUE(_km.RegisterKey(0x200, "slot_dup").HasValue());
@@ -92,7 +94,8 @@ namespace ara
             TEST(SecOcKeyManagerTest, UnregisterKey)
             {
                 const std::vector<std::uint8_t> cKey(16U, 0x55);
-                auto _ksp{MakeProvider("slot_tmp", cKey)};
+                ara::crypto::KeyStorageProvider _ksp;
+                InitProvider(_ksp, "slot_tmp", cKey);
                 SecOcKeyManager _km{_ksp};
 
                 ASSERT_TRUE(_km.RegisterKey(0x400, "slot_tmp").HasValue());
@@ -115,7 +118,8 @@ namespace ara
                 const std::vector<std::uint8_t> cKeyV1(16U, 0x11);
                 const std::vector<std::uint8_t> cKeyV2(16U, 0x22);
 
-                auto _ksp{MakeProvider(cSlotId, cKeyV1)};
+                ara::crypto::KeyStorageProvider _ksp;
+                InitProvider(_ksp, cSlotId, cKeyV1);
                 SecOcKeyManager _km{_ksp};
 
                 ASSERT_TRUE(_km.RegisterKey(0x600, cSlotId).HasValue());

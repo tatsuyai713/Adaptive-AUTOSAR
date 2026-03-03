@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/core/error_code.h"
+#include "../../../src/ara/core/core_error_domain.h"
 
 namespace ara
 {
@@ -20,6 +21,11 @@ namespace ara
             virtual const char *Message(CodeType errorCode) const noexcept override
             {
                 return "";
+            }
+
+            void ThrowAsException(const ErrorCode &errorCode) const override
+            {
+                throw CoreException{errorCode};
             }
         };
 

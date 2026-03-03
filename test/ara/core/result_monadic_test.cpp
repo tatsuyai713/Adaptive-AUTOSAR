@@ -5,26 +5,36 @@ namespace ara
 {
     namespace core
     {
+        /// @brief Simple wrapper to give a distinct error type for Result tests.
+        struct TestError
+        {
+            int value;
+            TestError() noexcept : value{0} {}
+            explicit TestError(int v) noexcept : value{v} {}
+            bool operator==(const TestError &o) const noexcept { return value == o.value; }
+            bool operator!=(const TestError &o) const noexcept { return !(*this == o); }
+        };
+
         // ------------------------------------------------------------------
         // Result<T,E> — AndThen
         // ------------------------------------------------------------------
 
         TEST(ResultMonadicTest, AndThenCallsCallableOnValue)
         {
-            Result<int, int> _r{42};
-            const auto _out{_r.AndThen([](int v) -> Result<std::string, int>
-                                       { return Result<std::string, int>{std::to_string(v)}; })};
+            Result<int, TestError> _r{42};
+            const auto _out{_r.AndThen([](int v) -> Result<std::string, TestError>
+                                       { return Result<std::string, TestError>{std::to_string(v)}; })};
             ASSERT_TRUE(_out.HasValue());
             EXPECT_EQ(_out.Value(), "42");
         }
 
         TEST(ResultMonadicTest, AndThenPropagatesError)
         {
-            Result<int, int> _r{Result<int, int>::FromError(99)};
-            const auto _out{_r.AndThen([](int v) -> Result<std::string, int>
-                                       { return Result<std::string, int>{std::to_string(v)}; })};
+            Result<int, TestError> _r{Result<int, TestError>::FromError(TestError{99})};
+            const auto _out{_r.AndThen([](int v) -> Result<std::string, TestError>
+                                       { return Result<std::string, TestError>{std::to_string(v)}; })};
             ASSERT_FALSE(_out.HasValue());
-            EXPECT_EQ(_out.Error(), 99);
+            EXPECT_EQ(_out.Error(), TestError{99});
         }
 
         // ------------------------------------------------------------------
@@ -33,18 +43,18 @@ namespace ara
 
         TEST(ResultMonadicTest, OrElsePropagatesValueUnchanged)
         {
-            Result<int, int> _r{7};
-            const auto _out{_r.OrElse([](int) -> Result<int, int>
-                                      { return Result<int, int>{0}; })};
+            Result<int, TestError> _r{7};
+            const auto _out{_r.OrElse([](TestError) -> Result<int, TestError>
+                                      { return Result<int, TestError>{0}; })};
             ASSERT_TRUE(_out.HasValue());
             EXPECT_EQ(_out.Value(), 7);
         }
 
         TEST(ResultMonadicTest, OrElseCallsCallableOnError)
         {
-            Result<int, int> _r{Result<int, int>::FromError(3)};
-            const auto _out{_r.OrElse([](int e) -> Result<int, int>
-                                      { return Result<int, int>{e * 10}; })};
+            Result<int, TestError> _r{Result<int, TestError>::FromError(TestError{3})};
+            const auto _out{_r.OrElse([](TestError e) -> Result<int, TestError>
+                                      { return Result<int, TestError>{e.value * 10}; })};
             ASSERT_TRUE(_out.HasValue());
             EXPECT_EQ(_out.Value(), 30);
         }
@@ -55,7 +65,7 @@ namespace ara
 
         TEST(ResultMonadicTest, MapTransformsValue)
         {
-            Result<int, int> _r{5};
+            Result<int, TestError> _r{5};
             const auto _out{_r.Map([](int v) { return v * 2; })};
             ASSERT_TRUE(_out.HasValue());
             EXPECT_EQ(_out.Value(), 10);
@@ -63,10 +73,10 @@ namespace ara
 
         TEST(ResultMonadicTest, MapPropagatesErrorUnchanged)
         {
-            Result<int, int> _r{Result<int, int>::FromError(42)};
+            Result<int, TestError> _r{Result<int, TestError>::FromError(TestError{42})};
             const auto _out{_r.Map([](int v) { return v * 2; })};
             ASSERT_FALSE(_out.HasValue());
-            EXPECT_EQ(_out.Error(), 42);
+            EXPECT_EQ(_out.Error(), TestError{42});
         }
 
         // ------------------------------------------------------------------
@@ -75,16 +85,16 @@ namespace ara
 
         TEST(ResultMonadicTest, MapErrorTransformsError)
         {
-            Result<int, int> _r{Result<int, int>::FromError(3)};
-            const auto _out{_r.MapError([](int e) { return std::to_string(e); })};
+            Result<int, TestError> _r{Result<int, TestError>::FromError(TestError{3})};
+            const auto _out{_r.MapError([](TestError e) { return std::to_string(e.value); })};
             ASSERT_FALSE(_out.HasValue());
             EXPECT_EQ(_out.Error(), "3");
         }
 
         TEST(ResultMonadicTest, MapErrorPropagatesValueUnchanged)
         {
-            Result<int, int> _r{10};
-            const auto _out{_r.MapError([](int e) { return std::to_string(e); })};
+            Result<int, TestError> _r{10};
+            const auto _out{_r.MapError([](TestError e) { return std::to_string(e.value); })};
             ASSERT_TRUE(_out.HasValue());
             EXPECT_EQ(_out.Value(), 10);
         }
@@ -97,21 +107,21 @@ namespace ara
         {
             Result<void, int> _r;
             bool _called{false};
-            const auto _out{_r.AndThen([&]() -> Result<int, int>
+            const auto _out{_r.AndThen([&]() -> Result<std::string, int>
                                        {
                                            _called = true;
-                                           return Result<int, int>{1};
+                                           return Result<std::string, int>{"ok"};
                                        })};
             ASSERT_TRUE(_called);
             ASSERT_TRUE(_out.HasValue());
-            EXPECT_EQ(_out.Value(), 1);
+            EXPECT_EQ(_out.Value(), "ok");
         }
 
         TEST(ResultVoidMonadicTest, AndThenPropagatesError)
         {
             Result<void, int> _r{Result<void, int>::FromError(7)};
-            const auto _out{_r.AndThen([&]() -> Result<int, int>
-                                       { return Result<int, int>{1}; })};
+            const auto _out{_r.AndThen([&]() -> Result<std::string, int>
+                                       { return Result<std::string, int>{"ok"}; })};
             ASSERT_FALSE(_out.HasValue());
             EXPECT_EQ(_out.Error(), 7);
         }

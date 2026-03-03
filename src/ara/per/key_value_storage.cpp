@@ -268,6 +268,11 @@ namespace ara
             mData = mCommittedData;
         }
 
+        std::size_t KeyValueStorage::GetPendingChangeCount() const noexcept
+        {
+            return mPendingChanges;
+        }
+
         // ── Observer helpers ─────────────────────────────────
 
         void KeyValueStorage::notifyObservers(const std::string &key) const
