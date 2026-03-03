@@ -22,6 +22,19 @@ namespace ara
             Optional<T> mValue;
             Optional<E> mError;
 
+            /// @brief Private tag for unambiguous error construction (used by FromError).
+            struct ErrorTag {};
+
+            Result(ErrorTag, const E &e) noexcept(
+                std::is_nothrow_copy_constructible<E>::value) : mError{e}
+            {
+            }
+
+            Result(ErrorTag, E &&e) noexcept(
+                std::is_nothrow_move_constructible<E>::value) : mError{std::move(e)}
+            {
+            }
+
         public:
             /// @brief Result value type alias
             using value_type = T;
@@ -384,8 +397,7 @@ namespace ara
                 }
                 else
                 {
-                    Result<decltype(f(Value())), E> _result{Error()};
-                    return _result;
+                    return Result<decltype(f(Value())), E>::FromError(Error());
                 }
             }
 
@@ -403,7 +415,7 @@ namespace ara
                 }
                 else
                 {
-                    return ReturnType{Error()};
+                    return ReturnType::FromError(Error());
                 }
             }
 
@@ -438,7 +450,7 @@ namespace ara
                 }
                 else
                 {
-                    return Result<U, E>{Error()};
+                    return Result<U, E>::FromError(Error());
                 }
             }
 
@@ -456,7 +468,7 @@ namespace ara
                 }
                 else
                 {
-                    return Result<T, G>{f(Error())};
+                    return Result<T, G>::FromError(f(Error()));
                 }
             }
         };
@@ -481,16 +493,14 @@ namespace ara
         Result<T, E> Result<T, E>::FromError(const E &e) noexcept(
             std::is_nothrow_copy_constructible<E>::value)
         {
-            Result _result{e};
-            return _result;
+            return Result{ErrorTag{}, e};
         }
 
         template <typename T, typename E>
         Result<T, E> Result<T, E>::FromError(E &&e) noexcept(
             std::is_nothrow_move_constructible<E>::value)
         {
-            Result _result{std::move(e)};
-            return _result;
+            return Result{ErrorTag{}, std::move(e)};
         }
 
         /// @returns True if both instances contain equal values or equal errors, otherwise false
@@ -854,8 +864,7 @@ namespace ara
             {
                 if (hasError())
                 {
-                    Result<decltype(f()), E> _result{Error()};
-                    return _result;
+                    return Result<decltype(f()), E>::FromError(Error());
                 }
                 else
                 {
@@ -878,7 +887,7 @@ namespace ara
                 }
                 else
                 {
-                    return ReturnType{Error()};
+                    return ReturnType::FromError(Error());
                 }
             }
 
@@ -913,7 +922,7 @@ namespace ara
                 }
                 else
                 {
-                    return Result<U, E>{Error()};
+                    return Result<U, E>::FromError(Error());
                 }
             }
 
@@ -931,7 +940,7 @@ namespace ara
                 }
                 else
                 {
-                    return Result<void, G>{f(Error())};
+                    return Result<void, G>::FromError(f(Error()));
                 }
             }
         };
