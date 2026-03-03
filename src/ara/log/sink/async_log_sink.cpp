@@ -96,6 +96,11 @@ namespace ara
                             --mSize;
                             hasEntry = true;
                         }
+
+                        if (mSize == 0U)
+                        {
+                            mDrained.notify_all();
+                        }
                     }
 
                     if (hasEntry && mInnerSink != nullptr)
@@ -125,18 +130,17 @@ namespace ara
 
             void AsyncLogSink::Flush()
             {
-                // Wait until the background thread has consumed all pending entries.
-                while (true)
+                std::unique_lock<std::mutex> lock{mMutex};
+                if (mSize == 0U)
                 {
-                    std::unique_lock<std::mutex> lock{mMutex};
-                    if (mSize == 0U)
-                    {
-                        break;
-                    }
-                    lock.unlock();
-                    mNotEmpty.notify_one();
-                    std::this_thread::yield();
+                    return;
                 }
+                // Wake the flush thread in case it is sleeping.
+                // notify_all is called while holding the lock; the flush thread
+                // will re-acquire after mDrained.wait() releases it below.
+                mNotEmpty.notify_all();
+                // Block until the background thread has drained the buffer.
+                mDrained.wait(lock, [this] { return mSize == 0U; });
             }
 
         } // namespace sink

@@ -89,6 +89,7 @@ namespace ara
 
                 mutable std::mutex mMutex;
                 mutable std::condition_variable mNotEmpty;
+                mutable std::condition_variable mDrained;
 
                 mutable std::atomic<std::uint64_t> mDropCount{0U};
 
