@@ -19,5 +19,35 @@ namespace ara
             ServiceProxyBase::StopFindService();
             SUCCEED();
         }
+
+        TEST(ServiceProxyBaseTest, StartFindServiceWithSpecifierAndNullHandlerReturnsError)
+        {
+            auto specifierResult = ara::core::InstanceSpecifier::Create(
+                "/ara/com/test/service");
+            ASSERT_TRUE(specifierResult.HasValue());
+
+            std::function<void(ServiceHandleContainer<ServiceHandleType>)> handler;
+            auto result = ServiceProxyBase::StartFindService(
+                handler,
+                specifierResult.Value());
+
+            ASSERT_FALSE(result.HasValue());
+            EXPECT_STREQ(result.Error().Domain().Name(), "Com");
+        }
+
+        TEST(ServiceProxyBaseTest, StartFindServiceWithSpecifierReturnsHandle)
+        {
+            auto specifierResult = ara::core::InstanceSpecifier::Create(
+                "/ara/com/test/service");
+            ASSERT_TRUE(specifierResult.HasValue());
+
+            auto startResult = ServiceProxyBase::StartFindService(
+                [](ServiceHandleContainer<ServiceHandleType>) {},
+                specifierResult.Value());
+            ASSERT_TRUE(startResult.HasValue());
+
+            auto stopResult = ServiceProxyBase::StopFindService(startResult.Value());
+            EXPECT_TRUE(stopResult.HasValue());
+        }
     }
 }
