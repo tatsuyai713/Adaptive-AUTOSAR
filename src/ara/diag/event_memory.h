@@ -105,6 +105,19 @@ namespace ara
             /// @brief Get memory type.
             EventMemoryType GetType() const noexcept { return mType; }
 
+            /// @brief Apply DTC healing: mark DTCs as healed after passing test cycles (SWS_DIAG_00502).
+            /// @param dtcNumber DTC to heal.
+            /// @param healingThreshold Number of passing operation cycles required.
+            /// @returns Void Result on success.
+            core::Result<void> HealDtc(
+                std::uint32_t dtcNumber, std::uint16_t healingThreshold = 3);
+
+            /// @brief Read extended data records for a specific DTC (SWS_DIAG_00253).
+            /// @param dtcNumber DTC number.
+            /// @returns Extended data records vector, or error.
+            core::Result<std::vector<ExtendedDataRecord>> ReadExtendedDataRecords(
+                std::uint32_t dtcNumber) const;
+
         private:
             EventMemoryType mType;
             std::size_t mMaxEntries;

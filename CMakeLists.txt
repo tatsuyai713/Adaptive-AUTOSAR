@@ -403,6 +403,9 @@ set(test_ara_com_helper_dir
 set(test_ara_com_option_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/option")
 
+set(test_ara_com_dds_dir
+  "${CMAKE_SOURCE_DIR}/test/ara/com/dds")
+
 set(test_ara_com_someip_dir
   "${CMAKE_SOURCE_DIR}/test/ara/com/someip")
 
@@ -541,6 +544,7 @@ add_library(
   ${source_ara_com_dir}/com_error_domain.cpp
   ${source_ara_com_dds_dir}/dds_pubsub.h
   ${source_ara_com_dds_dir}/cyclonedds_pubsub.h
+  ${source_ara_com_dds_dir}/dds_qos_config.h
   ${source_ara_com_zerocopy_dir}/zero_copy.h
   ${source_ara_com_zerocopy_dir}/zero_copy_binding.h
   ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.h
@@ -560,10 +564,14 @@ add_library(
   ${source_ara_com_e2e_dir}/profile01.cpp
   ${source_ara_com_e2e_dir}/profile02.h
   ${source_ara_com_e2e_dir}/profile02.cpp
+  ${source_ara_com_e2e_dir}/profile03.h
+  ${source_ara_com_e2e_dir}/profile03.cpp
   ${source_ara_com_e2e_dir}/profile04.h
   ${source_ara_com_e2e_dir}/profile04.cpp
   ${source_ara_com_e2e_dir}/profile05.h
   ${source_ara_com_e2e_dir}/profile05.cpp
+  ${source_ara_com_e2e_dir}/profile06.h
+  ${source_ara_com_e2e_dir}/profile06.cpp
   ${source_ara_com_e2e_dir}/profile07.h
   ${source_ara_com_e2e_dir}/profile07.cpp
   ${source_ara_com_e2e_dir}/profile11.h
@@ -575,6 +583,8 @@ add_library(
   ${source_ara_com_helper_dir}/payload_helper.cpp
   ${source_ara_com_helper_dir}/ipv4_address.h
   ${source_ara_com_helper_dir}/ipv4_address.cpp
+  ${source_ara_com_helper_dir}/ipv6_address.h
+  ${source_ara_com_helper_dir}/ipv6_address.cpp
   ${source_ara_com_helper_dir}/abstract_state_machine.h
   ${source_ara_com_helper_dir}/machine_state.h
   ${source_ara_com_helper_dir}/finite_state_machine.h
@@ -594,6 +604,8 @@ add_library(
   ${source_ara_com_option_dir}/option.cpp
   ${source_ara_com_option_dir}/ipv4_endpoint_option.h
   ${source_ara_com_option_dir}/ipv4_endpoint_option.cpp
+  ${source_ara_com_option_dir}/ipv6_endpoint_option.h
+  ${source_ara_com_option_dir}/ipv6_endpoint_option.cpp
   ${source_ara_com_option_dir}/loadbalancing_option.h
   ${source_ara_com_option_dir}/loadbalancing_option.cpp
   ${source_ara_com_option_dir}/option_deserializer.h
@@ -633,6 +645,7 @@ add_library(
   ${source_ara_com_someip_sd_dir}/someip_sd_client.cpp
   ${source_ara_com_someip_sd_dir}/sd_network_layer.h
   ${source_ara_com_someip_sd_dir}/sd_network_layer.cpp
+  ${source_ara_com_someip_sd_dir}/sd_network_config.h
   ${source_ara_com_someip_sd_fsm_dir}/timer_set_state.h
   ${source_ara_com_someip_sd_fsm_dir}/client_service_state.h
   ${source_ara_com_someip_sd_fsm_dir}/notready_state.h
@@ -655,6 +668,7 @@ add_library(
   ${source_ara_com_someip_sd_fsm_dir}/service_seen_state.cpp
   ${source_ara_com_internal_dir}/event_binding.h
   ${source_ara_com_internal_dir}/method_binding.h
+  ${source_ara_com_internal_dir}/queue_overflow_policy.h
   ${source_ara_com_internal_dir}/vsomeip_event_binding.h
   ${source_ara_com_internal_dir}/vsomeip_event_binding.cpp
   ${source_ara_com_internal_dir}/vsomeip_method_binding.h
@@ -668,6 +682,16 @@ add_library(
   ${source_ara_com_internal_dir}/dds_method_binding.h
   ${source_ara_com_internal_dir}/dds_method_binding.cpp
   ${source_ara_com_internal_dir}/binding_factory.h
+  ${source_ara_com_dir}/trigger.h
+  ${source_ara_com_dir}/raw_data_stream.h
+  ${source_ara_com_dir}/instance_identifier.h
+  ${source_ara_com_dir}/service_version.h
+  ${source_ara_com_dir}/network_binding_base.h
+  ${source_ara_com_dir}/qos.h
+  ${source_ara_com_dir}/runtime.h
+  ${source_ara_com_dir}/transformer.h
+  ${source_ara_com_dir}/e2e_error_domain.h
+  ${source_ara_com_dir}/sample_info.h
 )
 
 add_library(
@@ -1739,20 +1763,24 @@ if(build_tests)
     ${test_ara_com_entry_dir}/eventgroup_entry_test.cpp
     ${test_ara_com_entry_dir}/service_entry_test.cpp
     ${test_ara_com_helper_dir}/ipv4_address_test.cpp
+    ${test_ara_com_helper_dir}/ipv6_address_test.cpp
     ${test_ara_com_helper_dir}/mockup_network_layer.h
     ${test_ara_com_helper_dir}/ttl_timer_test.cpp
     ${test_ara_com_helper_dir}/concurrent_queue_test.cpp
     ${test_ara_com_option_dir}/ipv4_endpoint_option_test.cpp
+    ${test_ara_com_option_dir}/ipv6_endpoint_option_test.cpp
     ${test_ara_com_option_dir}/loadbalancing_option_test.cpp
     ${test_ara_com_someip_pubsub_dir}/someip_pubsub_test.cpp
     ${test_ara_com_someip_pubsub_fsm_dir}/pubsub_state_test.cpp
     ${test_ara_com_someip_dir}/someip_message_test.cpp
+    ${test_ara_com_someip_dir}/someip_tp_test.cpp
     ${test_ara_com_someip_rpc_dir}/someip_rpc_message_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_server_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_client_test.cpp
     ${test_ara_com_someip_sd_dir}/someip_sd_message_test.cpp
     ${test_ara_com_someip_sd_dir}/network_abstraction_test.cpp
     ${test_ara_com_someip_sd_dir}/someip_sd_test.cpp
+    ${test_ara_com_someip_sd_dir}/sd_network_config_test.cpp
     ${test_ara_com_someip_sd_fsm_dir}/machine_state_test.cpp
     ${test_ara_exec_dir}/worker_thread_test.cpp
     ${test_ara_exec_dir}/worker_runnable_test.cpp
@@ -1827,7 +1855,21 @@ if(build_tests)
     ${test_ara_com_dir}/cg/communication_group_test.cpp
     ${test_ara_com_dir}/field_test.cpp
     ${test_ara_com_dir}/service_proxy_base_test.cpp
+    ${test_ara_com_dir}/trigger_test.cpp
+    ${test_ara_com_dir}/raw_data_stream_test.cpp
+    ${test_ara_com_dir}/instance_identifier_test.cpp
+    ${test_ara_com_dir}/service_version_test.cpp
+    ${test_ara_com_dir}/qos_test.cpp
+    ${test_ara_com_dir}/network_binding_base_test.cpp
+    ${test_ara_com_dir}/runtime_test.cpp
+    ${test_ara_com_dir}/transformer_test.cpp
+    ${test_ara_com_dir}/e2e_error_domain_test.cpp
+    ${test_ara_com_dir}/sample_info_test.cpp
+    ${test_ara_com_dir}/types_extended_test.cpp
+    ${test_ara_com_dir}/event_extended_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
+    ${test_ara_com_zerocopy_dir}/iceoryx_binding_test.cpp
+    ${test_ara_com_dds_dir}/dds_binding_test.cpp
     ${test_ara_com_e2e_dir}/e2e_event_test.cpp
     ${test_ara_exec_dir}/signal_handler_test.cpp
     ${test_ara_exec_dir}/process_watchdog_test.cpp

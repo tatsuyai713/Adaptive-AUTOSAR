@@ -311,5 +311,20 @@ namespace ara
 
             return core::Result<void>::FromValue();
         }
+
+        AbacDecision AbacPolicyEngine::EvaluateWithTime(
+            const std::string &subject,
+            const std::string &resource,
+            const std::string &action,
+            std::uint8_t currentHour,
+            std::uint8_t currentDayOfWeek,
+            const AbacAttributes &attributes) const
+        {
+            // Inject time attributes, then delegate to Evaluate
+            AbacAttributes enriched{attributes};
+            enriched["time.hour"] = std::to_string(currentHour);
+            enriched["time.dayOfWeek"] = std::to_string(currentDayOfWeek);
+            return Evaluate(subject, resource, action, enriched);
+        }
     }
 }

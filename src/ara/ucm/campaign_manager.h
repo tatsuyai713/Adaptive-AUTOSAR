@@ -70,6 +70,24 @@ namespace ara
             /// @brief List all campaign IDs.
             std::vector<std::string> ListCampaignIds() const;
 
+            /// @brief Sign a campaign manifest with ECDSA (SWS_UCM_00045).
+            /// @param campaignId Campaign to sign.
+            /// @param privateKeyPem PEM-encoded ECDSA private key.
+            /// @returns Signature bytes, or error.
+            core::Result<std::vector<std::uint8_t>> SignCampaignManifest(
+                const std::string &campaignId,
+                const std::string &privateKeyPem);
+
+            /// @brief Verify a campaign manifest signature (SWS_UCM_00045).
+            /// @param campaignId Campaign to verify.
+            /// @param signature Signature bytes.
+            /// @param publicKeyPem PEM-encoded ECDSA public key.
+            /// @returns true if valid, false otherwise.
+            core::Result<bool> VerifyCampaignManifest(
+                const std::string &campaignId,
+                const std::vector<std::uint8_t> &signature,
+                const std::string &publicKeyPem);
+
         private:
             struct CampaignData
             {

@@ -31,7 +31,12 @@ namespace ara
             kCommunicationLinkError = 11,  ///< Communication link level error occurred.
             kNoClients = 12,               ///< Operation requires at least one connected client.
             kCommunicationStackError = 13, ///< Underlying communication stack reported an error.
-            kInstanceIDCouldNotBeResolved = 14 ///< Instance identifier resolution failed.
+            kInstanceIDCouldNotBeResolved = 14, ///< Instance identifier resolution failed.
+            kAlreadyOffered = 15,          ///< Service is already offered (SWS_CM_11350).
+            kMaxServicesExceeded = 16,     ///< Maximum number of services reached (SWS_CM_11351).
+            kWrongMethodCallProcessingMode = 17, ///< Incompatible MethodCallProcessingMode (SWS_CM_11352).
+            kCouldNotExecute = 18,         ///< Method handler execution failed (SWS_CM_11353).
+            kErroneousFileHandle = 19      ///< File-backed binding file error (SWS_CM_11354).
         };
 
         /// @brief `ErrorDomain` implementation for `ara::com`.

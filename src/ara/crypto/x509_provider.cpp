@@ -223,5 +223,48 @@ namespace ara
 
             return core::Result<bool>::FromValue(_verifyResult == 1);
         }
+
+        core::Result<bool> CheckCertificateRevocation(
+            const std::string &certPem,
+            const std::string &crlPem)
+        {
+            X509 *_cert = PemToX509(certPem);
+            if (_cert == nullptr)
+            {
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(CryptoErrc::kCertificateParseError));
+            }
+
+            BIO *_bio = BIO_new_mem_buf(crlPem.data(),
+                                         static_cast<int>(crlPem.size()));
+            if (_bio == nullptr)
+            {
+                X509_free(_cert);
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+            }
+
+            X509_CRL *_crl = PEM_read_bio_X509_CRL(
+                _bio, nullptr, nullptr, nullptr);
+            BIO_free(_bio);
+
+            if (_crl == nullptr)
+            {
+                X509_free(_cert);
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(CryptoErrc::kCertificateParseError));
+            }
+
+            // Check if serial is in the CRL
+            X509_REVOKED *_revoked = nullptr;
+            int _rc = X509_CRL_get0_by_cert(
+                _crl, &_revoked, _cert);
+
+            X509_CRL_free(_crl);
+            X509_free(_cert);
+
+            // rc == 0 means found (revoked), otherwise not revoked
+            return core::Result<bool>::FromValue(_rc == 0);
+        }
     }
 }

@@ -99,6 +99,22 @@ namespace ara
                 NmStateChangeHandler handler);
             void ClearStateChangeHandler() noexcept;
 
+            /// @brief Handle remote sleep indication (SWS_NM_00002).
+            /// @param channelName Channel that received RSI.
+            /// @returns Void Result on success.
+            core::Result<void> HandleRemoteSleepIndication(
+                const std::string &channelName);
+
+            /// @brief Handle repeat message request from peer (SWS_NM_00005).
+            /// @param channelName Channel on which RMR was received.
+            /// @returns Void Result on success.
+            core::Result<void> HandleRepeatMessageRequest(
+                const std::string &channelName);
+
+            /// @brief Get aggregated cluster sleep-readiness (SWS_NM_00009).
+            /// @returns true if all channels are in ReadySleep or BusSleep.
+            bool IsClusterSleepReady() const;
+
         private:
             struct ChannelRuntime
             {

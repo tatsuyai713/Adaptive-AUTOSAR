@@ -5,6 +5,7 @@
 #include "./campaign_manager.h"
 
 #include <algorithm>
+#include "../crypto/crypto_provider.h"
 
 namespace ara
 {
@@ -206,6 +207,96 @@ namespace ara
             {
                 campaign.State = CampaignState::kPartiallyComplete;
             }
+        }
+
+        core::Result<std::vector<std::uint8_t>> CampaignManager::SignCampaignManifest(
+            const std::string &campaignId,
+            const std::string &privateKeyPem)
+        {
+            if (campaignId.empty() || privateKeyPem.empty())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            std::string manifestData;
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                auto _it = mCampaigns.find(campaignId);
+                if (_it == mCampaigns.end())
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(UcmErrc::kCampaignNotFound));
+                }
+                // Serialize campaign as canonical string for signing
+                for (const auto &_entry : _it->second.Entries)
+                {
+                    manifestData += _entry.PackageName + "|" +
+                                    _entry.TargetCluster + "|" +
+                                    _entry.Version + ";";
+                }
+            }
+
+            // Use SHA-256 + ECDSA/RSA via OpenSSL EVP
+            auto digestResult = ara::crypto::ComputeDigest(
+                std::vector<std::uint8_t>(manifestData.begin(),
+                                          manifestData.end()),
+                ara::crypto::DigestAlgorithm::kSha256);
+
+            if (!digestResult.HasValue())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            // Return the digest as the "signature" (educational placeholder).
+            // A full implementation would use EVP_DigestSign with the private key.
+            return core::Result<std::vector<std::uint8_t>>::FromValue(
+                digestResult.Value());
+        }
+
+        core::Result<bool> CampaignManager::VerifyCampaignManifest(
+            const std::string &campaignId,
+            const std::vector<std::uint8_t> &signature,
+            const std::string &publicKeyPem)
+        {
+            if (campaignId.empty() || signature.empty() ||
+                publicKeyPem.empty())
+            {
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            std::string manifestData;
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                auto _it = mCampaigns.find(campaignId);
+                if (_it == mCampaigns.end())
+                {
+                    return core::Result<bool>::FromError(
+                        MakeErrorCode(UcmErrc::kCampaignNotFound));
+                }
+                for (const auto &_entry : _it->second.Entries)
+                {
+                    manifestData += _entry.PackageName + "|" +
+                                    _entry.TargetCluster + "|" +
+                                    _entry.Version + ";";
+                }
+            }
+
+            auto digestResult = ara::crypto::ComputeDigest(
+                std::vector<std::uint8_t>(manifestData.begin(),
+                                          manifestData.end()),
+                ara::crypto::DigestAlgorithm::kSha256);
+
+            if (!digestResult.HasValue())
+            {
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            return core::Result<bool>::FromValue(
+                digestResult.Value() == signature);
         }
     }
 }

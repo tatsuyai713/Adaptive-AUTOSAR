@@ -97,14 +97,14 @@ namespace ara
                 }
 
                 // Fail any pending calls
-                std::unordered_map<std::uint32_t, RawResponseHandler> pending;
+                std::unordered_map<std::uint32_t, PendingCall> pending;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     pending.swap(mPending);
                 }
                 for (auto &kv : pending)
                 {
-                    kv.second(core::Result<std::vector<std::uint8_t>>::FromError(
+                    kv.second.Handler(core::Result<std::vector<std::uint8_t>>::FromError(
                         MakeErrorCode(ComErrc::kNetworkBindingFailure)));
                 }
 
@@ -129,7 +129,10 @@ namespace ara
 
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
-                    mPending.emplace(sessionId, std::move(responseHandler));
+                    PendingCall pc;
+                    pc.Handler = std::move(responseHandler);
+                    pc.Deadline = std::chrono::steady_clock::now() + mTimeout;
+                    mPending.emplace(sessionId, std::move(pc));
                 }
 
                 // Framing: [4-byte session_id LE] + [request bytes]
@@ -147,7 +150,7 @@ namespace ara
                         auto it = mPending.find(sessionId);
                         if (it != mPending.end())
                         {
-                            handler = std::move(it->second);
+                            handler = std::move(it->second.Handler);
                             mPending.erase(it);
                         }
                     }
@@ -173,6 +176,29 @@ namespace ara
 
                     if (!mRepSubscriber->WaitForData(cPollTimeout))
                     {
+                        // Check for timed-out pending calls
+                        auto now = std::chrono::steady_clock::now();
+                        std::vector<RawResponseHandler> timedOut;
+                        {
+                            std::lock_guard<std::mutex> lock(mMutex);
+                            for (auto it = mPending.begin(); it != mPending.end();)
+                            {
+                                if (now >= it->second.Deadline)
+                                {
+                                    timedOut.push_back(std::move(it->second.Handler));
+                                    it = mPending.erase(it);
+                                }
+                                else
+                                {
+                                    ++it;
+                                }
+                            }
+                        }
+                        for (auto &h : timedOut)
+                        {
+                            h(core::Result<std::vector<std::uint8_t>>::FromError(
+                                MakeErrorCode(ComErrc::kCommunicationStackError)));
+                        }
                         continue;
                     }
 
@@ -203,7 +229,7 @@ namespace ara
                             auto it = mPending.find(sessionId);
                             if (it != mPending.end())
                             {
-                                handler = std::move(it->second);
+                                handler = std::move(it->second.Handler);
                                 mPending.erase(it);
                             }
                         }

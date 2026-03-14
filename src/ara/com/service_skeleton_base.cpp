@@ -58,8 +58,13 @@ namespace ara
 
         core::Result<void> ServiceSkeletonBase::OfferService()
         {
+            if (mOffered)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ComErrc::kAlreadyOffered));
+            }
+
 #ifdef ARA_COM_USE_VSOMEIP
-            if (!mOffered)
             {
                 auto app = someip::VsomeipApplication::GetServerApplication();
                 app->offer_service(
@@ -67,11 +72,9 @@ namespace ara
                     mInstanceId,
                     static_cast<vsomeip::major_version_t>(mMajorVersion),
                     static_cast<vsomeip::minor_version_t>(mMinorVersion));
-                mOffered = true;
             }
-#else
-            mOffered = true;
 #endif
+            mOffered = true;
             return core::Result<void>::FromValue();
         }
 
@@ -257,6 +260,41 @@ namespace ara
                 return &mDispatchMutex;
             }
             return nullptr;
+        }
+
+        core::Result<void> ServiceSkeletonBase::ProcessNextMethodCall(
+            std::chrono::milliseconds timeout)
+        {
+            if (mProcessingMode == MethodCallProcessingMode::kEvent ||
+                mProcessingMode == MethodCallProcessingMode::kEventSingleThread)
+            {
+                return core::Result<void>::FromValue();
+            }
+
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mPollMutex);
+                if (mPollQueue.empty())
+                {
+                    mPollCV.wait_for(lock, timeout, [this]
+                                     { return !mPollQueue.empty(); });
+
+                    if (mPollQueue.empty())
+                    {
+                        return core::Result<void>::FromValue();
+                    }
+                }
+                task = std::move(mPollQueue.front());
+                mPollQueue.pop_front();
+            }
+
+            task();
+            return core::Result<void>::FromValue();
+        }
+
+        ServiceVersion ServiceSkeletonBase::GetServiceVersion() const noexcept
+        {
+            return ServiceVersion{mMajorVersion, mMinorVersion};
         }
     }
 }

@@ -53,6 +53,16 @@ namespace ara
                 return "Communication stack error.";
             case ComErrc::kInstanceIDCouldNotBeResolved:
                 return "InstanceID could not be resolved.";
+            case ComErrc::kAlreadyOffered:
+                return "Service is already offered.";
+            case ComErrc::kMaxServicesExceeded:
+                return "Maximum number of services exceeded.";
+            case ComErrc::kWrongMethodCallProcessingMode:
+                return "Wrong method call processing mode.";
+            case ComErrc::kCouldNotExecute:
+                return "Method handler could not execute.";
+            case ComErrc::kErroneousFileHandle:
+                return "Erroneous file handle.";
             default:
                 return "Unknown communication error.";
             }

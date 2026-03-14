@@ -46,6 +46,14 @@ namespace ara
             {
             }
 
+            IceoryxProxyEventBinding::IceoryxProxyEventBinding(
+                EventBindingConfig config,
+                QueueOverflowPolicy overflowPolicy) noexcept
+                : mConfig{config},
+                  mOverflowPolicy{overflowPolicy}
+            {
+            }
+
             IceoryxProxyEventBinding::~IceoryxProxyEventBinding() noexcept
             {
                 if (mState != SubscriptionState::kNotSubscribed)
@@ -257,6 +265,14 @@ namespace ara
                             std::lock_guard<std::mutex> lock(mMutex);
                             if (mSampleQueue.size() >= mMaxSampleCount)
                             {
+                                if (mOverflowPolicy ==
+                                    QueueOverflowPolicy::kRejectNew)
+                                {
+                                    mDroppedSamples.fetch_add(
+                                        1U, std::memory_order_relaxed);
+                                    continue;
+                                }
+                                // kDropOldest: discard the oldest sample
                                 mSampleQueue.pop_front();
                             }
                             mSampleQueue.emplace_back(data, data + size);

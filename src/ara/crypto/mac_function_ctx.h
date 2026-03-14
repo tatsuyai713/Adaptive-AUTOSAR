@@ -40,6 +40,12 @@ namespace ara
             /// @brief Finalize and return the MAC tag.
             core::Result<std::vector<std::uint8_t>> Finish();
 
+            /// @brief Finalize and return a truncated MAC tag (SWS_CRYPT_22250).
+            /// @param truncatedLength Desired MAC length in bytes.
+            /// @returns Truncated MAC tag, or error.
+            core::Result<std::vector<std::uint8_t>> FinishTruncated(
+                std::size_t truncatedLength);
+
             DigestAlgorithm GetAlgorithm() const noexcept { return mAlgorithm; }
 
         private:

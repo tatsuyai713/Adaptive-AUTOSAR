@@ -26,6 +26,11 @@ namespace ara
                 std::uint16_t EventId;
                 std::uint16_t EventGroupId;
                 std::uint8_t MajorVersion{1U};
+
+                /// @brief DDS domain ID override (0 = derive from ServiceId).
+                ///        When non-zero, the DDS binding will use this domain ID
+                ///        instead of deriving it from ServiceId & 0xFF.
+                std::uint32_t DdsDomainId{0U};
             };
 
             /// @brief Abstract proxy-side event binding.

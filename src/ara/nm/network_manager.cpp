@@ -313,5 +313,69 @@ namespace ara
                 return NmMode::kBusSleep;
             }
         }
+
+        core::Result<void> NetworkManager::HandleRemoteSleepIndication(
+            const std::string &channelName)
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            auto it{mChannels.find(channelName)};
+            if (it == mChannels.end())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kInvalidChannel));
+            }
+
+            auto &channel{it->second};
+            // RSI: remote side requests sleep — transition to PrepBusSleep
+            // if we are in ReadySleep or NormalOperation without local request
+            if (!channel.Status.NetworkRequested &&
+                (channel.Status.State == NmState::kReadySleep ||
+                 channel.Status.State == NmState::kNormalOperation))
+            {
+                TransitionTo(channel, NmState::kPrepBusSleep, 0U);
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> NetworkManager::HandleRepeatMessageRequest(
+            const std::string &channelName)
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            auto it{mChannels.find(channelName)};
+            if (it == mChannels.end())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kInvalidChannel));
+            }
+
+            auto &channel{it->second};
+            // RMR: force re-enter RepeatMessage state for re-announcement
+            if (channel.Status.State != NmState::kBusSleep)
+            {
+                TransitionTo(channel, NmState::kRepeatMessage, 0U);
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        bool NetworkManager::IsClusterSleepReady() const
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            if (mChannels.empty())
+            {
+                return false;
+            }
+
+            for (const auto &entry : mChannels)
+            {
+                const auto &status = entry.second.Status;
+                if (status.State != NmState::kBusSleep &&
+                    status.State != NmState::kPrepBusSleep &&
+                    status.State != NmState::kReadySleep)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }

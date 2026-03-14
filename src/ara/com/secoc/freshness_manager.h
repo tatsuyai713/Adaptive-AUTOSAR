@@ -15,6 +15,7 @@
 #define ARA_COM_SECOC_FRESHNESS_MANAGER_H
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <string>
@@ -146,6 +147,23 @@ namespace ara
 
                 /// @brief Convert freshness byte vector to 64-bit counter (little-endian).
                 static uint64_t bytesToCounter(const FreshnessValue &fv);
+
+                /// @brief Overflow threshold ratio (0.0–1.0) for warning generation.
+                static constexpr double cOverflowWarningRatio{0.9};
+
+                /// @brief Callback for overflow warning.
+                std::function<void(PduId, uint64_t currentCounter, uint64_t maxCounter)>
+                    mOverflowWarningCallback;
+
+            public:
+                /// @brief Set overflow warning callback (SWS_SecOC_00204).
+                void SetOverflowWarningCallback(
+                    std::function<void(PduId, uint64_t, uint64_t)> callback);
+
+                /// @brief Check if a counter is near overflow threshold.
+                /// @param pduId PDU identifier.
+                /// @returns true if counter >= 90% of max.
+                bool IsNearOverflow(PduId pduId) const;
             };
 
         } // namespace secoc

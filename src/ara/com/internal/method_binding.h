@@ -23,6 +23,9 @@ namespace ara
                 std::uint16_t ServiceId{0U};
                 std::uint16_t InstanceId{0U};
                 std::uint16_t MethodId{0U};
+
+                /// @brief DDS domain ID override (0 = derive from ServiceId).
+                std::uint32_t DdsDomainId{0U};
             };
 
             /// @brief Abstract proxy-side method binding.

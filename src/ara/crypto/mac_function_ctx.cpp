@@ -164,5 +164,26 @@ namespace ara
             mImpl->started = false;
             return core::Result<std::vector<std::uint8_t>>::FromValue(std::move(tag));
         }
+
+        core::Result<std::vector<std::uint8_t>>
+        MessageAuthenticationCodeCtx::FinishTruncated(size_t truncatedLength)
+        {
+            auto fullResult = Finish();
+            if (!fullResult.HasValue())
+            {
+                return fullResult;
+            }
+
+            auto tag = fullResult.Value();
+            if (truncatedLength == 0U || truncatedLength > tag.size())
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(CryptoErrc::kInvalidArgument));
+            }
+
+            tag.resize(truncatedLength);
+            return core::Result<std::vector<std::uint8_t>>::FromValue(
+                std::move(tag));
+        }
     }
 }

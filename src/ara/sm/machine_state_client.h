@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <string>
 #include "../core/result.h"
 #include "./sm_error_domain.h"
 
@@ -61,10 +62,19 @@ namespace ara
             /// @returns Void Result on success.
             core::Result<void> RequestRestart();
 
+            /// @brief Request graceful shutdown with coordination (SWS_SM_00851).
+            /// @param timeoutMs Timeout in milliseconds before force-kill.
+            /// @param reason Restart/shutdown reason code.
+            /// @returns Void Result on success.
+            core::Result<void> RequestGracefulShutdown(
+                uint32_t timeoutMs, const std::string &reason = "");
+
         private:
             MachineState mState;
             StateChangeNotifier mNotifier;
             mutable std::mutex mMutex;
+            uint32_t mShutdownTimeoutMs{0U};
+            std::string mShutdownReason;
         };
     }
 }

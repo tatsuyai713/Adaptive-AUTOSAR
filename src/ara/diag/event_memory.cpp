@@ -141,5 +141,39 @@ namespace ara
             }
             mEntries.erase(oldest);
         }
+
+        core::Result<void> EventMemory::HealDtc(
+            uint32_t dtcNumber, uint16_t healingThreshold)
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            auto it = mEntries.find(dtcNumber);
+            if (it == mEntries.end())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(DiagErrc::kNoSuchDTC));
+            }
+
+            it->second.agingCounter++;
+            if (it->second.agingCounter >= healingThreshold)
+            {
+                // Clear the confirmed/pending bits in status byte
+                it->second.statusByte &= static_cast<uint8_t>(~0x09U);
+            }
+            return core::Result<void>{};
+        }
+
+        core::Result<std::vector<ExtendedDataRecord>>
+        EventMemory::ReadExtendedDataRecords(uint32_t dtcNumber) const
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            auto it = mEntries.find(dtcNumber);
+            if (it == mEntries.end())
+            {
+                return core::Result<std::vector<ExtendedDataRecord>>::FromError(
+                    MakeErrorCode(DiagErrc::kNoSuchDTC));
+            }
+            return core::Result<std::vector<ExtendedDataRecord>>::FromValue(
+                it->second.extData);
+        }
     }
 }

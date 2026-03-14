@@ -6,6 +6,7 @@
 #define OPTION_DESERIALIZER_H
 
 #include "./ipv4_endpoint_option.h"
+#include "./ipv6_endpoint_option.h"
 #include "./loadbalancing_option.h"
 
 namespace ara

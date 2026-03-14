@@ -149,6 +149,19 @@ namespace ara
 
             /// @brief Query current session progress (0..100).
             std::uint8_t GetProgress() const noexcept;
+
+            /// @brief Request rollback confirmation handshake (SWS_UCM_00041).
+            /// @param confirmed true to confirm rollback, false to abort.
+            /// @returns Void Result on success.
+            core::Result<void> ConfirmRollback(bool confirmed);
+
+            /// @brief Validate a chunk CRC during transfer (SWS_UCM_00151).
+            /// @param chunk Data chunk.
+            /// @param expectedCrc32 Expected CRC-32 of this chunk.
+            /// @returns Void Result on success, error on mismatch.
+            core::Result<void> ValidateChunkCrc(
+                const std::vector<std::uint8_t> &chunk,
+                std::uint32_t expectedCrc32);
         };
     }
 }

@@ -5,6 +5,7 @@
 #ifndef ARA_COM_SERVICE_SKELETON_BASE_H
 #define ARA_COM_SERVICE_SKELETON_BASE_H
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -13,6 +14,7 @@
 #include <utility>
 #include <vector>
 #include "./types.h"
+#include "./service_version.h"
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
 
@@ -128,12 +130,25 @@ namespace ara
             ///          call finishes, or immediately if no call was pending.
             core::Result<void> ProcessNextMethodCall();
 
+            /// @brief Process next pending method call with timeout (SWS_CM_00200).
+            /// @details Blocks until a method call is available or the timeout
+            ///          expires. Returns success if a call was dispatched, or
+            ///          success with no action if the timeout elapsed first.
+            /// @param timeout Maximum time to wait for a pending method call.
+            /// @returns Result indicating success.
+            core::Result<void> ProcessNextMethodCall(
+                std::chrono::milliseconds timeout);
+
             /// @brief Get the configured method processing mode.
             MethodCallProcessingMode GetMethodCallProcessingMode() const noexcept;
 
             /// @brief Check whether there are pending method calls in the poll queue.
             /// @returns `true` if at least one pending call is queued.
             bool HasPendingMethodCalls() const noexcept;
+
+            /// @brief Get the service interface version.
+            /// @returns ServiceVersion with major and minor version numbers.
+            ServiceVersion GetServiceVersion() const noexcept;
         };
     }
 }

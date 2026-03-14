@@ -135,6 +135,22 @@ namespace ara
             /// @param filePath Path to the input file.
             /// @returns Void result, or IAM domain error on parse or I/O failure.
             core::Result<void> LoadFromFile(const std::string &filePath);
+
+            /// @brief Evaluate with TBAC: time-based access control (SWS_IAM_00310).
+            /// @param subject   Subject identity.
+            /// @param resource  Resource name.
+            /// @param action    Action name.
+            /// @param currentHour  Current hour of day (0-23).
+            /// @param currentDayOfWeek  Day of week (0=Sunday, 6=Saturday).
+            /// @param attributes Additional ABAC attributes.
+            /// @returns AbacDecision considering time constraints.
+            AbacDecision EvaluateWithTime(
+                const std::string &subject,
+                const std::string &resource,
+                const std::string &action,
+                std::uint8_t currentHour,
+                std::uint8_t currentDayOfWeek,
+                const AbacAttributes &attributes = {}) const;
         };
     }
 }

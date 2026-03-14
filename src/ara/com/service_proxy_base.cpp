@@ -451,6 +451,42 @@ namespace ara
             return FindService(serviceId, instanceId);
         }
 
+        core::Result<ServiceHandleContainer<ServiceHandleType>>
+        ServiceProxyBase::FindService(const InstanceIdentifier &identifier)
+        {
+            // Resolve InstanceIdentifier string to service/instance IDs.
+            // Educational approach: parse from "someip:SID:IID" format or
+            // use stable hash like InstanceSpecifier path.
+            const std::string &idStr = identifier.ToString();
+            const std::string prefix{"someip:"};
+            if (idStr.compare(0, prefix.size(), prefix) == 0)
+            {
+                // Parse "someip:serviceId:instanceId"
+                auto colonPos = idStr.find(':', prefix.size());
+                if (colonPos != std::string::npos)
+                {
+                    try
+                    {
+                        auto serviceId = static_cast<std::uint16_t>(
+                            std::stoul(idStr.substr(prefix.size(),
+                                                     colonPos - prefix.size())));
+                        auto instanceId = static_cast<std::uint16_t>(
+                            std::stoul(idStr.substr(colonPos + 1)));
+                        return FindService(serviceId, instanceId);
+                    }
+                    catch (...)
+                    {
+                        // Fall through to hash-based resolution
+                    }
+                }
+            }
+
+            // Fallback: use same hash as InstanceSpecifier
+            const auto ids = ResolveServiceIdsFromSpecifier(
+                core::InstanceSpecifier{idStr});
+            return FindService(ids.first, ids.second);
+        }
+
         core::Result<FindServiceHandle> ServiceProxyBase::StartFindService(
             std::function<void(ServiceHandleContainer<ServiceHandleType>)> handler,
             const core::InstanceSpecifier &specifier)
@@ -460,6 +496,14 @@ namespace ara
                 std::move(handler),
                 ids.first,
                 ids.second);
+        }
+
+        bool ServiceProxyBase::CheckServiceVersion(
+            const ServiceVersion &requiredVersion,
+            const ServiceVersion &offeredVersion,
+            VersionCheckPolicy policy) noexcept
+        {
+            return requiredVersion.IsCompatibleWith(offeredVersion, policy);
         }
     }
 }

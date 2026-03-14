@@ -262,6 +262,38 @@ namespace ara
                 return ara::core::Result<void>::FromValue();
             }
 
+            // -----------------------------------------------------------------------
+            // SetOverflowWarningCallback (SWS_SecOC_00204)
+            // -----------------------------------------------------------------------
+            void FreshnessManager::SetOverflowWarningCallback(
+                std::function<void(PduId, uint64_t, uint64_t)> callback)
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                mOverflowWarningCallback = std::move(callback);
+            }
+
+            // -----------------------------------------------------------------------
+            // IsNearOverflow (SWS_SecOC_00204)
+            // -----------------------------------------------------------------------
+            bool FreshnessManager::IsNearOverflow(PduId pduId) const
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                auto it = mEntries.find(pduId);
+                if (it == mEntries.end())
+                {
+                    return false;
+                }
+                const Entry &entry = it->second;
+                if (entry.config.maxCounter == 0U)
+                {
+                    return false; // no limit configured
+                }
+                const double ratio =
+                    static_cast<double>(entry.counter) /
+                    static_cast<double>(entry.config.maxCounter);
+                return ratio >= cOverflowWarningRatio;
+            }
+
         } // namespace secoc
     }     // namespace com
 } // namespace ara

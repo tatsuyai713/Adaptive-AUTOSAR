@@ -19,6 +19,7 @@
 #include <thread>
 #include <unordered_map>
 #include "./event_binding.h"
+#include "./queue_overflow_policy.h"
 #include "../com_error_domain.h"
 #include "../zerocopy/zero_copy.h"
 
@@ -43,10 +44,15 @@ namespace ara
                 std::size_t mMaxSampleCount{16U};
                 std::function<void()> mReceiveHandler;
                 SubscriptionStateChangeHandler mStateChangeHandler;
+                QueueOverflowPolicy mOverflowPolicy{
+                    QueueOverflowPolicy::kDropOldest};
 
                 std::unique_ptr<zerocopy::ZeroCopySubscriber> mSubscriber;
                 std::atomic<bool> mRunning{false};
                 std::thread mPollThread;
+
+                /// @brief Dropped sample counter (incremented when policy rejects)
+                std::atomic<std::uint64_t> mDroppedSamples{0U};
 
                 void pollLoop() noexcept;
 
@@ -56,6 +62,11 @@ namespace ara
 
                 explicit IceoryxProxyEventBinding(
                     EventBindingConfig config) noexcept;
+
+                /// @brief Constructor with configurable queue overflow policy.
+                IceoryxProxyEventBinding(
+                    EventBindingConfig config,
+                    QueueOverflowPolicy overflowPolicy) noexcept;
                 ~IceoryxProxyEventBinding() noexcept override;
 
                 IceoryxProxyEventBinding(const IceoryxProxyEventBinding &) = delete;

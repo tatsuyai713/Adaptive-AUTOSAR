@@ -11,6 +11,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <random>
+#include <vector>
 #include "../core/result.h"
 #include "./worker_runnable.h"
 #include "./helper/atomic_optional.h"
@@ -52,6 +53,7 @@ namespace ara
             static uint64_t mRandomNumber;
             static TimeStamp mActivationTime;
             static std::atomic_bool mTerminationRequested;
+            static std::atomic<uint64_t> mConfiguredCycleMs;
             WorkerThread mWorkerThread;
             ActivationReturnType mLifecycleState;
 
@@ -116,6 +118,15 @@ namespace ara
             /// @brief SWS standard-named alias for WaitForActivation (SWS_EM_02001).
             /// @returns Value that controls the caller's internal lifecycle
             core::Result<ActivationReturnType> WaitForNextActivation();
+
+            /// @brief Set CPU affinity for the deterministic thread (SWS_EM_02040).
+            /// @param cpuCores Set of CPU core indices to pin this thread to.
+            /// @returns Void Result on success, error if affinity cannot be set.
+            core::Result<void> SetCpuAffinity(const std::vector<int> &cpuCores);
+
+            /// @brief Set the deterministic cycle time (SWS_EM_02045).
+            /// @param cycleMs Cycle time in milliseconds.
+            static void SetCycleTime(uint64_t cycleMs);
         };
     }
 }

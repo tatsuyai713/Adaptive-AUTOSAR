@@ -23,6 +23,7 @@
 #define ARA_COM_INTERNAL_ICEORYX_METHOD_BINDING_H
 
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -38,6 +39,10 @@ namespace ara
     {
         namespace internal
         {
+            /// @brief Default method call timeout for iceoryx bindings.
+            static constexpr std::chrono::milliseconds
+                cDefaultMethodTimeout{5000};
+
             /// @brief iceoryx-based proxy-side method binding.
             ///        Publishes serialized requests on a request channel and
             ///        receives serialized replies on a reply channel.
@@ -47,13 +52,20 @@ namespace ara
                 MethodBindingConfig mConfig;
                 std::mutex mMutex;
                 std::atomic<std::uint32_t> mNextSessionId{1U};
-                std::unordered_map<std::uint32_t, RawResponseHandler> mPending;
+
+                struct PendingCall
+                {
+                    RawResponseHandler Handler;
+                    std::chrono::steady_clock::time_point Deadline;
+                };
+                std::unordered_map<std::uint32_t, PendingCall> mPending;
 
                 std::unique_ptr<zerocopy::ZeroCopyPublisher> mReqPublisher;
                 std::unique_ptr<zerocopy::ZeroCopySubscriber> mRepSubscriber;
 
                 std::atomic<bool> mRunning{false};
                 std::thread mPollThread;
+                std::chrono::milliseconds mTimeout{cDefaultMethodTimeout};
 
                 void pollLoop() noexcept;
 

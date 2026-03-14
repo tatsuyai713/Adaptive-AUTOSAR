@@ -102,6 +102,10 @@ namespace ara
             /// @brief Get the quota (maximum allowed size) for this storage (SWS_PER_00408).
             /// @returns Maximum size in bytes, or error. Returns 0 if no quota is configured.
             core::Result<uint64_t> GetCurrentFileStorageQuota() const;
+
+            /// @brief Estimate available free space in this storage (SWS_PER_00450).
+            /// @returns Estimated free bytes (quota - currentSize), or error.
+            core::Result<uint64_t> EstimatedFreeSpace() const;
         };
     }
 }

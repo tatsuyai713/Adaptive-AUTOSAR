@@ -28,6 +28,12 @@ namespace ara
                     return Ipv4EndpointOption::Deserialize(
                         payload, offset, _type, _discardable);
 
+                case OptionType::IPv6Endpoint:
+                case OptionType::IPv6Multicast:
+                case OptionType::IPv6SdEndpoint:
+                    return Ipv6EndpointOption::Deserialize(
+                        payload, offset, _type, _discardable);
+
                 case OptionType::LoadBalancing:
                     return LoadBalancingOption::Deserialize(
                         payload, offset, _discardable);

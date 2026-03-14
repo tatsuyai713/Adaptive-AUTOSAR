@@ -9,6 +9,7 @@
 #ifndef ARA_COM_SOMEIP_SOMEIP_TP_H
 #define ARA_COM_SOMEIP_SOMEIP_TP_H
 
+#include <chrono>
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -45,6 +46,11 @@ namespace ara
                 const std::vector<uint8_t> &payload,
                 std::size_t maxSegmentPayload = cDefaultTpSegmentSize);
 
+            /// @brief Default SOME/IP-TP reassembly timeout (seconds).
+            ///        Per PRS_SOMEIP_00730, incomplete reassembly should be
+            ///        discarded after a configurable timeout.
+            static constexpr std::chrono::seconds cDefaultTpTimeout{5};
+
             /// @brief Stateful reassembler that collects SOME/IP-TP segments
             ///        and reconstructs the original payload.
             class TpReassembler
@@ -59,8 +65,21 @@ namespace ara
                 /// @brief Expected total payload size (derived from final segment).
                 std::size_t mExpectedSize{0U};
 
+                /// @brief Timestamp when the first segment was received.
+                std::chrono::steady_clock::time_point mFirstSegmentTime;
+
+                /// @brief Whether any segment has been received yet.
+                bool mStarted{false};
+
+                /// @brief Configurable reassembly timeout.
+                std::chrono::seconds mTimeout{cDefaultTpTimeout};
+
             public:
                 TpReassembler() = default;
+
+                /// @brief Constructor with configurable timeout.
+                /// @param timeout Reassembly timeout duration
+                explicit TpReassembler(std::chrono::seconds timeout) noexcept;
 
                 /// @brief Feed a segment into the reassembler.
                 /// @param offset Byte offset from the TP header
@@ -74,6 +93,14 @@ namespace ara
                 ///        and the payload can be reassembled.
                 /// @returns True when the full payload is available.
                 bool IsComplete() const noexcept;
+
+                /// @brief Check whether the reassembly has timed out.
+                /// @returns True if the timeout has been exceeded.
+                bool IsTimedOut() const noexcept;
+
+                /// @brief Get the number of segments received so far.
+                /// @returns Number of segments
+                std::size_t SegmentCount() const noexcept;
 
                 /// @brief Reassemble the full payload from collected segments.
                 /// @pre IsComplete() must return true.

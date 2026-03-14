@@ -619,5 +619,65 @@ namespace ara
             std::lock_guard<std::mutex> lock{mMutex};
             return mProgress;
         }
+
+        core::Result<void> UpdateManager::ConfirmRollback(bool confirmed)
+        {
+            std::pair<StateChangeHandler, ProgressHandler> handlers;
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                if (mState != UpdateSessionState::kRolledBack)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(UcmErrc::kInvalidState));
+                }
+
+                if (confirmed)
+                {
+                    mState = UpdateSessionState::kIdle;
+                    mSessionId.clear();
+                    mProgress = 0U;
+                }
+                handlers = CaptureHandlers(mStateChangeHandler, mProgressHandler);
+            }
+
+            if (confirmed)
+            {
+                Notify(handlers, UpdateSessionState::kIdle, 0U);
+            }
+            return core::Result<void>::FromValue();
+        }
+
+        core::Result<void> UpdateManager::ValidateChunkCrc(
+            const std::vector<std::uint8_t> &chunk,
+            std::uint32_t expectedCrc32)
+        {
+            if (chunk.empty())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            // Standard CRC-32 (ISO 3309 / ITU-T V.42)
+            std::uint32_t crc = 0xFFFFFFFFU;
+            for (auto byte : chunk)
+            {
+                crc ^= static_cast<std::uint32_t>(byte);
+                for (int bit = 0; bit < 8; ++bit)
+                {
+                    if (crc & 1U)
+                        crc = (crc >> 1) ^ 0xEDB88320U;
+                    else
+                        crc >>= 1;
+                }
+            }
+            crc ^= 0xFFFFFFFFU;
+
+            if (crc != expectedCrc32)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kVerificationFailed));
+            }
+            return core::Result<void>::FromValue();
+        }
     }
 }

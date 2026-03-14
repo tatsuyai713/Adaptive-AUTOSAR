@@ -73,5 +73,17 @@ namespace ara
         {
             return SetMachineState(MachineState::kRestart);
         }
+
+        core::Result<void> MachineStateClient::RequestGracefulShutdown(
+            uint32_t timeoutMs, const std::string &reason)
+        {
+            // Store the shutdown parameters for the SM daemon to consume
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                mShutdownTimeoutMs = timeoutMs;
+                mShutdownReason = reason;
+            }
+            return SetMachineState(MachineState::kShutdown);
+        }
     }
 }

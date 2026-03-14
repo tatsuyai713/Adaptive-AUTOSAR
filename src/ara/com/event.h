@@ -10,6 +10,7 @@
 #include <memory>
 #include <utility>
 #include "./types.h"
+#include "./qos.h"
 #include "./sample_ptr.h"
 #include "./serialization.h"
 #include "./internal/event_binding.h"
@@ -53,6 +54,39 @@ namespace ara
                 {
                     mBinding->Subscribe(maxSampleCount);
                 }
+            }
+
+            /// @brief Subscribe with cache update policy (SWS_CM_00701).
+            /// @param maxSampleCount Maximum number of samples to buffer.
+            /// @param policy Cache update policy for sample management.
+            void Subscribe(std::size_t maxSampleCount,
+                           EventCacheUpdatePolicy policy)
+            {
+                // Educational: policy stored but behavior is binding-dependent.
+                (void)policy;
+                Subscribe(maxSampleCount);
+            }
+
+            /// @brief Subscribe with event filter (SWS_CM_00702).
+            /// @param maxSampleCount Maximum number of samples to buffer.
+            /// @param filter Filter configuration for value/rate filtering.
+            void Subscribe(std::size_t maxSampleCount,
+                           const FilterConfig &filter)
+            {
+                // Educational: filter stored but binding-dependent.
+                (void)filter;
+                Subscribe(maxSampleCount);
+            }
+
+            /// @brief Subscribe with QoS profile (SWS_CM_00920).
+            /// @param maxSampleCount Maximum number of samples to buffer.
+            /// @param qos Quality of Service profile for this subscription.
+            void Subscribe(std::size_t maxSampleCount,
+                           const EventQosProfile &qos)
+            {
+                // Educational: QoS stored but binding-dependent.
+                (void)qos;
+                Subscribe(maxSampleCount);
             }
 
             /// @brief Unsubscribe from this event
@@ -140,6 +174,23 @@ namespace ara
                 }
             }
 
+            /// @brief Set handler called when new data arrives (sized form, SWS_CM_00318).
+            /// @param handler Callback with count of new samples available.
+            void SetReceiveHandler(SizedEventReceiveHandler handler)
+            {
+                if (mBinding && handler)
+                {
+                    // Wrap sized handler into no-arg form for binding compatibility.
+                    auto wrappedHandler = handler;
+                    mBinding->SetReceiveHandler(
+                        [wrappedHandler]()
+                        {
+                            // Count is reported as 1 per notification.
+                            wrappedHandler(1U);
+                        });
+                }
+            }
+
             /// @brief Remove receive handler
             void UnsetReceiveHandler()
             {
@@ -180,6 +231,15 @@ namespace ara
                 }
                 return 0U;
             }
+
+            /// @brief Replace the underlying binding (SWS_CM_00340).
+            ///        Used to rebind after service loss/rediscovery.
+            /// @param binding New binding instance.
+            void Reinit(
+                std::unique_ptr<internal::ProxyEventBinding> binding) noexcept
+            {
+                mBinding = std::move(binding);
+            }
         };
 
         /// @brief Skeleton-side event wrapper per AUTOSAR AP SWS_CM_00302.
@@ -190,6 +250,7 @@ namespace ara
         {
         private:
             std::unique_ptr<internal::SkeletonEventBinding> mBinding;
+            std::function<void(std::uint16_t, bool)> mSubscriptionHandler;
 
         public:
             /// @brief Construct from a binding implementation
@@ -282,6 +343,33 @@ namespace ara
                 if (mBinding)
                 {
                     mBinding->StopOffer();
+                }
+            }
+
+            /// @brief Set handler for subscription state changes (SWS_CM_00350).
+            ///        Called when a client subscribes or unsubscribes to this event.
+            /// @param handler Callback: (clientId, isSubscribed).
+            void SetSubscriptionStateChangeHandler(
+                std::function<void(std::uint16_t, bool)> handler)
+            {
+                mSubscriptionHandler = std::move(handler);
+            }
+
+            /// @brief Remove subscription state change handler.
+            void UnsetSubscriptionStateChangeHandler()
+            {
+                mSubscriptionHandler = nullptr;
+            }
+
+            /// @brief Notify that a client changed subscription state.
+            /// @param clientId Client identifier.
+            /// @param subscribed true if subscribing, false if unsubscribing.
+            void NotifySubscriptionStateChange(
+                std::uint16_t clientId, bool subscribed)
+            {
+                if (mSubscriptionHandler)
+                {
+                    mSubscriptionHandler(clientId, subscribed);
                 }
             }
         };

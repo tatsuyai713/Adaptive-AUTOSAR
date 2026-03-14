@@ -46,6 +46,14 @@ namespace ara
         core::Result<bool> VerifyX509Chain(
             const std::string &leafPem,
             const std::vector<std::string> &caCertsPem);
+
+        /// @brief Check if a certificate is revoked against a CRL (SWS_CRYPT_25100).
+        /// @param certPem PEM-encoded certificate to check.
+        /// @param crlPem PEM-encoded CRL.
+        /// @returns true if certificate is NOT revoked, false if revoked.
+        core::Result<bool> CheckCertificateRevocation(
+            const std::string &certPem,
+            const std::string &crlPem);
     }
 }
 

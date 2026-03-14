@@ -6,12 +6,16 @@
 #define SERVICE_HANDLE_TYPE_H
 
 #include <stdint.h>
+#include <string>
 #include "../core/instance_specifier.h"
 
 namespace ara
 {
     namespace com
     {
+        /// Forward declaration for GetInstanceIdentifier.
+        class InstanceIdentifier;
+
         /// @brief Immutable identifier for a discovered service instance.
         /// @details
         /// A handle is returned by discovery APIs and then passed to generated
@@ -46,6 +50,14 @@ namespace ara
             uint16_t GetInstanceId() const noexcept
             {
                 return mInstanceId;
+            }
+
+            /// @brief Get the service interface ID as string (SWS_CM_00312).
+            /// @returns String representation of service/instance pair.
+            std::string GetServiceInterfaceId() const
+            {
+                return std::to_string(mServiceId) + ":" +
+                       std::to_string(mInstanceId);
             }
 
             /// @brief Equality comparison.

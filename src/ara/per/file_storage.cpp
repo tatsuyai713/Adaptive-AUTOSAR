@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <fstream>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <cstdio>
 
 namespace ara
@@ -287,6 +288,42 @@ namespace ara
             // In a full platform, quota is read from the ARXML manifest.
             // For this educational implementation, return 0 (no quota configured).
             return core::Result<uint64_t>::FromValue(0);
+        }
+
+        core::Result<uint64_t> FileStorage::EstimatedFreeSpace() const
+        {
+            auto quotaResult = GetCurrentFileStorageQuota();
+            if (!quotaResult.HasValue())
+            {
+                return core::Result<uint64_t>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            uint64_t quota = quotaResult.Value();
+            if (quota == 0U)
+            {
+                // No quota configured — use filesystem statvfs
+                struct statvfs svfs;
+                if (::statvfs(mBasePath.c_str(), &svfs) != 0)
+                {
+                    return core::Result<uint64_t>::FromError(
+                        MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+                }
+                return core::Result<uint64_t>::FromValue(
+                    static_cast<uint64_t>(svfs.f_bavail) *
+                    static_cast<uint64_t>(svfs.f_frsize));
+            }
+
+            auto sizeResult = GetCurrentFileStorageSize();
+            if (!sizeResult.HasValue())
+            {
+                return core::Result<uint64_t>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            uint64_t used = sizeResult.Value();
+            return core::Result<uint64_t>::FromValue(
+                (used < quota) ? (quota - used) : 0U);
         }
     }
 }

@@ -9,6 +9,8 @@
 #include <functional>
 #include <vector>
 #include "./types.h"
+#include "./service_version.h"
+#include "./instance_identifier.h"
 #include "./service_handle_type.h"
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
@@ -64,6 +66,12 @@ namespace ara
             static core::Result<ServiceHandleContainer<ServiceHandleType>>
             FindService(const core::InstanceSpecifier &specifier);
 
+            /// @brief One-shot service discovery via InstanceIdentifier (SWS_CM_00124).
+            /// @param identifier Transport-level instance identifier
+            /// @returns Container of matching service handles
+            static core::Result<ServiceHandleContainer<ServiceHandleType>>
+            FindService(const InstanceIdentifier &identifier);
+
             /// @brief Start continuous service discovery
             /// @param handler Callback invoked when availability changes
             /// @param serviceId Service ID to find
@@ -90,6 +98,17 @@ namespace ara
             /// @brief Stop continuous service discovery
             /// @note Legacy helper that stops the currently active search, if any.
             static void StopFindService();
+
+            /// @brief Check version compatibility with a service handle.
+            /// @param requiredVersion The version this proxy requires.
+            /// @param offeredVersion The version offered by the skeleton.
+            /// @param policy Compatibility policy to use.
+            /// @returns True if versions are compatible.
+            static bool CheckServiceVersion(
+                const ServiceVersion &requiredVersion,
+                const ServiceVersion &offeredVersion,
+                VersionCheckPolicy policy =
+                    VersionCheckPolicy::kMinorBackward) noexcept;
         };
     }
 }

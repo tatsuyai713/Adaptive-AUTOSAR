@@ -58,11 +58,22 @@ namespace ara
                 return segments;
             }
 
+            TpReassembler::TpReassembler(std::chrono::seconds timeout) noexcept
+                : mTimeout{timeout}
+            {
+            }
+
             void TpReassembler::AddSegment(
                 uint32_t offset,
                 bool moreSegments,
                 const std::vector<uint8_t> &segmentPayload)
             {
+                if (!mStarted)
+                {
+                    mFirstSegmentTime = std::chrono::steady_clock::now();
+                    mStarted = true;
+                }
+
                 mSegments[offset] = segmentPayload;
 
                 if (!moreSegments)
@@ -122,6 +133,22 @@ namespace ara
                 mSegments.clear();
                 mLastSegmentReceived = false;
                 mExpectedSize = 0U;
+                mStarted = false;
+            }
+
+            bool TpReassembler::IsTimedOut() const noexcept
+            {
+                if (!mStarted)
+                {
+                    return false;
+                }
+                auto elapsed = std::chrono::steady_clock::now() - mFirstSegmentTime;
+                return elapsed > mTimeout;
+            }
+
+            std::size_t TpReassembler::SegmentCount() const noexcept
+            {
+                return mSegments.size();
             }
         }
     }

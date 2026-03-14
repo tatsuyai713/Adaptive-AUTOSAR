@@ -3,7 +3,9 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include <thread>
+#include <sched.h>
 #include "./deterministic_client.h"
+#include "./exec_error_domain.h"
 
 namespace ara
 {
@@ -21,6 +23,7 @@ namespace ara
         uint64_t DeterministicClient::mRandomNumber;
         DeterministicClient::TimeStamp  DeterministicClient::mActivationTime;
         std::atomic_bool DeterministicClient::mTerminationRequested{false};
+        std::atomic<uint64_t> DeterministicClient::mConfiguredCycleMs{0};
 
         DeterministicClient::DeterministicClient() : mLifecycleState{ActivationReturnType::kRegisterService}
         {
@@ -40,8 +43,6 @@ namespace ara
 
         void DeterministicClient::activateCycle()
         {
-            const std::chrono::milliseconds cCycleDuration{cCycleDelayMs};
-
             while (mRunning)
             {
                 // Apply the seed if it was requested
@@ -55,7 +56,14 @@ namespace ara
                 mActivationTime = std::chrono::steady_clock::now();
                 mCycleConditionVariable.notify_all();
 
-                std::this_thread::sleep_for(cCycleDuration);
+                uint64_t cycleMs = mConfiguredCycleMs.load(
+                    std::memory_order_relaxed);
+                if (cycleMs == 0U)
+                {
+                    cycleMs = cCycleDelayMs;
+                }
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds{cycleMs});
             }
         }
 
@@ -152,6 +160,40 @@ namespace ara
                 // Wait for the cycling thread to exit gracefully
                 mFuture.get();
             }
+        }
+
+        core::Result<void> DeterministicClient::SetCpuAffinity(
+            const std::vector<int> &cpuCores)
+        {
+            if (cpuCores.empty())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ExecErrc::kInvalidArguments));
+            }
+
+            cpu_set_t cpuSet;
+            CPU_ZERO(&cpuSet);
+            for (int core : cpuCores)
+            {
+                if (core >= 0 && core < CPU_SETSIZE)
+                {
+                    CPU_SET(core, &cpuSet);
+                }
+            }
+
+            int rc = sched_setaffinity(0, sizeof(cpuSet), &cpuSet);
+            if (rc != 0)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(ExecErrc::kFailed));
+            }
+
+            return core::Result<void>::FromValue();
+        }
+
+        void DeterministicClient::SetCycleTime(uint64_t cycleMs)
+        {
+            mConfiguredCycleMs.store(cycleMs, std::memory_order_relaxed);
         }
     }
 }
