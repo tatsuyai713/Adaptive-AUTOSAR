@@ -97,6 +97,10 @@ namespace ara
                 {
                     switch (transport)
                     {
+#if ARA_COM_USE_VSOMEIP
+                    case TransportBinding::kVsomeip:
+                        return std::make_unique<VsomeipProxyMethodBinding>(config);
+#endif
 #if ARA_COM_USE_ICEORYX
                     case TransportBinding::kIceoryx:
                         return std::make_unique<IceoryxProxyMethodBinding>(config);
@@ -117,6 +121,10 @@ namespace ara
                 {
                     switch (transport)
                     {
+#if ARA_COM_USE_VSOMEIP
+                    case TransportBinding::kVsomeip:
+                        return std::make_unique<VsomeipSkeletonMethodBinding>(config);
+#endif
 #if ARA_COM_USE_ICEORYX
                     case TransportBinding::kIceoryx:
                         return std::make_unique<IceoryxSkeletonMethodBinding>(config);

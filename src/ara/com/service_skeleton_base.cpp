@@ -47,6 +47,15 @@ namespace ara
             return mInstanceId;
         }
 
+        void ServiceSkeletonBase::EnqueuePollCall(std::function<void()> task)
+        {
+            {
+                std::lock_guard<std::mutex> lock(mPollMutex);
+                mPollQueue.push_back(std::move(task));
+            }
+            mPollCV.notify_one();
+        }
+
         core::Result<void> ServiceSkeletonBase::OfferService()
         {
 #ifdef ARA_COM_USE_VSOMEIP
@@ -204,16 +213,26 @@ namespace ara
 
         core::Result<void> ServiceSkeletonBase::ProcessNextMethodCall()
         {
-            if (mProcessingMode == MethodCallProcessingMode::kEvent)
+            if (mProcessingMode == MethodCallProcessingMode::kEvent ||
+                mProcessingMode == MethodCallProcessingMode::kEventSingleThread)
             {
-                // In event-driven mode, methods are dispatched automatically
+                // In event-driven modes, methods are dispatched automatically
                 return core::Result<void>::FromValue();
             }
 
-            // In kPoll mode, dispatch one pending method request from the queue.
-            // The actual dispatch depends on the binding layer (vsomeip etc).
-            // For now, return success — the binding will be integrated when
-            // the full polling infrastructure is in place.
+            // kPoll mode: dequeue and dispatch exactly one pending call.
+            std::function<void()> task;
+            {
+                std::lock_guard<std::mutex> lock(mPollMutex);
+                if (mPollQueue.empty())
+                {
+                    return core::Result<void>::FromValue();
+                }
+                task = std::move(mPollQueue.front());
+                mPollQueue.pop_front();
+            }
+
+            task();
             return core::Result<void>::FromValue();
         }
 
@@ -221,6 +240,12 @@ namespace ara
         ServiceSkeletonBase::GetMethodCallProcessingMode() const noexcept
         {
             return mProcessingMode;
+        }
+
+        bool ServiceSkeletonBase::HasPendingMethodCalls() const noexcept
+        {
+            std::lock_guard<std::mutex> lock(mPollMutex);
+            return !mPollQueue.empty();
         }
     }
 }

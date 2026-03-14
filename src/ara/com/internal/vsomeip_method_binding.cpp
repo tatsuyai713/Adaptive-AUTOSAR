@@ -15,6 +15,19 @@ namespace ara
             // ── VsomeipProxyMethodBinding ──────────────────────────
 
             VsomeipProxyMethodBinding::VsomeipProxyMethodBinding(
+                MethodBindingConfig config)
+                : mConfig{config},
+                  mOwnedClient{std::make_unique<someip::rpc::SocketRpcClient>(
+                      nullptr,   // poller — unused by vsomeip backend
+                      "",        // ipAddress — unused by vsomeip backend
+                      0U,        // port — unused by vsomeip backend
+                      1U,        // protocolVersion
+                      1U)}       // interfaceVersion
+            {
+                mRpcClient = mOwnedClient.get();
+            }
+
+            VsomeipProxyMethodBinding::VsomeipProxyMethodBinding(
                 MethodBindingConfig config,
                 someip::rpc::RpcClient *rpcClient) noexcept
                 : mConfig{config},
@@ -56,6 +69,19 @@ namespace ara
             }
 
             // ── VsomeipSkeletonMethodBinding ──────────────────────
+
+            VsomeipSkeletonMethodBinding::VsomeipSkeletonMethodBinding(
+                MethodBindingConfig config)
+                : mConfig{config},
+                  mOwnedServer{std::make_unique<someip::rpc::SocketRpcServer>(
+                      nullptr,   // poller — unused by vsomeip backend
+                      "",        // ipAddress — unused by vsomeip backend
+                      0U,        // port — unused by vsomeip backend
+                      1U,        // protocolVersion
+                      1U)}       // interfaceVersion
+            {
+                mRpcServer = mOwnedServer.get();
+            }
 
             VsomeipSkeletonMethodBinding::VsomeipSkeletonMethodBinding(
                 MethodBindingConfig config,

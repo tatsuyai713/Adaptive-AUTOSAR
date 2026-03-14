@@ -595,6 +595,8 @@ add_library(
   ${source_ara_com_option_dir}/option_deserializer.cpp
   ${source_ara_com_someip_dir}/someip_message.h
   ${source_ara_com_someip_dir}/someip_message.cpp
+  ${source_ara_com_someip_dir}/someip_tp.h
+  ${source_ara_com_someip_dir}/someip_tp.cpp
   ${source_ara_com_someip_dir}/vsomeip_application.h
   ${source_ara_com_someip_dir}/vsomeip_application.cpp
   ${source_ara_com_someip_rpc_dir}/someip_rpc_message.h

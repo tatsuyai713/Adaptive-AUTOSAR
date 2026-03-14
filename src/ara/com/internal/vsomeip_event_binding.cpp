@@ -34,6 +34,7 @@ namespace ara
             core::Result<void> VsomeipProxyEventBinding::Subscribe(
                 std::size_t maxSampleCount)
             {
+                SubscriptionStateChangeHandler pendingNotify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     if (mState != SubscriptionState::kNotSubscribed)
@@ -45,6 +46,16 @@ namespace ara
                     mMaxSampleCount = std::max<std::size_t>(1U, maxSampleCount);
                     mSampleQueue.clear();
                     mState = SubscriptionState::kSubscriptionPending;
+                    if (mStateChangeHandler)
+                    {
+                        pendingNotify = mStateChangeHandler;
+                    }
+                }
+
+                // Notify transition to kSubscriptionPending outside lock
+                if (pendingNotify)
+                {
+                    pendingNotify(SubscriptionState::kSubscriptionPending);
                 }
 
                 auto app = someip::VsomeipApplication::GetClientApplication();
@@ -88,23 +99,14 @@ namespace ara
                                 return;
                             }
 
+                            if (mSampleQueue.size() >= mMaxSampleCount)
+                            {
+                                mSampleQueue.pop_front();
+                            }
+                            mSampleQueue.push_back(std::move(payloadBytes));
                             if (mReceiveHandler)
                             {
-                                // Queue the sample first, then notify
-                                if (mSampleQueue.size() >= mMaxSampleCount)
-                                {
-                                    mSampleQueue.pop_front();
-                                }
-                                mSampleQueue.push_back(std::move(payloadBytes));
                                 notifyHandler = mReceiveHandler;
-                            }
-                            else
-                            {
-                                if (mSampleQueue.size() >= mMaxSampleCount)
-                                {
-                                    mSampleQueue.pop_front();
-                                }
-                                mSampleQueue.push_back(std::move(payloadBytes));
                             }
                         }
 
@@ -121,9 +123,73 @@ namespace ara
                     static_cast<vsomeip::major_version_t>(mConfig.MajorVersion),
                     static_cast<vsomeip::event_t>(mConfig.EventId));
 
+                // Register subscription status handler for async ACK from remote
+                app->register_subscription_status_handler(
+                    static_cast<vsomeip::service_t>(mConfig.ServiceId),
+                    static_cast<vsomeip::instance_t>(mConfig.InstanceId),
+                    static_cast<vsomeip::eventgroup_t>(mConfig.EventGroupId),
+                    static_cast<vsomeip::event_t>(mConfig.EventId),
+                    [this](
+                        const vsomeip::service_t,
+                        const vsomeip::instance_t,
+                        const vsomeip::eventgroup_t,
+                        const vsomeip::event_t,
+                        const uint16_t status)
+                    {
+                        SubscriptionStateChangeHandler notify;
+                        SubscriptionState newState;
+                        {
+                            std::lock_guard<std::mutex> lock(mMutex);
+                            if (mState == SubscriptionState::kNotSubscribed)
+                            {
+                                return;
+                            }
+                            // status == 0 means subscribed OK, non-zero means rejected
+                            newState = (status == 0U)
+                                           ? SubscriptionState::kSubscribed
+                                           : SubscriptionState::kNotSubscribed;
+                            if (mState != newState)
+                            {
+                                mState = newState;
+                                if (mStateChangeHandler)
+                                {
+                                    notify = mStateChangeHandler;
+                                }
+                            }
+                        }
+                        if (notify)
+                        {
+                            notify(newState);
+                        }
+                    });
+
+                // Set kSubscribed as a fallback for local routing (no async ACK)
                 {
+                    SubscriptionStateChangeHandler subscribedNotify;
                     std::lock_guard<std::mutex> lock(mMutex);
-                    mState = SubscriptionState::kSubscribed;
+                    if (mState == SubscriptionState::kSubscriptionPending)
+                    {
+                        mState = SubscriptionState::kSubscribed;
+                        if (mStateChangeHandler)
+                        {
+                            subscribedNotify = mStateChangeHandler;
+                        }
+                    }
+                    if (subscribedNotify)
+                    {
+                        // Notify outside lock scope via the captured handler
+                        // — but we are inside the lock here; schedule below.
+                        pendingNotify = subscribedNotify;
+                    }
+                    else
+                    {
+                        pendingNotify = nullptr;
+                    }
+                }
+
+                if (pendingNotify)
+                {
+                    pendingNotify(SubscriptionState::kSubscribed);
                 }
 
                 return core::Result<void>::FromValue();
@@ -131,6 +197,7 @@ namespace ara
 
             void VsomeipProxyEventBinding::Unsubscribe()
             {
+                SubscriptionStateChangeHandler notify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     if (mState == SubscriptionState::kNotSubscribed)
@@ -140,6 +207,10 @@ namespace ara
                     mState = SubscriptionState::kNotSubscribed;
                     mSampleQueue.clear();
                     mReceiveHandler = nullptr;
+                    if (mStateChangeHandler)
+                    {
+                        notify = mStateChangeHandler;
+                    }
                 }
 
                 auto app = someip::VsomeipApplication::GetClientApplication();
@@ -156,6 +227,11 @@ namespace ara
                     static_cast<vsomeip::service_t>(mConfig.ServiceId),
                     static_cast<vsomeip::instance_t>(mConfig.InstanceId),
                     static_cast<vsomeip::method_t>(mConfig.EventId));
+
+                if (notify)
+                {
+                    notify(SubscriptionState::kNotSubscribed);
+                }
             }
 
             SubscriptionState
@@ -271,6 +347,14 @@ namespace ara
                     static_cast<vsomeip::instance_t>(mConfig.InstanceId),
                     static_cast<vsomeip::event_t>(mConfig.EventId),
                     eventGroups);
+
+                // If an initial value is set, push it to vsomeip so that
+                // every new subscriber immediately receives the current field value.
+                if (mHasInitialValue)
+                {
+                    SendInitialNotification();
+                }
+
                 mOffered = true;
 
                 return core::Result<void>::FromValue();
@@ -345,6 +429,38 @@ namespace ara
                 std::free(data);
 
                 return Send(payload);
+            }
+
+            void VsomeipSkeletonEventBinding::SetInitialValue(
+                const std::vector<std::uint8_t> &payload)
+            {
+                mInitialValue = payload;
+                mHasInitialValue = true;
+
+                // If already offered, push the value immediately so that
+                // late subscribers receive it via vsomeip's internal cache.
+                if (mOffered)
+                {
+                    SendInitialNotification();
+                }
+            }
+
+            void VsomeipSkeletonEventBinding::SendInitialNotification()
+            {
+                auto app = someip::VsomeipApplication::GetServerApplication();
+                auto vsPayload = vsomeip::runtime::get()->create_payload();
+                std::vector<vsomeip::byte_t> payloadBytes{
+                    mInitialValue.begin(), mInitialValue.end()};
+                vsPayload->set_data(payloadBytes);
+
+                // force=true ensures the notification is cached and delivered
+                // to any subscriber immediately upon subscription.
+                app->notify(
+                    static_cast<vsomeip::service_t>(mConfig.ServiceId),
+                    static_cast<vsomeip::instance_t>(mConfig.InstanceId),
+                    static_cast<vsomeip::event_t>(mConfig.EventId),
+                    vsPayload,
+                    true);
             }
         }
     }

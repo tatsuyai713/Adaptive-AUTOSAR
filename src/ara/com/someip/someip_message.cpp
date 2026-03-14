@@ -47,6 +47,21 @@ namespace ara
                     return (messageType == SomeIpMessageType::Error) ||
                            (messageType == SomeIpMessageType::TpError);
                 }
+
+                bool IsTpType(SomeIpMessageType messageType) noexcept
+                {
+                    switch (messageType)
+                    {
+                    case SomeIpMessageType::TpRequest:
+                    case SomeIpMessageType::TpRequestNoReturn:
+                    case SomeIpMessageType::TpNotification:
+                    case SomeIpMessageType::TpResponse:
+                    case SomeIpMessageType::TpError:
+                        return true;
+                    default:
+                        return false;
+                    }
+                }
             } // namespace
 
 
@@ -118,7 +133,8 @@ namespace ara
                                                                            mProtocolVersion{other.mProtocolVersion},
                                                                            mInterfaceVersion{other.mInterfaceVersion},
                                                                            mMessageType{other.mMessageType},
-                                                                           mReturnCode{other.mReturnCode}
+                                                                           mReturnCode{other.mReturnCode},
+                                                                           mTpHeader{other.mTpHeader}
             {
             }
 
@@ -131,6 +147,7 @@ namespace ara
                 mInterfaceVersion = other.mInterfaceVersion;
                 mMessageType = other.mMessageType;
                 mReturnCode = other.mReturnCode;
+                mTpHeader = other.mTpHeader;
 
                 return *this;
             }
@@ -154,7 +171,20 @@ namespace ara
                 message->mMessageType =
                     static_cast<SomeIpMessageType>(payload[_offset++]);
                 message->mReturnCode =
-                    static_cast<SomeIpReturnCode>(payload[_offset]);
+                    static_cast<SomeIpReturnCode>(payload[_offset++]);
+
+                // If this is a TP message and there are at least 4 more bytes,
+                // extract the TP header (offset [31:4] + more-segments [0]).
+                if (IsTpType(message->mMessageType) &&
+                    payload.size() >= _offset + 4U)
+                {
+                    message->mTpHeader =
+                        helper::ExtractInteger(payload, _offset);
+                }
+                else
+                {
+                    message->mTpHeader = 0U;
+                }
             }
 
             uint32_t SomeIpMessage::MessageId() const noexcept
@@ -214,6 +244,33 @@ namespace ara
                 return mReturnCode;
             }
 
+            bool SomeIpMessage::IsTp() const noexcept
+            {
+                return IsTpType(mMessageType);
+            }
+
+            uint32_t SomeIpMessage::TpOffset() const noexcept
+            {
+                return mTpHeader & 0xFFFFFFF0U;
+            }
+
+            bool SomeIpMessage::TpMoreSegments() const noexcept
+            {
+                return (mTpHeader & 0x01U) != 0U;
+            }
+
+            void SomeIpMessage::SetTpHeader(uint32_t tpHeader) noexcept
+            {
+                mTpHeader = tpHeader;
+            }
+
+            void SomeIpMessage::SetTpFields(
+                uint32_t offset, bool moreSegments) noexcept
+            {
+                mTpHeader = (offset & 0xFFFFFFF0U) |
+                            (moreSegments ? 0x01U : 0x00U);
+            }
+
             std::vector<uint8_t> SomeIpMessage::Payload() const
             {
                 std::vector<uint8_t> _result;
@@ -230,6 +287,12 @@ namespace ara
 
                 uint8_t _returnCode = static_cast<uint8_t>(ReturnCode());
                 _result.push_back(_returnCode);
+
+                // Append the 4-byte TP header for TP message types
+                if (IsTp())
+                {
+                    helper::Inject(_result, mTpHeader);
+                }
 
                 return _result;
             }

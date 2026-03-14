@@ -65,6 +65,10 @@ namespace ara
                 SomeIpMessageType mMessageType;
                 SomeIpReturnCode mReturnCode;
 
+                /// @brief SOME/IP-TP header: offset [31:4] + more-segments flag [0].
+                ///        Only meaningful when MessageType is a TP type.
+                uint32_t mTpHeader{0U};
+
                 SomeIpMessage(uint32_t messageId,
                               uint16_t clientId,
                               uint16_t sessionId,
@@ -157,6 +161,28 @@ namespace ara
                 /// @brief Get return code
                 /// @returns SOME/IP message return code
                 SomeIpReturnCode ReturnCode() const noexcept;
+
+                /// @brief Check whether this message uses the SOME/IP-TP protocol.
+                /// @returns `true` when the message type has the TP flag set.
+                bool IsTp() const noexcept;
+
+                /// @brief Get the SOME/IP-TP byte offset (bits [31:4] of the TP header).
+                /// @returns Byte offset of this segment within the reassembled payload.
+                uint32_t TpOffset() const noexcept;
+
+                /// @brief Get the SOME/IP-TP "more segments" flag (bit 0 of the TP header).
+                /// @returns `true` when more segments follow.
+                bool TpMoreSegments() const noexcept;
+
+                /// @brief Set the raw SOME/IP-TP header (offset [31:4] + more-flag [0]).
+                /// @param tpHeader Raw 32-bit TP header value
+                void SetTpHeader(uint32_t tpHeader) noexcept;
+
+                /// @brief Build and set the TP header from offset and more-segments flag.
+                /// @param offset Byte offset within the reassembled payload (must be
+                ///        a multiple of 16)
+                /// @param moreSegments True if more segments follow
+                void SetTpFields(uint32_t offset, bool moreSegments) noexcept;
 
                 /// @brief Get message payload
                 /// @returns Byte array

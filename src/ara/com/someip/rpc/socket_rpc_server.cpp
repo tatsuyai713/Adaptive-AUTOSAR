@@ -16,14 +16,14 @@ namespace ara
         {
             namespace rpc
             {
-                const vsomeip::instance_t SocketRpcServer::cInstanceId;
-
                 SocketRpcServer::SocketRpcServer(
                     AsyncBsdSocketLib::Poller *poller,
                     std::string ipAddress,
                     uint16_t port,
                     uint8_t protocolVersion,
-                    uint8_t interfaceVersion) : RpcServer(protocolVersion, interfaceVersion),
+                    uint8_t interfaceVersion,
+                    uint16_t instanceId) : RpcServer(protocolVersion, interfaceVersion),
+                                                mInstanceId{static_cast<vsomeip::instance_t>(instanceId)},
                                                 mApplication{VsomeipApplication::GetServerApplication()}
                 {
                     (void)poller;
@@ -97,13 +97,13 @@ namespace ara
                         auto _insertResult{mOfferedServices.insert(cService)};
                         if (_insertResult.second)
                         {
-                            mApplication->offer_service(cService, cInstanceId);
+                            mApplication->offer_service(cService, mInstanceId);
                         }
                     }
 
                     mApplication->register_message_handler(
                         cService,
-                        cInstanceId,
+                        mInstanceId,
                         cMethod,
                         std::bind(
                             &SocketRpcServer::onRequest,
@@ -170,9 +170,9 @@ namespace ara
                         for (auto _service : mOfferedServices)
                         {
                             mApplication->unregister_message_handler(
-                                _service, cInstanceId, vsomeip::ANY_METHOD);
+                                _service, mInstanceId, vsomeip::ANY_METHOD);
                             mApplication->stop_offer_service(
-                                _service, cInstanceId);
+                                _service, mInstanceId);
                         }
                     }
                 }

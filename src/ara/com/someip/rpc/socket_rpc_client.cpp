@@ -16,14 +16,14 @@ namespace ara
         {
             namespace rpc
             {
-                const vsomeip::instance_t SocketRpcClient::cInstanceId;
-
                 SocketRpcClient::SocketRpcClient(
                     AsyncBsdSocketLib::Poller *poller,
                     std::string ipAddress,
                     uint16_t port,
                     uint8_t protocolVersion,
-                    uint8_t interfaceVersion) : RpcClient(protocolVersion, interfaceVersion),
+                    uint8_t interfaceVersion,
+                    uint16_t instanceId) : RpcClient(protocolVersion, interfaceVersion),
+                                                mInstanceId{static_cast<vsomeip::instance_t>(instanceId)},
                                                 mApplication{VsomeipApplication::GetClientApplication()}
                 {
                     (void)poller;
@@ -137,13 +137,13 @@ namespace ara
                         auto _insertResult{mRequestedServices.insert(cService)};
                         if (_insertResult.second)
                         {
-                            mApplication->request_service(cService, cInstanceId);
+                            mApplication->request_service(cService, mInstanceId);
                         }
                     }
 
                     auto _request{vsomeip::runtime::get()->create_request()};
                     _request->set_service(cService);
-                    _request->set_instance(cInstanceId);
+                    _request->set_instance(mInstanceId);
                     _request->set_method(cMethod);
                     _request->set_client(cRequest.ClientId());
                     _request->set_session(cRequest.SessionId());
@@ -171,7 +171,7 @@ namespace ara
 
                         for (auto _service : mRequestedServices)
                         {
-                            mApplication->release_service(_service, cInstanceId);
+                            mApplication->release_service(_service, mInstanceId);
                         }
                     }
                 }

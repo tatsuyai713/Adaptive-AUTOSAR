@@ -31,7 +31,7 @@ namespace ara
                 class SocketRpcServer : public RpcServer
                 {
                 private:
-                    static const vsomeip::instance_t cInstanceId{1};
+                    vsomeip::instance_t mInstanceId;
                     std::shared_ptr<vsomeip::application> mApplication;
                     std::set<vsomeip::service_t> mOfferedServices;
                     std::mutex mServiceMutex;
@@ -56,13 +56,15 @@ namespace ara
                     /// @param port RPC server listening TCP port number
                     /// @param protocolVersion SOME/IP protocol header version
                     /// @param interfaceVersion Service interface version
+                    /// @param instanceId SOME/IP instance ID (default: 1)
                     /// @throws std::runtime_error Throws when the TCP server socket configuration failed
                     SocketRpcServer(
                         AsyncBsdSocketLib::Poller *poller,
                         std::string ipAddress,
                         uint16_t port,
                         uint8_t protocolVersion,
-                        uint8_t interfaceVersion = 1);
+                        uint8_t interfaceVersion = 1,
+                        uint16_t instanceId = 1);
 
                     virtual ~SocketRpcServer() override;
                 };

@@ -5,7 +5,9 @@
 #ifndef ARA_COM_SERVICE_SKELETON_BASE_H
 #define ARA_COM_SERVICE_SKELETON_BASE_H
 
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <utility>
@@ -34,6 +36,11 @@ namespace ara
             std::vector<std::uint16_t> mRegisteredEventGroups;
             mutable std::mutex mSubscriptionMutex;
 
+            /// @brief Queue of deferred method calls for kPoll mode.
+            std::deque<std::function<void()>> mPollQueue;
+            mutable std::mutex mPollMutex;
+            std::condition_variable mPollCV;
+
         protected:
             /// @brief Constructor
             /// @param specifier Instance specifier identifying this skeleton
@@ -53,6 +60,14 @@ namespace ara
             std::uint16_t GetServiceId() const noexcept;
             /// @brief Returns configured instance identifier.
             std::uint16_t GetInstanceId() const noexcept;
+
+            /// @brief Enqueue a deferred method call for kPoll dispatch.
+            ///        Concrete skeletons or method bindings call this when
+            ///        the processing mode is kPoll so that the application
+            ///        controls when each method call is dispatched via
+            ///        ProcessNextMethodCall().
+            /// @param task Callable encapsulating the method dispatch
+            void EnqueuePollCall(std::function<void()> task);
 
         public:
             /// @brief Callback type to validate/deny event subscription changes.
@@ -104,6 +119,10 @@ namespace ara
 
             /// @brief Get the configured method processing mode.
             MethodCallProcessingMode GetMethodCallProcessingMode() const noexcept;
+
+            /// @brief Check whether there are pending method calls in the poll queue.
+            /// @returns `true` if at least one pending call is queued.
+            bool HasPendingMethodCalls() const noexcept;
         };
     }
 }

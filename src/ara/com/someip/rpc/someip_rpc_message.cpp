@@ -71,8 +71,10 @@ namespace ara
                 uint32_t SomeIpRpcMessage::Length() const noexcept
                 {
                     const size_t cHeaderLength{8};
+                    const size_t cTpHeaderLength = IsTp() ? 4U : 0U;
                     auto _result{
-                        static_cast<uint32_t>(cHeaderLength + mRpcPayload.size())};
+                        static_cast<uint32_t>(
+                            cHeaderLength + cTpHeaderLength + mRpcPayload.size())};
 
                     return _result;
                 }
@@ -96,6 +98,7 @@ namespace ara
                     const std::vector<uint8_t> &payload)
                 {
                     const size_t cHeaderSize{16};
+                    const size_t cTpHeaderSize{4};
 
                     size_t _lengthOffset{4};
                     uint32_t _lengthInt{
@@ -104,10 +107,24 @@ namespace ara
 
                     SomeIpRpcMessage _result;
                     SomeIpMessage::Deserialize(&_result, payload);
-                    _result.mRpcPayload =
-                        std::vector<uint8_t>(
-                            payload.cbegin() + cHeaderSize,
-                            payload.cbegin() + cHeaderSize + _length - _lengthOffset);
+
+                    // For TP messages the 4-byte TP header sits at bytes 16-19
+                    // and the RPC payload begins at byte 20.
+                    const size_t payloadStart =
+                        _result.IsTp()
+                            ? cHeaderSize + cTpHeaderSize
+                            : cHeaderSize;
+
+                    const size_t payloadEnd =
+                        cHeaderSize + _length - _lengthOffset;
+
+                    if (payloadStart <= payloadEnd && payloadEnd <= payload.size())
+                    {
+                        _result.mRpcPayload =
+                            std::vector<uint8_t>(
+                                payload.cbegin() + payloadStart,
+                                payload.cbegin() + payloadEnd);
+                    }
 
                     return _result;
                 }

@@ -106,6 +106,16 @@ namespace ara
                 /// @param size Size of the data
                 virtual core::Result<void> SendAllocated(
                     void *data, std::size_t size) = 0;
+
+                /// @brief Set the initial value to be delivered to new subscribers.
+                ///        For SOME/IP: triggers vsomeip notify(force=true) so that
+                ///        any new subscriber immediately receives the current field value.
+                /// @param payload Serialized initial value bytes
+                virtual void SetInitialValue(
+                    const std::vector<std::uint8_t> &payload)
+                {
+                    (void)payload; // Default: no-op for bindings that don't support it
+                }
             };
         }
     }
