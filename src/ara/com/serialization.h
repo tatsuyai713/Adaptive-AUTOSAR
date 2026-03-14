@@ -84,6 +84,24 @@ namespace ara
                 std::memcpy(&value, data, sizeof(T));
                 return core::Result<T>::FromValue(std::move(value));
             }
+
+            /// @brief Deserialize from offset; returns (value, bytes_consumed).
+            ///        Used by SkeletonMethod for sequential multi-arg deserialization.
+            static core::Result<std::pair<T, std::size_t>> DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                if (maxSize < sizeof(T))
+                {
+                    return core::Result<std::pair<T, std::size_t>>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                T value;
+                std::memcpy(&value, data, sizeof(T));
+                return core::Result<std::pair<T, std::size_t>>::FromValue(
+                    std::make_pair(std::move(value), sizeof(T)));
+            }
         };
 
         /// @brief CDR serializer for ROS/CycloneDDS generated message types.
@@ -143,6 +161,39 @@ namespace ara
                         MakeErrorCode(ComErrc::kFieldValueIsNotValid));
                 }
             }
+
+            /// @brief Deserialize from offset; returns (value, bytes_consumed).
+            ///        Used by SkeletonMethod for sequential multi-arg deserialization.
+            static core::Result<std::pair<T, std::size_t>> DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                using namespace org::eclipse::cyclonedds::core::cdr;
+
+                if (data == nullptr || maxSize <= 4U)
+                {
+                    return core::Result<std::pair<T, std::size_t>>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                try
+                {
+                    T value{};
+                    basic_cdr_stream reader;
+                    reader.set_buffer(
+                        reinterpret_cast<char *>(const_cast<std::uint8_t *>(data + 4U)),
+                        maxSize - 4U);
+                    read(reader, value, false);
+                    const std::size_t consumed = 4U + reader.position();
+                    return core::Result<std::pair<T, std::size_t>>::FromValue(
+                        std::make_pair(std::move(value), consumed));
+                }
+                catch (...)
+                {
+                    return core::Result<std::pair<T, std::size_t>>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+            }
         };
 
         /// @brief Compile-time error for unsupported complex types.
@@ -196,6 +247,33 @@ namespace ara
                         reinterpret_cast<const char *>(data + sizeof(len)),
                         len));
             }
+
+            /// @brief Deserialize from offset; returns (value, bytes_consumed).
+            static core::Result<std::pair<std::string, std::size_t>> DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                if (maxSize < sizeof(std::uint32_t))
+                {
+                    return core::Result<std::pair<std::string, std::size_t>>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                std::uint32_t len;
+                std::memcpy(&len, data, sizeof(len));
+
+                if (maxSize < sizeof(len) + len)
+                {
+                    return core::Result<std::pair<std::string, std::size_t>>::FromError(
+                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                std::string value(
+                    reinterpret_cast<const char *>(data + sizeof(len)), len);
+                const std::size_t consumed = sizeof(len) + len;
+                return core::Result<std::pair<std::string, std::size_t>>::FromValue(
+                    std::make_pair(std::move(value), consumed));
+            }
         };
 
         /// @brief Serializer specialization for std::vector<uint8_t> (raw bytes passthrough)
@@ -214,6 +292,20 @@ namespace ara
             {
                 return core::Result<std::vector<std::uint8_t>>::FromValue(
                     std::vector<std::uint8_t>(data, data + size));
+            }
+
+            /// @brief Deserialize from offset; consumes all remaining bytes.
+            ///        Note: use as the last (or only) argument in multi-arg contexts.
+            static core::Result<std::pair<std::vector<std::uint8_t>, std::size_t>>
+            DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                return core::Result<std::pair<std::vector<std::uint8_t>, std::size_t>>::
+                    FromValue(
+                        std::make_pair(
+                            std::vector<std::uint8_t>(data, data + maxSize),
+                            maxSize));
             }
         };
     } // namespace com

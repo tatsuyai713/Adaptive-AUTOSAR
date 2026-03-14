@@ -511,5 +511,126 @@ namespace ara
             ASSERT_TRUE(_result.HasValue());
             EXPECT_EQ(_result.Value().size(), 16U);
         }
+
+        // -----------------------------------------------------------------------
+        // AES-CTR stream cipher tests
+        // -----------------------------------------------------------------------
+        TEST(CryptoProviderTest, AesCtrEncryptDecryptRoundTrip128)
+        {
+            const std::vector<std::uint8_t> cKey(16U, 0x2BU);
+            const std::vector<std::uint8_t> cIv(16U, 0xF0U);
+            const std::vector<std::uint8_t> cPlaintext{'H', 'e', 'l', 'l', 'o'};
+
+            const auto _encrypted = AesCtrEncrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encrypted.HasValue());
+            EXPECT_EQ(_encrypted.Value().size(), cPlaintext.size());
+            EXPECT_NE(_encrypted.Value(), cPlaintext);
+
+            const auto _decrypted = AesCtrDecrypt(_encrypted.Value(), cKey, cIv);
+            ASSERT_TRUE(_decrypted.HasValue());
+            EXPECT_EQ(_decrypted.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, AesCtrEncryptDecryptRoundTrip256)
+        {
+            const std::vector<std::uint8_t> cKey(32U, 0x42U);
+            const std::vector<std::uint8_t> cIv(16U, 0x00U);
+            const std::vector<std::uint8_t> cPlaintext{0xDE, 0xAD, 0xBE, 0xEF};
+
+            const auto _encrypted = AesCtrEncrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encrypted.HasValue());
+
+            const auto _decrypted = AesCtrDecrypt(_encrypted.Value(), cKey, cIv);
+            ASSERT_TRUE(_decrypted.HasValue());
+            EXPECT_EQ(_decrypted.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, AesCtrInvalidKeySize)
+        {
+            const std::vector<std::uint8_t> cBadKey(24U, 0x00U); // 192-bit (unsupported)
+            const std::vector<std::uint8_t> cIv(16U, 0x00U);
+            const std::vector<std::uint8_t> cData{0x01};
+
+            const auto _result = AesCtrEncrypt(cData, cBadKey, cIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidKeySize);
+        }
+
+        TEST(CryptoProviderTest, AesCtrInvalidIvSize)
+        {
+            const std::vector<std::uint8_t> cKey(16U, 0x00U);
+            const std::vector<std::uint8_t> cBadIv(8U, 0x00U); // too short
+            const std::vector<std::uint8_t> cData{0x01};
+
+            const auto _result = AesCtrEncrypt(cData, cKey, cBadIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
+
+        // -----------------------------------------------------------------------
+        // ChaCha20 stream cipher tests
+        // -----------------------------------------------------------------------
+        TEST(CryptoProviderTest, ChaCha20EncryptDecryptRoundTrip)
+        {
+            const std::vector<std::uint8_t> cKey(32U, 0x1AU);
+            // 16-byte IV: 4-byte counter (0) + 12-byte nonce
+            const std::vector<std::uint8_t> cIv(16U, 0x00U);
+            const std::vector<std::uint8_t> cPlaintext{
+                'C', 'h', 'a', 'C', 'h', 'a', '2', '0'};
+
+            const auto _encrypted = ChaCha20Encrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encrypted.HasValue());
+            EXPECT_EQ(_encrypted.Value().size(), cPlaintext.size());
+            EXPECT_NE(_encrypted.Value(), cPlaintext);
+
+            const auto _decrypted = ChaCha20Decrypt(_encrypted.Value(), cKey, cIv);
+            ASSERT_TRUE(_decrypted.HasValue());
+            EXPECT_EQ(_decrypted.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, ChaCha20EncryptDecryptLongPayload)
+        {
+            std::vector<std::uint8_t> cKey(32U, 0xABU);
+            std::vector<std::uint8_t> cIv(16U, 0x00U);
+            std::vector<std::uint8_t> cPlaintext(1024U, 0x55U);
+
+            const auto _encrypted = ChaCha20Encrypt(cPlaintext, cKey, cIv);
+            ASSERT_TRUE(_encrypted.HasValue());
+            EXPECT_EQ(_encrypted.Value().size(), 1024U);
+
+            const auto _decrypted = ChaCha20Decrypt(_encrypted.Value(), cKey, cIv);
+            ASSERT_TRUE(_decrypted.HasValue());
+            EXPECT_EQ(_decrypted.Value(), cPlaintext);
+        }
+
+        TEST(CryptoProviderTest, ChaCha20InvalidKeySize)
+        {
+            const std::vector<std::uint8_t> cBadKey(16U, 0x00U); // 128-bit (ChaCha20 needs 256)
+            const std::vector<std::uint8_t> cIv(16U, 0x00U);
+            const std::vector<std::uint8_t> cData{0x01};
+
+            const auto _result = ChaCha20Encrypt(cData, cBadKey, cIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidKeySize);
+        }
+
+        TEST(CryptoProviderTest, ChaCha20InvalidIvSize)
+        {
+            const std::vector<std::uint8_t> cKey(32U, 0x00U);
+            const std::vector<std::uint8_t> cBadIv(12U, 0x00U); // 12 bytes (need 16)
+            const std::vector<std::uint8_t> cData{0x01};
+
+            const auto _result = ChaCha20Encrypt(cData, cKey, cBadIv);
+            ASSERT_FALSE(_result.HasValue());
+            EXPECT_EQ(
+                static_cast<CryptoErrc>(_result.Error().Value()),
+                CryptoErrc::kInvalidArgument);
+        }
     }
 }

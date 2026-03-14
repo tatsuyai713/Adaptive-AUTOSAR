@@ -9,3 +9,7 @@ endif()
 if(USER_APPS_BUILD_APPS_FEATURE)
   add_subdirectory(feature)
 endif()
+
+if(USER_APPS_BUILD_APPS_SAMPLES)
+  add_subdirectory(samples)
+endif()

@@ -209,6 +209,50 @@ namespace ara
                     }
                 }
             };
+
+            /// @brief Mock skeleton-side method binding for unit testing.
+            class MockSkeletonMethodBinding : public internal::SkeletonMethodBinding
+            {
+            private:
+                RawRequestHandler mHandler;
+                bool mRegistered{false};
+
+            public:
+                bool ShouldFailRegistration{false};
+
+                core::Result<void> Register(RawRequestHandler handler) override
+                {
+                    if (ShouldFailRegistration)
+                    {
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(ComErrc::kServiceNotOffered));
+                    }
+                    mHandler = std::move(handler);
+                    mRegistered = true;
+                    return core::Result<void>::FromValue();
+                }
+
+                void Unregister() override
+                {
+                    mHandler = nullptr;
+                    mRegistered = false;
+                }
+
+                bool IsRegistered() const noexcept { return mRegistered; }
+
+                /// @brief Simulate an incoming method request from the transport.
+                ///        Returns the raw response bytes from the registered handler.
+                core::Result<std::vector<std::uint8_t>> InvokeRequest(
+                    const std::vector<std::uint8_t> &requestBytes)
+                {
+                    if (!mHandler)
+                    {
+                        return core::Result<std::vector<std::uint8_t>>::FromError(
+                            MakeErrorCode(ComErrc::kSetHandlerNotSet));
+                    }
+                    return mHandler(requestBytes);
+                }
+            };
         }
     }
 }

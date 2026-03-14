@@ -16,6 +16,15 @@ namespace ara
     {
         namespace internal
         {
+            /// @brief Configuration identifying a specific method within a service.
+            ///        Shared by all transport-specific method binding implementations.
+            struct MethodBindingConfig
+            {
+                std::uint16_t ServiceId{0U};
+                std::uint16_t InstanceId{0U};
+                std::uint16_t MethodId{0U};
+            };
+
             /// @brief Abstract proxy-side method binding.
             ///        Sends serialized request and receives serialized response asynchronously.
             class ProxyMethodBinding

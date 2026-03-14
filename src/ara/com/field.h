@@ -263,6 +263,8 @@ namespace ara
 
         /// @brief Skeleton-side field per AUTOSAR AP.
         ///        Holds the current field value and notifies subscribers on update.
+        ///        Optionally registers typed get/set handlers on method bindings
+        ///        (SWS_CM_00112, SWS_CM_00113).
         /// @tparam T Field value type
         template <typename T>
         class SkeletonField
@@ -270,13 +272,21 @@ namespace ara
         private:
             SkeletonEvent<T> mNotifier;
             T mValue{};
+            std::unique_ptr<internal::SkeletonMethodBinding> mGetBinding;
+            std::unique_ptr<internal::SkeletonMethodBinding> mSetBinding;
 
         public:
             /// @brief Constructs a skeleton field wrapper.
             /// @param notifierBinding Binding for field notifier event.
+            /// @param getBinding  Optional skeleton method binding for GET requests.
+            /// @param setBinding  Optional skeleton method binding for SET requests.
             explicit SkeletonField(
-                std::unique_ptr<internal::SkeletonEventBinding> notifierBinding)
-                : mNotifier{std::move(notifierBinding)}
+                std::unique_ptr<internal::SkeletonEventBinding> notifierBinding,
+                std::unique_ptr<internal::SkeletonMethodBinding> getBinding = nullptr,
+                std::unique_ptr<internal::SkeletonMethodBinding> setBinding = nullptr)
+                : mNotifier{std::move(notifierBinding)},
+                  mGetBinding{std::move(getBinding)},
+                  mSetBinding{std::move(setBinding)}
             {
             }
 
@@ -311,6 +321,91 @@ namespace ara
             void StopOffer()
             {
                 mNotifier.StopOffer();
+            }
+
+            /// @brief Register a handler for GET requests (SWS_CM_00112).
+            ///        The handler is called with no arguments and must return a
+            ///        Future<T> that resolves with the current field value.
+            /// @param handler Application GET handler.
+            /// @returns `Result<void>` indicating registration success or failure.
+            core::Result<void> RegisterGetHandler(
+                std::function<core::Future<T>()> handler)
+            {
+                if (!mGetBinding)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(ComErrc::kServiceNotOffered));
+                }
+
+                if (!handler)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(ComErrc::kSetHandlerNotSet));
+                }
+
+                return mGetBinding->Register(
+                    [h = std::move(handler)](
+                        const std::vector<std::uint8_t> & /*request*/)
+                        -> core::Result<std::vector<std::uint8_t>>
+                    {
+                        auto future = h();
+                        auto result = future.GetResult();
+                        if (!result.HasValue())
+                        {
+                            return core::Result<std::vector<std::uint8_t>>::FromError(
+                                result.Error());
+                        }
+                        return core::Result<std::vector<std::uint8_t>>::FromValue(
+                            Serializer<T>::Serialize(result.Value()));
+                    });
+            }
+
+            /// @brief Register a handler for SET requests (SWS_CM_00113).
+            ///        The handler receives the requested new value and must return a
+            ///        Future<T> that resolves with the accepted value (which may differ).
+            ///        On success the internal field value is updated automatically.
+            /// @param handler Application SET handler.
+            /// @returns `Result<void>` indicating registration success or failure.
+            core::Result<void> RegisterSetHandler(
+                std::function<core::Future<T>(const T &)> handler)
+            {
+                if (!mSetBinding)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(ComErrc::kServiceNotOffered));
+                }
+
+                if (!handler)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(ComErrc::kSetHandlerNotSet));
+                }
+
+                return mSetBinding->Register(
+                    [h = std::move(handler), this](
+                        const std::vector<std::uint8_t> &request)
+                        -> core::Result<std::vector<std::uint8_t>>
+                    {
+                        auto deserResult = Serializer<T>::Deserialize(
+                            request.data(), request.size());
+                        if (!deserResult.HasValue())
+                        {
+                            return core::Result<std::vector<std::uint8_t>>::FromError(
+                                deserResult.Error());
+                        }
+
+                        auto future = h(deserResult.Value());
+                        auto result = future.GetResult();
+                        if (!result.HasValue())
+                        {
+                            return core::Result<std::vector<std::uint8_t>>::FromError(
+                                result.Error());
+                        }
+
+                        mValue = result.Value();
+                        return core::Result<std::vector<std::uint8_t>>::FromValue(
+                            Serializer<T>::Serialize(result.Value()));
+                    });
             }
         };
     }

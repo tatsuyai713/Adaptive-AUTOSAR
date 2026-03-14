@@ -20,14 +20,6 @@ namespace ara
     {
         namespace internal
         {
-            /// @brief Configuration for a method binding
-            struct MethodBindingConfig
-            {
-                std::uint16_t ServiceId;
-                std::uint16_t InstanceId;
-                std::uint16_t MethodId;
-            };
-
             /// @brief vsomeip-based proxy-side method binding.
             ///        Wraps the existing RPC client to send requests and receive responses.
             class VsomeipProxyMethodBinding final : public ProxyMethodBinding

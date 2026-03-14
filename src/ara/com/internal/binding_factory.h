@@ -11,6 +11,15 @@
 #include "./method_binding.h"
 #if ARA_COM_USE_VSOMEIP
 #include "./vsomeip_event_binding.h"
+#include "./vsomeip_method_binding.h"
+#endif
+#if ARA_COM_USE_ICEORYX
+#include "./iceoryx_event_binding.h"
+#include "./iceoryx_method_binding.h"
+#endif
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+#include "./dds_event_binding.h"
+#include "./dds_method_binding.h"
 #endif
 #include "../com_error_domain.h"
 
@@ -44,6 +53,14 @@ namespace ara
                     case TransportBinding::kVsomeip:
                         return std::make_unique<VsomeipProxyEventBinding>(config);
 #endif
+#if ARA_COM_USE_ICEORYX
+                    case TransportBinding::kIceoryx:
+                        return std::make_unique<IceoryxProxyEventBinding>(config);
+#endif
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                    case TransportBinding::kCycloneDds:
+                        return std::make_unique<DdsProxyEventBinding>(config);
+#endif
                     default:
                         return nullptr;
                     }
@@ -59,6 +76,54 @@ namespace ara
 #if ARA_COM_USE_VSOMEIP
                     case TransportBinding::kVsomeip:
                         return std::make_unique<VsomeipSkeletonEventBinding>(config);
+#endif
+#if ARA_COM_USE_ICEORYX
+                    case TransportBinding::kIceoryx:
+                        return std::make_unique<IceoryxSkeletonEventBinding>(config);
+#endif
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                    case TransportBinding::kCycloneDds:
+                        return std::make_unique<DdsSkeletonEventBinding>(config);
+#endif
+                    default:
+                        return nullptr;
+                    }
+                }
+
+                /// @brief Create a proxy-side method binding
+                static std::unique_ptr<ProxyMethodBinding> CreateProxyMethodBinding(
+                    TransportBinding transport,
+                    const MethodBindingConfig &config)
+                {
+                    switch (transport)
+                    {
+#if ARA_COM_USE_ICEORYX
+                    case TransportBinding::kIceoryx:
+                        return std::make_unique<IceoryxProxyMethodBinding>(config);
+#endif
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                    case TransportBinding::kCycloneDds:
+                        return std::make_unique<DdsProxyMethodBinding>(config);
+#endif
+                    default:
+                        return nullptr;
+                    }
+                }
+
+                /// @brief Create a skeleton-side method binding
+                static std::unique_ptr<SkeletonMethodBinding> CreateSkeletonMethodBinding(
+                    TransportBinding transport,
+                    const MethodBindingConfig &config)
+                {
+                    switch (transport)
+                    {
+#if ARA_COM_USE_ICEORYX
+                    case TransportBinding::kIceoryx:
+                        return std::make_unique<IceoryxSkeletonMethodBinding>(config);
+#endif
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                    case TransportBinding::kCycloneDds:
+                        return std::make_unique<DdsSkeletonMethodBinding>(config);
 #endif
                     default:
                         return nullptr;

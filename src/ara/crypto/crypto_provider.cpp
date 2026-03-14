@@ -710,5 +710,187 @@ namespace ara
             return core::Result<std::vector<std::uint8_t>>::FromValue(
                 std::move(_derivedKey));
         }
+
+        namespace
+        {
+            /// @brief Common helper for AES-CTR encrypt/decrypt (same operation in CTR mode).
+            core::Result<std::vector<std::uint8_t>> AesCtrProcess(
+                const std::vector<std::uint8_t> &input,
+                const std::vector<std::uint8_t> &key,
+                const std::vector<std::uint8_t> &iv)
+            {
+                const EVP_CIPHER *_cipher{nullptr};
+                if (key.size() == 16U)
+                {
+                    _cipher = EVP_aes_128_ctr();
+                }
+                else if (key.size() == 32U)
+                {
+                    _cipher = EVP_aes_256_ctr();
+                }
+
+                if (_cipher == nullptr)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kInvalidKeySize));
+                }
+
+                if (iv.size() != cAesBlockSize)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kInvalidArgument));
+                }
+
+                EVP_CIPHER_CTX *_context{EVP_CIPHER_CTX_new()};
+                if (_context == nullptr)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+                }
+
+                // CTR mode: output size equals input size (stream cipher, no padding)
+                std::vector<std::uint8_t> _output(input.empty() ? 0U : input.size());
+                int _outLength{0};
+                int _totalLength{0};
+
+                bool _success{true};
+                _success = _success &&
+                           (EVP_EncryptInit_ex(_context, _cipher, nullptr,
+                                               key.data(), iv.data()) == 1);
+
+                if (_success && !input.empty())
+                {
+                    _success = _success &&
+                               (EVP_EncryptUpdate(_context, _output.data(), &_outLength,
+                                                  input.data(),
+                                                  static_cast<int>(input.size())) == 1);
+                    _totalLength = _outLength;
+                }
+
+                if (_success)
+                {
+                    // For CTR (stream) mode, EncryptFinal_ex produces 0 extra bytes
+                    std::vector<std::uint8_t> _finalBuf(cAesBlockSize);
+                    _success = _success &&
+                               (EVP_EncryptFinal_ex(_context, _finalBuf.data(), &_outLength) == 1);
+                    _totalLength += _outLength;
+                }
+
+                EVP_CIPHER_CTX_free(_context);
+
+                if (!_success)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kEncryptionFailure));
+                }
+
+                _output.resize(static_cast<std::size_t>(_totalLength));
+                return core::Result<std::vector<std::uint8_t>>::FromValue(
+                    std::move(_output));
+            }
+
+            /// @brief Common helper for ChaCha20 encrypt/decrypt (same operation).
+            core::Result<std::vector<std::uint8_t>> ChaCha20Process(
+                const std::vector<std::uint8_t> &input,
+                const std::vector<std::uint8_t> &key,
+                const std::vector<std::uint8_t> &iv)
+            {
+                // OpenSSL EVP_chacha20: key=32 bytes, iv=16 bytes
+                // (4-byte counter LE + 12-byte nonce, per OpenSSL convention)
+                static constexpr std::size_t cChaCha20KeySize{32U};
+                static constexpr std::size_t cChaCha20IvSize{16U};
+
+                if (key.size() != cChaCha20KeySize)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kInvalidKeySize));
+                }
+
+                if (iv.size() != cChaCha20IvSize)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kInvalidArgument));
+                }
+
+                EVP_CIPHER_CTX *_context{EVP_CIPHER_CTX_new()};
+                if (_context == nullptr)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kCryptoProviderFailure));
+                }
+
+                std::vector<std::uint8_t> _output(input.empty() ? 0U : input.size());
+                int _outLength{0};
+                int _totalLength{0};
+
+                bool _success{true};
+                _success = _success &&
+                           (EVP_EncryptInit_ex(_context, EVP_chacha20(), nullptr,
+                                               key.data(), iv.data()) == 1);
+
+                if (_success && !input.empty())
+                {
+                    _success = _success &&
+                               (EVP_EncryptUpdate(_context, _output.data(), &_outLength,
+                                                  input.data(),
+                                                  static_cast<int>(input.size())) == 1);
+                    _totalLength = _outLength;
+                }
+
+                if (_success)
+                {
+                    std::vector<std::uint8_t> _finalBuf(64U); // ChaCha20 block size
+                    _success = _success &&
+                               (EVP_EncryptFinal_ex(_context, _finalBuf.data(), &_outLength) == 1);
+                    _totalLength += _outLength;
+                }
+
+                EVP_CIPHER_CTX_free(_context);
+
+                if (!_success)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(CryptoErrc::kEncryptionFailure));
+                }
+
+                _output.resize(static_cast<std::size_t>(_totalLength));
+                return core::Result<std::vector<std::uint8_t>>::FromValue(
+                    std::move(_output));
+            }
+        } // anonymous namespace
+
+        core::Result<std::vector<std::uint8_t>> AesCtrEncrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv)
+        {
+            return AesCtrProcess(plaintext, key, iv);
+        }
+
+        core::Result<std::vector<std::uint8_t>> AesCtrDecrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv)
+        {
+            // AES-CTR: decryption is identical to encryption
+            return AesCtrProcess(ciphertext, key, iv);
+        }
+
+        core::Result<std::vector<std::uint8_t>> ChaCha20Encrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv)
+        {
+            return ChaCha20Process(plaintext, key, iv);
+        }
+
+        core::Result<std::vector<std::uint8_t>> ChaCha20Decrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv)
+        {
+            // ChaCha20: decryption is identical to encryption
+            return ChaCha20Process(ciphertext, key, iv);
+        }
     }
 }

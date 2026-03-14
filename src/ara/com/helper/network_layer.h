@@ -5,9 +5,11 @@
 #ifndef NETWORK_LAYER_H
 #define NETWORK_LAYER_H
 
-#include <map>
+#include <cstdint>
 #include <functional>
+#include <map>
 #include <type_traits>
+#include <vector>
 
 namespace ara
 {

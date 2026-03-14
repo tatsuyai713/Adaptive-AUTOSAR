@@ -134,6 +134,47 @@ namespace ara
             const std::vector<std::uint8_t> &info,
             std::size_t keyLength,
             DigestAlgorithm algorithm = DigestAlgorithm::kSha256);
+
+        /// @brief Encrypt plaintext using AES-CTR (counter mode, no padding).
+        /// @param plaintext Input data (any length; stream cipher, no padding applied).
+        /// @param key AES key (16 bytes for AES-128-CTR or 32 bytes for AES-256-CTR).
+        /// @param iv Counter/IV block (must be exactly 16 bytes).
+        /// @returns Ciphertext bytes (same length as plaintext) or a crypto domain error.
+        core::Result<std::vector<std::uint8_t>> AesCtrEncrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv);
+
+        /// @brief Decrypt ciphertext using AES-CTR (counter mode, no padding).
+        /// @param ciphertext Encrypted data.
+        /// @param key AES key (16 bytes for AES-128-CTR or 32 bytes for AES-256-CTR).
+        /// @param iv Counter/IV block used during encryption (must be exactly 16 bytes).
+        /// @returns Plaintext bytes (same length as ciphertext) or a crypto domain error.
+        core::Result<std::vector<std::uint8_t>> AesCtrDecrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv);
+
+        /// @brief Encrypt plaintext using ChaCha20 (IETF 96-bit nonce variant, RFC 8439).
+        /// @param plaintext Input data (any length; stream cipher, no padding).
+        /// @param key ChaCha20 key (must be exactly 32 bytes).
+        /// @param iv Nonce/counter block (must be exactly 16 bytes:
+        ///           4-byte initial counter LE + 12-byte nonce, per OpenSSL EVP_chacha20 layout).
+        /// @returns Ciphertext bytes (same length as plaintext) or a crypto domain error.
+        core::Result<std::vector<std::uint8_t>> ChaCha20Encrypt(
+            const std::vector<std::uint8_t> &plaintext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv);
+
+        /// @brief Decrypt ciphertext using ChaCha20 (IETF 96-bit nonce variant, RFC 8439).
+        /// @param ciphertext Encrypted data.
+        /// @param key ChaCha20 key (must be exactly 32 bytes).
+        /// @param iv Nonce/counter block used during encryption (must be exactly 16 bytes).
+        /// @returns Plaintext bytes (same length as ciphertext) or a crypto domain error.
+        core::Result<std::vector<std::uint8_t>> ChaCha20Decrypt(
+            const std::vector<std::uint8_t> &ciphertext,
+            const std::vector<std::uint8_t> &key,
+            const std::vector<std::uint8_t> &iv);
     }
 }
 

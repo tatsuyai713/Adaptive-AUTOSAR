@@ -553,6 +553,16 @@ add_library(
   ${source_ara_com_secoc_dir}/secoc_key_manager.cpp
   ${source_ara_com_cg_dir}/communication_group_client.h
   ${source_ara_com_cg_dir}/communication_group_server.h
+  ${source_ara_com_e2e_dir}/profile01.h
+  ${source_ara_com_e2e_dir}/profile01.cpp
+  ${source_ara_com_e2e_dir}/profile02.h
+  ${source_ara_com_e2e_dir}/profile02.cpp
+  ${source_ara_com_e2e_dir}/profile04.h
+  ${source_ara_com_e2e_dir}/profile04.cpp
+  ${source_ara_com_e2e_dir}/profile05.h
+  ${source_ara_com_e2e_dir}/profile05.cpp
+  ${source_ara_com_e2e_dir}/profile07.h
+  ${source_ara_com_e2e_dir}/profile07.cpp
   ${source_ara_com_e2e_dir}/profile11.h
   ${source_ara_com_e2e_dir}/profile11.cpp
   ${source_ara_com_e2e_dir}/e2e_event.h
@@ -642,6 +652,14 @@ add_library(
   ${source_ara_com_internal_dir}/vsomeip_event_binding.cpp
   ${source_ara_com_internal_dir}/vsomeip_method_binding.h
   ${source_ara_com_internal_dir}/vsomeip_method_binding.cpp
+  ${source_ara_com_internal_dir}/iceoryx_event_binding.h
+  ${source_ara_com_internal_dir}/iceoryx_event_binding.cpp
+  ${source_ara_com_internal_dir}/iceoryx_method_binding.h
+  ${source_ara_com_internal_dir}/iceoryx_method_binding.cpp
+  ${source_ara_com_internal_dir}/dds_event_binding.h
+  ${source_ara_com_internal_dir}/dds_event_binding.cpp
+  ${source_ara_com_internal_dir}/dds_method_binding.h
+  ${source_ara_com_internal_dir}/dds_method_binding.cpp
   ${source_ara_com_internal_dir}/binding_factory.h
 )
 
@@ -835,6 +853,10 @@ add_library(
   ${source_ara_iam_dir}/policy_version.cpp
   ${source_ara_iam_dir}/role_manager.h
   ${source_ara_iam_dir}/role_manager.cpp
+  ${source_ara_iam_dir}/abac_policy_engine.h
+  ${source_ara_iam_dir}/abac_policy_engine.cpp
+  ${source_ara_iam_dir}/policy_signer.h
+  ${source_ara_iam_dir}/policy_signer.cpp
 )
 
 add_library(
@@ -893,6 +915,7 @@ target_link_libraries(
 target_link_libraries(
   ara_iam
   ara_core
+  ara_crypto
 )
 
 target_link_libraries(
@@ -1673,6 +1696,7 @@ if(build_tests)
     ${test_ara_sm_dir}/machine_state_client_test.cpp
     ${test_ara_sm_dir}/state_transition_handler_test.cpp
     ${test_ara_sm_dir}/function_group_state_machine_test.cpp
+    ${test_ara_com_e2e_dir}/profile07_test.cpp
     ${test_ara_com_e2e_dir}/profile11_test.cpp
     ${test_ara_com_entry_dir}/eventgroup_entry_test.cpp
     ${test_ara_com_entry_dir}/service_entry_test.cpp
@@ -1760,6 +1784,9 @@ if(build_tests)
     ${test_ara_com_dir}/mock_event_binding.h
     ${test_ara_com_dir}/event_test.cpp
     ${test_ara_com_dir}/method_test.cpp
+    ${test_ara_com_dir}/skeleton_method_test.cpp
+    ${test_ara_com_dir}/fire_and_forget_method_test.cpp
+    ${test_ara_com_dir}/cg/communication_group_test.cpp
     ${test_ara_com_dir}/field_test.cpp
     ${test_ara_com_dir}/service_proxy_base_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
@@ -1795,6 +1822,8 @@ if(build_tests)
     ${test_ara_iam_dir}/grant_manager_test.cpp
     ${test_ara_iam_dir}/policy_version_test.cpp
     ${test_ara_iam_dir}/role_manager_test.cpp
+    ${test_ara_iam_dir}/abac_policy_engine_test.cpp
+    ${test_ara_iam_dir}/policy_signer_test.cpp
     ${test_ara_com_secoc_dir}/secoc_key_manager_test.cpp
     ${test_ara_nm_dir}/nm_coordinator_test.cpp
     ${test_ara_nm_dir}/nm_transport_adapter_test.cpp
@@ -2019,3 +2048,11 @@ if(AUTOSAR_AP_INSTALL_TOOLS)
     )
   endif()
 endif()
+
+########################################################################
+#
+# ara::com API samples have been moved to user_apps/src/apps/samples/.
+# Build them via the user_apps CMake project:
+#   cmake -S user_apps -B build-user-apps -DAUTOSAR_AP_PREFIX=<install>
+#   cmake --build build-user-apps --target ara_com_samples
+#

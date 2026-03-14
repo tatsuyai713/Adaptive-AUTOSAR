@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/com/field.h"
 #include "../../../src/ara/com/serialization.h"
+#include "../../../src/ara/core/promise.h"
 #include "./mock_event_binding.h"
 
 namespace ara
@@ -180,6 +181,126 @@ namespace ara
 
             EXPECT_EQ(field.GetValue(), 3);
             EXPECT_EQ(rawBinding->SentPayloads.size(), 3U);
+        }
+
+        TEST(SkeletonFieldTest, RegisterGetHandlerNoBindingReturnsError)
+        {
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>()};
+
+            auto result = field.RegisterGetHandler(
+                []() -> core::Future<std::uint32_t>
+                {
+                    core::Promise<std::uint32_t> p;
+                    p.set_value(0U);
+                    return p.get_future();
+                });
+
+            EXPECT_FALSE(result.HasValue());
+        }
+
+        TEST(SkeletonFieldTest, RegisterGetHandlerDispatchesOnRequest)
+        {
+            auto getBinding = std::make_unique<test::MockSkeletonMethodBinding>();
+            auto *rawGet = getBinding.get();
+
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>(),
+                std::move(getBinding)};
+            field.Update(77U);
+
+            auto result = field.RegisterGetHandler(
+                []() -> core::Future<std::uint32_t>
+                {
+                    core::Promise<std::uint32_t> p;
+                    p.set_value(77U);
+                    return p.get_future();
+                });
+
+            ASSERT_TRUE(result.HasValue());
+            EXPECT_TRUE(rawGet->IsRegistered());
+
+            auto reply = rawGet->InvokeRequest({});
+            ASSERT_TRUE(reply.HasValue());
+
+            auto deser = Serializer<std::uint32_t>::Deserialize(
+                reply.Value().data(), reply.Value().size());
+            ASSERT_TRUE(deser.HasValue());
+            EXPECT_EQ(deser.Value(), 77U);
+        }
+
+        TEST(SkeletonFieldTest, RegisterSetHandlerNoBindingReturnsError)
+        {
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>()};
+
+            auto result = field.RegisterSetHandler(
+                [](const std::uint32_t &v) -> core::Future<std::uint32_t>
+                {
+                    core::Promise<std::uint32_t> p;
+                    p.set_value(v);
+                    return p.get_future();
+                });
+
+            EXPECT_FALSE(result.HasValue());
+        }
+
+        TEST(SkeletonFieldTest, RegisterSetHandlerDispatchesAndUpdatesValue)
+        {
+            auto setBinding = std::make_unique<test::MockSkeletonMethodBinding>();
+            auto *rawSet = setBinding.get();
+
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>(),
+                nullptr,
+                std::move(setBinding)};
+
+            auto result = field.RegisterSetHandler(
+                [](const std::uint32_t &newVal) -> core::Future<std::uint32_t>
+                {
+                    core::Promise<std::uint32_t> p;
+                    p.set_value(newVal);
+                    return p.get_future();
+                });
+
+            ASSERT_TRUE(result.HasValue());
+            EXPECT_TRUE(rawSet->IsRegistered());
+
+            auto request = Serializer<std::uint32_t>::Serialize(123U);
+            auto reply = rawSet->InvokeRequest(request);
+            ASSERT_TRUE(reply.HasValue());
+
+            EXPECT_EQ(field.GetValue(), 123U);
+
+            auto deser = Serializer<std::uint32_t>::Deserialize(
+                reply.Value().data(), reply.Value().size());
+            ASSERT_TRUE(deser.HasValue());
+            EXPECT_EQ(deser.Value(), 123U);
+        }
+
+        TEST(SkeletonFieldTest, RegisterGetHandlerNullHandlerReturnsError)
+        {
+            auto getBinding = std::make_unique<test::MockSkeletonMethodBinding>();
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>(),
+                std::move(getBinding)};
+
+            auto result = field.RegisterGetHandler(
+                std::function<core::Future<std::uint32_t>()>{nullptr});
+            EXPECT_FALSE(result.HasValue());
+        }
+
+        TEST(SkeletonFieldTest, RegisterSetHandlerNullHandlerReturnsError)
+        {
+            auto setBinding = std::make_unique<test::MockSkeletonMethodBinding>();
+            SkeletonField<std::uint32_t> field{
+                std::make_unique<test::MockSkeletonEventBinding>(),
+                nullptr,
+                std::move(setBinding)};
+
+            auto result = field.RegisterSetHandler(
+                std::function<core::Future<std::uint32_t>(const std::uint32_t &)>{nullptr});
+            EXPECT_FALSE(result.HasValue());
         }
     }
 }
