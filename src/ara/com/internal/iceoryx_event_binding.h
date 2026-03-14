@@ -85,6 +85,8 @@ namespace ara
                 EventBindingConfig mConfig;
                 std::unique_ptr<zerocopy::ZeroCopyPublisher> mPublisher;
                 bool mOffered{false};
+                std::vector<std::uint8_t> mInitialValue;
+                bool mHasInitialValue{false};
 
                 /// @brief Outstanding Loan() allocations keyed by raw pointer.
                 std::mutex mLoanMutex;
@@ -106,6 +108,8 @@ namespace ara
                 core::Result<void *> Allocate(std::size_t size) override;
                 core::Result<void> SendAllocated(
                     void *data, std::size_t size) override;
+                void SetInitialValue(
+                    const std::vector<std::uint8_t> &payload) override;
             };
         }
     }

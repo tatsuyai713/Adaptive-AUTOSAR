@@ -212,5 +212,24 @@ namespace ara
         {
             return mStream.is_open() && mStream.good();
         }
+
+        core::Result<void> ReadWriteAccessor::Peek(std::uint8_t &byte)
+        {
+            if (!mStream.is_open() || !mStream.good())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            int ch = mStream.peek();
+            if (ch == std::char_traits<char>::eof())
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            byte = static_cast<std::uint8_t>(ch);
+            return core::Result<void>::FromValue();
+        }
     }
 }

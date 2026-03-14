@@ -225,5 +225,12 @@ namespace ara
             concat(std::move(_valueString));
             return *this;
         }
+
+        LogStream &LogStream::operator<<(const core::StringView &value)
+        {
+            std::string _valueString(value.data(), value.size());
+            concat(std::move(_valueString));
+            return *this;
+        }
     }
 }

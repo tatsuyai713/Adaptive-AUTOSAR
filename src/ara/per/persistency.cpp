@@ -575,5 +575,24 @@ namespace ara
 
             return core::Result<void>::FromValue();
         }
+
+        core::Result<std::uint32_t> GetCurrentPersistencyVersion(
+            const core::InstanceSpecifier &specifier)
+        {
+            // In a full platform, versions are tracked in a metadata file.
+            // For this educational implementation, return version 1 (default).
+            (void)specifier;
+            return core::Result<std::uint32_t>::FromValue(1);
+        }
+
+        namespace
+        {
+            DataTypeFaultHandler sDataTypeFaultHandler;
+        }
+
+        void RegisterDataTypeFaultHandler(DataTypeFaultHandler handler)
+        {
+            sDataTypeFaultHandler = std::move(handler);
+        }
     }
 }

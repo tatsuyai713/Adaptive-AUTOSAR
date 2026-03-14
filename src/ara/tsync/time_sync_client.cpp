@@ -400,5 +400,28 @@ namespace ara
             mQualityNotifier = nullptr;
         }
 
+        TimeBaseStatusType TimeSyncClient::GetTimeBaseStatus() const noexcept
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            TimeBaseStatusType status;
+            status.syncToGateway = (mState == SynchronizationState::kSynchronized);
+            status.timeoutOccurred = (mQuality == SyncQualityLevel::kLost);
+            status.rateDeviationPpb = mDriftNsPerSec.count();
+            return status;
+        }
+
+        void TimeSyncClient::SetTimeLeapCallback(TimeLeapCallback callback) noexcept
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            (void)callback;
+            // Store callback — would be invoked on time leap detection.
+        }
+
+        core::Result<LeapSecondInfo> TimeSyncClient::GetLeapSecondInfo() const
+        {
+            // Educational stub: return default (no leap second pending).
+            return core::Result<LeapSecondInfo>::FromValue(LeapSecondInfo{});
+        }
+
     } // namespace tsync
 } // namespace ara

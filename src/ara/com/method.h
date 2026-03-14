@@ -6,6 +6,7 @@
 #define ARA_COM_METHOD_H
 
 #include <memory>
+#include <mutex>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -301,6 +302,7 @@ namespace ara
         {
         private:
             std::unique_ptr<internal::SkeletonMethodBinding> mBinding;
+            std::recursive_mutex *mDispatchMutex{nullptr};
 
         public:
             /// @brief Typed async handler: receives typed args, returns Future<R>.
@@ -308,9 +310,12 @@ namespace ara
 
             /// @brief Constructs a skeleton method wrapper bound to transport implementation.
             /// @param binding Concrete skeleton method binding implementation.
+            /// @param dispatchMutex Optional serialization mutex for kEventSingleThread.
             explicit SkeletonMethod(
-                std::unique_ptr<internal::SkeletonMethodBinding> binding) noexcept
-                : mBinding{std::move(binding)}
+                std::unique_ptr<internal::SkeletonMethodBinding> binding,
+                std::recursive_mutex *dispatchMutex = nullptr) noexcept
+                : mBinding{std::move(binding)},
+                  mDispatchMutex{dispatchMutex}
             {
             }
 
@@ -332,10 +337,17 @@ namespace ara
                 }
 
                 return mBinding->Register(
-                    [h = std::move(handler)](
+                    [h = std::move(handler), mtx = mDispatchMutex](
                         const std::vector<std::uint8_t> &request)
                         -> core::Result<std::vector<std::uint8_t>>
                     {
+                        // kEventSingleThread: serialize concurrent calls
+                        std::unique_lock<std::recursive_mutex> guard;
+                        if (mtx)
+                        {
+                            guard = std::unique_lock<std::recursive_mutex>(*mtx);
+                        }
+
                         std::size_t offset = 0;
                         auto argsResult =
                             detail::TupleDeserializer<Args...>::Deserialize(
@@ -379,6 +391,7 @@ namespace ara
         {
         private:
             std::unique_ptr<internal::SkeletonMethodBinding> mBinding;
+            std::recursive_mutex *mDispatchMutex{nullptr};
 
         public:
             /// @brief Typed async handler for void-return methods.
@@ -386,9 +399,12 @@ namespace ara
 
             /// @brief Constructs a void-return skeleton method wrapper.
             /// @param binding Concrete skeleton method binding implementation.
+            /// @param dispatchMutex Optional serialization mutex for kEventSingleThread.
             explicit SkeletonMethod(
-                std::unique_ptr<internal::SkeletonMethodBinding> binding) noexcept
-                : mBinding{std::move(binding)}
+                std::unique_ptr<internal::SkeletonMethodBinding> binding,
+                std::recursive_mutex *dispatchMutex = nullptr) noexcept
+                : mBinding{std::move(binding)},
+                  mDispatchMutex{dispatchMutex}
             {
             }
 
@@ -409,10 +425,16 @@ namespace ara
                 }
 
                 return mBinding->Register(
-                    [h = std::move(handler)](
+                    [h = std::move(handler), mtx = mDispatchMutex](
                         const std::vector<std::uint8_t> &request)
                         -> core::Result<std::vector<std::uint8_t>>
                     {
+                        std::unique_lock<std::recursive_mutex> guard;
+                        if (mtx)
+                        {
+                            guard = std::unique_lock<std::recursive_mutex>(*mtx);
+                        }
+
                         std::size_t offset = 0;
                         auto argsResult =
                             detail::TupleDeserializer<Args...>::Deserialize(
@@ -523,6 +545,7 @@ namespace ara
         {
         private:
             std::unique_ptr<internal::SkeletonMethodBinding> mBinding;
+            std::recursive_mutex *mDispatchMutex{nullptr};
 
         public:
             /// @brief Typed handler — receives args, returns nothing.
@@ -530,9 +553,12 @@ namespace ara
 
             /// @brief Constructs a fire-and-forget skeleton method wrapper.
             /// @param binding Concrete skeleton method binding implementation.
+            /// @param dispatchMutex Optional serialization mutex for kEventSingleThread.
             explicit SkeletonFireAndForgetMethod(
-                std::unique_ptr<internal::SkeletonMethodBinding> binding) noexcept
-                : mBinding{std::move(binding)}
+                std::unique_ptr<internal::SkeletonMethodBinding> binding,
+                std::recursive_mutex *dispatchMutex = nullptr) noexcept
+                : mBinding{std::move(binding)},
+                  mDispatchMutex{dispatchMutex}
             {
             }
 
@@ -559,10 +585,16 @@ namespace ara
                 }
 
                 return mBinding->Register(
-                    [h = std::move(handler)](
+                    [h = std::move(handler), mtx = mDispatchMutex](
                         const std::vector<std::uint8_t> &request)
                         -> core::Result<std::vector<std::uint8_t>>
                     {
+                        std::unique_lock<std::recursive_mutex> guard;
+                        if (mtx)
+                        {
+                            guard = std::unique_lock<std::recursive_mutex>(*mtx);
+                        }
+
                         std::size_t offset = 0;
                         auto argsResult =
                             detail::TupleDeserializer<Args...>::Deserialize(

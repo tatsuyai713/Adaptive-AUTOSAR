@@ -57,6 +57,7 @@ namespace ara
             core::Result<void> IceoryxProxyEventBinding::Subscribe(
                 std::size_t maxSampleCount)
             {
+                SubscriptionStateChangeHandler pendingNotify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     if (mState != SubscriptionState::kNotSubscribed)
@@ -66,13 +67,37 @@ namespace ara
                     }
                     mMaxSampleCount = std::max<std::size_t>(1U, maxSampleCount);
                     mSampleQueue.clear();
-                    mState = SubscriptionState::kSubscribed;
+                    mState = SubscriptionState::kSubscriptionPending;
+                    if (mStateChangeHandler)
+                    {
+                        pendingNotify = mStateChangeHandler;
+                    }
+                }
+
+                if (pendingNotify)
+                {
+                    pendingNotify(SubscriptionState::kSubscriptionPending);
                 }
 
                 mSubscriber.reset(new zerocopy::ZeroCopySubscriber{
                     makeChannel(mConfig),
                     "ara_com_proxy",
                     static_cast<std::uint64_t>(mMaxSampleCount)});
+
+                SubscriptionStateChangeHandler subscribedNotify;
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    mState = SubscriptionState::kSubscribed;
+                    if (mStateChangeHandler)
+                    {
+                        subscribedNotify = mStateChangeHandler;
+                    }
+                }
+
+                if (subscribedNotify)
+                {
+                    subscribedNotify(SubscriptionState::kSubscribed);
+                }
 
                 mRunning.store(true, std::memory_order_relaxed);
                 mPollThread = std::thread([this] { pollLoop(); });
@@ -88,14 +113,29 @@ namespace ara
                     mPollThread.join();
                 }
 
+                SubscriptionStateChangeHandler notify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
+                    if (mState == SubscriptionState::kNotSubscribed)
+                    {
+                        mSubscriber.reset();
+                        return;
+                    }
                     mState = SubscriptionState::kNotSubscribed;
                     mSampleQueue.clear();
                     mReceiveHandler = nullptr;
+                    if (mStateChangeHandler)
+                    {
+                        notify = mStateChangeHandler;
+                    }
                 }
 
                 mSubscriber.reset();
+
+                if (notify)
+                {
+                    notify(SubscriptionState::kNotSubscribed);
+                }
             }
 
             SubscriptionState
@@ -260,6 +300,14 @@ namespace ara
                     "ara_com_skeleton"});
 
                 mOffered = true;
+
+                // Publish the stored initial value so that late-joining
+                // subscribers receive it from shared memory.
+                if (mHasInitialValue)
+                {
+                    Send(mInitialValue);
+                }
+
                 return core::Result<void>::FromValue();
             }
 
@@ -345,6 +393,18 @@ namespace ara
                 }
 
                 return mPublisher->Publish(std::move(sample));
+            }
+
+            void IceoryxSkeletonEventBinding::SetInitialValue(
+                const std::vector<std::uint8_t> &payload)
+            {
+                mInitialValue = payload;
+                mHasInitialValue = true;
+
+                if (mOffered)
+                {
+                    Send(mInitialValue);
+                }
             }
         }
     }

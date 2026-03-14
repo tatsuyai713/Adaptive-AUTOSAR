@@ -273,6 +273,21 @@ namespace ara
             return mPendingChanges;
         }
 
+        std::size_t KeyValueStorage::GetCurrentStorageSize() const noexcept
+        {
+            std::size_t totalSize{0U};
+            for (const auto &kv : mData)
+            {
+                totalSize += kv.first.size() + kv.second.size();
+            }
+            return totalSize;
+        }
+
+        std::uint64_t KeyValueStorage::GetStorageQuota() const noexcept
+        {
+            return 0U; // No quota configured in this implementation
+        }
+
         // ── Observer helpers ─────────────────────────────────
 
         void KeyValueStorage::notifyObservers(const std::string &key) const

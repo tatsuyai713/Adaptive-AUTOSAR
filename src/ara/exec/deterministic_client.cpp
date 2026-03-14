@@ -132,6 +132,11 @@ namespace ara
             return _result;
         }
 
+        core::Result<ActivationReturnType> DeterministicClient::WaitForNextActivation()
+        {
+            return WaitForActivation();
+        }
+
         DeterministicClient::~DeterministicClient()
         {
             // Atomically decrement and check whether this is the last instance

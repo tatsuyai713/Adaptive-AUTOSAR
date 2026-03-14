@@ -53,6 +53,14 @@ namespace ara
             ///          in the requested state.
             core::Result<void> SetMachineState(MachineState state);
 
+            /// @brief Request an orderly machine shutdown (SWS_SM_91001).
+            /// @returns Void Result on success.
+            core::Result<void> RequestShutdown();
+
+            /// @brief Request an orderly machine restart (SWS_SM_91001).
+            /// @returns Void Result on success.
+            core::Result<void> RequestRestart();
+
         private:
             MachineState mState;
             StateChangeNotifier mNotifier;

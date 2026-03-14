@@ -130,6 +130,11 @@ namespace ara
             return ara::core::Result<void>{};
         }
 
+        const core::InstanceSpecifier &Event::GetEventId() const noexcept
+        {
+            return mSpecifier;
+        }
+
         ara::core::Result<DebouncingState> Event::GetDebouncingStatus()
         {
             DebouncingState _debouncingState;

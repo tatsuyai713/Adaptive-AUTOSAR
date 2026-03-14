@@ -10,6 +10,9 @@
 #include "./shared_handle.h"
 #include "./key_value_storage.h"
 #include "./file_storage.h"
+#include <cstdint>
+#include <functional>
+#include <string>
 
 namespace ara
 {
@@ -63,6 +66,21 @@ namespace ara
         /// @brief Reset all persistent data for this application (SWS_PER_00457)
         /// @returns Void Result on success
         core::Result<void> ResetPersistency();
+
+        /// @brief Get the current persistency data version (SWS_PER_00452).
+        /// @param specifier Instance specifier identifying the storage
+        /// @returns Version number on success, error otherwise
+        core::Result<std::uint32_t> GetCurrentPersistencyVersion(
+            const core::InstanceSpecifier &specifier);
+
+        /// @brief Callback type for data type fault notifications (SWS_PER_00350).
+        using DataTypeFaultHandler = std::function<void(
+            const core::InstanceSpecifier &specifier,
+            const std::string &key)>;
+
+        /// @brief Register a handler for data type / deserialization faults (SWS_PER_00350).
+        /// @param handler Callback invoked when a corrupt or incompatible value is detected.
+        void RegisterDataTypeFaultHandler(DataTypeFaultHandler handler);
     }
 }
 

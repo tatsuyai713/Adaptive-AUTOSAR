@@ -11,6 +11,7 @@
 #include "../core/result.h"
 #include "./checkpoint_communicator.h"
 #include "./phm_error_domain.h"
+#include "./supervision_status.h"
 
 namespace ara
 {
@@ -77,6 +78,22 @@ namespace ara
             /// @brief Disable supervision for this entity (SWS_PHM_01141)
             /// @returns Void Result on success
             core::Result<void> Disable();
+
+            /// @brief Query the current supervision status (SWS_PHM_01142).
+            /// @returns The global supervision status of this entity
+            core::Result<GlobalSupervisionStatus> GetSupervisionStatus() const;
+
+            /// @brief Query local supervision status per supervision type (SWS_PHM_01143).
+            /// @param type Type of elementary supervision to query (0=alive, 1=deadline, 2=logical)
+            /// @returns The local supervision status for the given type
+            core::Result<LocalSupervisionStatus> GetLocalSupervisionStatus(
+                std::uint32_t type) const;
+
+            /// @brief Factory method to create a supervised entity (SWS_PHM_01130).
+            /// @param specifier Instance specifier for the entity
+            /// @returns A Result containing the entity on success
+            static core::Result<SupervisedEntity> Create(
+                const core::InstanceSpecifier &specifier);
         };
     }
 }

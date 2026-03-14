@@ -7,6 +7,8 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
+#include <chrono>
 #include "../core/result.h"
 #include "./per_error_domain.h"
 #include "./read_accessor.h"
@@ -17,6 +19,17 @@ namespace ara
 {
     namespace per
     {
+        /// @brief File metadata information (SWS_PER_00410).
+        struct FileInfo
+        {
+            std::string fileName;                                    ///< File name (relative)
+            std::uint64_t size{0};                                   ///< File size in bytes
+            std::chrono::system_clock::time_point creationTime;      ///< Creation time
+            std::chrono::system_clock::time_point modificationTime;  ///< Last modification time
+            std::chrono::system_clock::time_point accessTime;        ///< Last access time
+            bool isReadOnly{false};                                  ///< Read-only flag
+        };
+
         /// @brief File storage per AUTOSAR AP SWS_PER
         ///        Provides file-based persistent storage within a dedicated directory.
         class FileStorage
@@ -80,6 +93,15 @@ namespace ara
             /// @brief Get the total size consumed by all files in this storage (SWS_PER_00409)
             /// @returns Total size in bytes, or error
             core::Result<uint64_t> GetCurrentFileStorageSize() const;
+
+            /// @brief Get metadata for a specific file (SWS_PER_00410).
+            /// @param fileName Name of the file (relative to storage directory)
+            /// @returns FileInfo on success, error otherwise
+            core::Result<FileInfo> GetFileInfo(const std::string &fileName) const;
+
+            /// @brief Get the quota (maximum allowed size) for this storage (SWS_PER_00408).
+            /// @returns Maximum size in bytes, or error. Returns 0 if no quota is configured.
+            core::Result<uint64_t> GetCurrentFileStorageQuota() const;
         };
     }
 }

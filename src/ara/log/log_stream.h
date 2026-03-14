@@ -121,6 +121,9 @@ namespace ara
             /// @brief Insert a raw-byte span as hexadecimal (SWS_LOG_00101).
             LogStream &operator<<(core::Span<const core::Byte> data);
 
+            /// @brief StringView insertion operator (SWS_LOG_00029).
+            LogStream &operator<<(const core::StringView &value);
+
             /// @brief Log stream at a certian file and a certian line within the file
             /// @param file File name
             /// @param line Line number

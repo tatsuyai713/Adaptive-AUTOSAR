@@ -278,7 +278,54 @@ namespace ara
                 app->request_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
-#endif // ARA_COM_USE_VSOMEIP
+#elif defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                // DDS uses data-centric discovery: topics are matched
+                // automatically.  Immediately report the requested
+                // service/instance as available.
+                {
+                    ServiceHandleType discoveredHandle{serviceId, instanceId};
+                    auto &ctx{GetFindServiceContext()};
+                    FindServiceHandler<ServiceHandleType> callback;
+                    ServiceHandleContainer<ServiceHandleType> handles;
+                    {
+                        std::lock_guard<std::mutex> lock(ctx.Mutex);
+                        auto searchIt = ctx.Searches.find(handleId);
+                        if (searchIt != ctx.Searches.end())
+                        {
+                            searchIt->second.Handles.push_back(discoveredHandle);
+                            handles = searchIt->second.Handles;
+                            callback = searchIt->second.Handler;
+                        }
+                    }
+                    if (callback)
+                    {
+                        callback(std::move(handles));
+                    }
+                }
+#elif ARA_COM_USE_ICEORYX
+                // iceoryx uses shared-memory channels matched by service
+                // description.  Immediately report availability.
+                {
+                    ServiceHandleType discoveredHandle{serviceId, instanceId};
+                    auto &ctx{GetFindServiceContext()};
+                    FindServiceHandler<ServiceHandleType> callback;
+                    ServiceHandleContainer<ServiceHandleType> handles;
+                    {
+                        std::lock_guard<std::mutex> lock(ctx.Mutex);
+                        auto searchIt = ctx.Searches.find(handleId);
+                        if (searchIt != ctx.Searches.end())
+                        {
+                            searchIt->second.Handles.push_back(discoveredHandle);
+                            handles = searchIt->second.Handles;
+                            callback = searchIt->second.Handler;
+                        }
+                    }
+                    if (callback)
+                    {
+                        callback(std::move(handles));
+                    }
+                }
+#endif // ARA_COM_USE_VSOMEIP / DDS / ICEORYX
             }
             else if (hasInitialHandles)
             {
@@ -361,7 +408,15 @@ namespace ara
                 app->release_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
-#endif // ARA_COM_USE_VSOMEIP
+#elif defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
+                // DDS: no explicit unregistration needed
+                (void)serviceId;
+                (void)instanceId;
+#elif ARA_COM_USE_ICEORYX
+                // iceoryx: no explicit unregistration needed
+                (void)serviceId;
+                (void)instanceId;
+#endif
             }
 
             return core::Result<void>::FromValue();

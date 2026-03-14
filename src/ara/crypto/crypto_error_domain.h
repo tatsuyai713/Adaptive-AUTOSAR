@@ -29,7 +29,9 @@ namespace ara
             kCertificateParseError = 12,///< X.509 certificate parsing failed
             kCertificateVerifyError = 13,///< X.509 certificate chain verification failed
             kSlotNotFound = 14,         ///< Requested key slot does not exist
-            kSlotAlreadyExists = 15     ///< Key slot with the given ID already exists
+            kSlotAlreadyExists = 15,    ///< Key slot with the given ID already exists
+            kProcessingNotStarted = 16, ///< Processing was not started before update/finish
+            kKeyDerivationFailure = 17  ///< Key agreement/derivation failed
         };
 
         /// @brief Error domain for ara::crypto subset implementation.

@@ -41,6 +41,11 @@ namespace ara
             mutable std::mutex mPollMutex;
             std::condition_variable mPollCV;
 
+            /// @brief Serialization mutex for kEventSingleThread mode.
+            ///        Method dispatch lambdas lock this so that at most one
+            ///        method handler executes at a time.
+            std::recursive_mutex mDispatchMutex;
+
         protected:
             /// @brief Constructor
             /// @param specifier Instance specifier identifying this skeleton
@@ -68,6 +73,12 @@ namespace ara
             ///        ProcessNextMethodCall().
             /// @param task Callable encapsulating the method dispatch
             void EnqueuePollCall(std::function<void()> task);
+
+            /// @brief Returns pointer to the dispatch serialization mutex when
+            ///        the processing mode is kEventSingleThread, nullptr otherwise.
+            ///        Derived skeletons pass this to SkeletonMethod constructors
+            ///        so that concurrent handler invocations are serialized.
+            std::recursive_mutex *GetDispatchMutex() noexcept;
 
         public:
             /// @brief Callback type to validate/deny event subscription changes.

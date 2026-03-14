@@ -57,6 +57,10 @@ namespace ara
             /// @returns Reference to the InstanceSpecifier.
             const core::InstanceSpecifier &GetInstance() const noexcept;
 
+            /// @brief Get the network state (up/down) (SWS_SM_91005).
+            /// @returns True if the network interface is considered up.
+            bool GetNetworkState() const noexcept;
+
         private:
             core::InstanceSpecifier mInstance;
             ComMode mCurrentMode;

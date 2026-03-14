@@ -63,5 +63,15 @@ namespace ara
 
             return core::Result<void>::FromValue();
         }
+
+        core::Result<void> MachineStateClient::RequestShutdown()
+        {
+            return SetMachineState(MachineState::kShutdown);
+        }
+
+        core::Result<void> MachineStateClient::RequestRestart()
+        {
+            return SetMachineState(MachineState::kRestart);
+        }
     }
 }

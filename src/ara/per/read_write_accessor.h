@@ -76,6 +76,11 @@ namespace ara
 
             /// @brief Check if the stream is in a good state
             bool IsValid() const noexcept;
+
+            /// @brief Peek at the next byte without consuming it (SWS_PER_00330).
+            /// @param byte [out] Receives the peeked byte
+            /// @returns Void Result on success, error if no data
+            core::Result<void> Peek(std::uint8_t &byte);
         };
     }
 }

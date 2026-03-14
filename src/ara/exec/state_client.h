@@ -5,11 +5,14 @@
 #ifndef STATE_CLIENT_H
 #define STATE_CLIENT_H
 
+#include <chrono>
 #include <future>
 #include <map>
 #include <mutex>
+#include <string>
 #include "../com/someip/rpc/rpc_client.h"
 #include "./execution_error_event.h"
+#include "./execution_client.h"
 #include "./function_group_state.h"
 #include "./exec_exception.h"
 
@@ -85,6 +88,20 @@ namespace ara
             /// @returns Result containing the execution error if the Undefined Function Group State exist, otherwise Failed Result
             core::Result<ExecutionErrorEvent> GetExecutionError(
                 const FunctionGroup &functionGroup) noexcept;
+
+            /// @brief Get the execution state of a named process (SWS_EM_02060).
+            /// @param processName Name of the process.
+            /// @returns ExecutionState on success, error if process is unknown.
+            core::Result<exec::ExecutionState> GetProcessState(
+                const std::string &processName) const;
+
+            /// @brief Set function group state with a timeout (SWS_EM_02070).
+            /// @param state Target state.
+            /// @param timeout Maximum wait duration.
+            /// @returns Void future unless an error occurs.
+            std::shared_future<void> SetStateWithTimeout(
+                const FunctionGroupState &state,
+                std::chrono::milliseconds timeout);
         };
     }
 }

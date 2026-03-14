@@ -6,12 +6,13 @@
 #define SYNCHRONIZED_TIME_BASE_PROVIDER_H
 
 #include "../core/result.h"
-#include "./time_sync_client.h"
 
 namespace ara
 {
     namespace tsync
     {
+        // Forward declaration to break circular dependency
+        class TimeSyncClient;
         /// @brief Abstract interface for external time source providers.
         ///
         /// Concrete implementations (PTP, NTP, etc.) derive from this class

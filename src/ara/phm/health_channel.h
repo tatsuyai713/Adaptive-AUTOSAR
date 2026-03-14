@@ -9,6 +9,7 @@
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
 #include "./phm_error_domain.h"
+#include "./supervision_status.h"
 
 namespace ara
 {
@@ -72,6 +73,10 @@ namespace ara
             /// @brief Register a callback for health status changes (SWS_PHM_01180)
             /// @param callback Callback to be invoked on health status changes
             void SetHealthStatusCallback(HealthStatusCallback callback);
+
+            /// @brief Get the externally visible health channel status (SWS_PHM_00370).
+            /// @returns kNormal if last reported status is kOk, kExpired otherwise
+            HealthChannelExternalStatus GetHealthChannelExternalStatus() const noexcept;
         };
     }
 }

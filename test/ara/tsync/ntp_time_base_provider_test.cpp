@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "../../../src/ara/tsync/time_sync_client.h"
 #include "../../../src/ara/tsync/ntp_time_base_provider.h"
 
 namespace ara

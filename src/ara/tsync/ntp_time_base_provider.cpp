@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./ntp_time_base_provider.h"
+#include "./time_sync_client.h"
 
 #include <cstdio>
 #include <cstdlib>

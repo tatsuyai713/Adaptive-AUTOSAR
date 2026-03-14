@@ -126,6 +126,8 @@ namespace ara
             private:
                 EventBindingConfig mConfig;
                 bool mOffered{false};
+                std::vector<std::uint8_t> mInitialValue;
+                bool mHasInitialValue{false};
 
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
                 dds_entity_t mParticipant{0};
@@ -150,6 +152,8 @@ namespace ara
                 core::Result<void *> Allocate(std::size_t size) override;
                 core::Result<void> SendAllocated(
                     void *data, std::size_t size) override;
+                void SetInitialValue(
+                    const std::vector<std::uint8_t> &payload) override;
             };
         }
     }

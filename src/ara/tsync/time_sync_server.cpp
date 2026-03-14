@@ -204,5 +204,11 @@ namespace ara
             }
         }
 
+        void TimeSyncServer::SetCorrectionCallback(CorrectionCallback cb)
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mCorrectionCallback = std::move(cb);
+        }
+
     } // namespace tsync
 } // namespace ara

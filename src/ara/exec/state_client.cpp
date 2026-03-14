@@ -3,7 +3,9 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./state_client.h"
+#include <chrono>
 #include <stdexcept>
+#include <string>
 
 namespace ara
 {
@@ -218,6 +220,24 @@ namespace ara
             core::Result<ExecutionErrorEvent> _result{_errorCode};
 
             return _result;
+        }
+
+        core::Result<exec::ExecutionState> StateClient::GetProcessState(
+            const std::string &processName) const
+        {
+            // In a full platform, this queries the Execution Manager via RPC.
+            // Educational stub: return kRunning for any known process.
+            (void)processName;
+            return core::Result<exec::ExecutionState>::FromValue(
+                exec::ExecutionState::kRunning);
+        }
+
+        std::shared_future<void> StateClient::SetStateWithTimeout(
+            const FunctionGroupState &state,
+            std::chrono::milliseconds timeout)
+        {
+            (void)timeout;
+            return SetState(state);
         }
     }
 }

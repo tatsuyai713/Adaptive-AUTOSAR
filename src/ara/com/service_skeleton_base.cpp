@@ -247,5 +247,16 @@ namespace ara
             std::lock_guard<std::mutex> lock(mPollMutex);
             return !mPollQueue.empty();
         }
+
+        std::recursive_mutex *
+        ServiceSkeletonBase::GetDispatchMutex() noexcept
+        {
+            if (mProcessingMode ==
+                MethodCallProcessingMode::kEventSingleThread)
+            {
+                return &mDispatchMutex;
+            }
+            return nullptr;
+        }
     }
 }

@@ -115,6 +115,7 @@ namespace ara
             core::Result<void> DdsProxyEventBinding::Subscribe(
                 std::size_t maxSampleCount)
             {
+                SubscriptionStateChangeHandler pendingNotify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     if (mState != SubscriptionState::kNotSubscribed)
@@ -124,6 +125,16 @@ namespace ara
                     }
                     mMaxSampleCount = std::max<std::size_t>(1U, maxSampleCount);
                     mSampleQueue.clear();
+                    mState = SubscriptionState::kSubscriptionPending;
+                    if (mStateChangeHandler)
+                    {
+                        pendingNotify = mStateChangeHandler;
+                    }
+                }
+
+                if (pendingNotify)
+                {
+                    pendingNotify(SubscriptionState::kSubscriptionPending);
                 }
 
                 // Create DDS entities
@@ -208,9 +219,19 @@ namespace ara
                 dds_waitset_attach(mWaitSet, mReadCond,
                                    static_cast<dds_attach_t>(mReader));
 
+                SubscriptionStateChangeHandler subscribedNotify;
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
                     mState = SubscriptionState::kSubscribed;
+                    if (mStateChangeHandler)
+                    {
+                        subscribedNotify = mStateChangeHandler;
+                    }
+                }
+
+                if (subscribedNotify)
+                {
+                    subscribedNotify(SubscriptionState::kSubscribed);
                 }
 
                 mRunning.store(true, std::memory_order_relaxed);
@@ -234,10 +255,26 @@ namespace ara
                 deleteSafe(mTopic);
                 deleteSafe(mParticipant);
 
-                std::lock_guard<std::mutex> lock(mMutex);
-                mState = SubscriptionState::kNotSubscribed;
-                mSampleQueue.clear();
-                mReceiveHandler = nullptr;
+                SubscriptionStateChangeHandler notify;
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    if (mState == SubscriptionState::kNotSubscribed)
+                    {
+                        return;
+                    }
+                    mState = SubscriptionState::kNotSubscribed;
+                    mSampleQueue.clear();
+                    mReceiveHandler = nullptr;
+                    if (mStateChangeHandler)
+                    {
+                        notify = mStateChangeHandler;
+                    }
+                }
+
+                if (notify)
+                {
+                    notify(SubscriptionState::kNotSubscribed);
+                }
             }
 
             SubscriptionState
@@ -461,6 +498,14 @@ namespace ara
                 }
 
                 mOffered = true;
+
+                // Publish the stored initial value so that late-joining
+                // subscribers receive it via DDS durability/history.
+                if (mHasInitialValue)
+                {
+                    Send(mInitialValue);
+                }
+
                 return core::Result<void>::FromValue();
             }
 
@@ -550,6 +595,18 @@ namespace ara
                 std::free(data);
 
                 return Send(payload);
+            }
+
+            void DdsSkeletonEventBinding::SetInitialValue(
+                const std::vector<std::uint8_t> &payload)
+            {
+                mInitialValue = payload;
+                mHasInitialValue = true;
+
+                if (mOffered)
+                {
+                    Send(mInitialValue);
+                }
             }
         }
     }

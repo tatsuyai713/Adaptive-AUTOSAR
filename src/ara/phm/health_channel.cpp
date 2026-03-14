@@ -217,5 +217,12 @@ namespace ara
         {
             mHealthStatusCallback = std::move(callback);
         }
+
+        HealthChannelExternalStatus HealthChannel::GetHealthChannelExternalStatus() const noexcept
+        {
+            return (mLastReportedStatus == HealthStatus::kOk)
+                       ? HealthChannelExternalStatus::kNormal
+                       : HealthChannelExternalStatus::kExpired;
+        }
     }
 }

@@ -7,12 +7,15 @@
 
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
 #include <org/eclipse/cyclonedds/core/cdr/basic_cdr_ser.hpp>
+#endif
 
 #include "../core/result.h"
 #include "./com_error_domain.h"
@@ -23,6 +26,7 @@ namespace ara
     {
         namespace detail
         {
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
             using org::eclipse::cyclonedds::core::cdr::move;
             using org::eclipse::cyclonedds::core::cdr::read;
             using org::eclipse::cyclonedds::core::cdr::write;
@@ -54,6 +58,16 @@ namespace ara
             public:
                 static constexpr bool value = decltype(Test<T>(0))::value;
             };
+#else
+            /// @brief Fallback: when CycloneDDS is not available, CDR detection
+            ///        always evaluates to false.
+            template <typename T>
+            class HasCdrSerializerOps
+            {
+            public:
+                static constexpr bool value = false;
+            };
+#endif
         } // namespace detail
 
         template <typename T, typename Enable = void>
@@ -105,6 +119,7 @@ namespace ara
         };
 
         /// @brief CDR serializer for ROS/CycloneDDS generated message types.
+#if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
         template <typename T>
         struct Serializer<
             T,
@@ -195,19 +210,7 @@ namespace ara
                 }
             }
         };
-
-        /// @brief Compile-time error for unsupported complex types.
-        template <typename T>
-        struct Serializer<
-            T,
-            typename std::enable_if<
-                !std::is_trivially_copyable<T>::value &&
-                !detail::HasCdrSerializerOps<T>::value>::type>
-        {
-            static_assert(
-                std::is_trivially_copyable<T>::value || detail::HasCdrSerializerOps<T>::value,
-                "Serializer<T> requires either trivially-copyable type or Cyclone CDR move/write/read support.");
-        };
+#endif // ARA_COM_USE_CYCLONEDDS
 
         /// @brief Serializer specialization for std::string
         template <>
@@ -306,6 +309,177 @@ namespace ara
                         std::make_pair(
                             std::vector<std::uint8_t>(data, data + maxSize),
                             maxSize));
+            }
+        };
+
+        /// @brief Serializer for std::vector<T> where T is not uint8_t.
+        ///        Format: [uint32_t count][element0][element1]...
+        template <typename T>
+        struct Serializer<
+            std::vector<T>,
+            typename std::enable_if<
+                !std::is_same<T, std::uint8_t>::value>::type>
+        {
+            static std::vector<std::uint8_t> Serialize(
+                const std::vector<T> &value)
+            {
+                std::vector<std::uint8_t> buffer;
+                const std::uint32_t count =
+                    static_cast<std::uint32_t>(value.size());
+                buffer.resize(sizeof(count));
+                std::memcpy(buffer.data(), &count, sizeof(count));
+
+                for (const auto &elem : value)
+                {
+                    auto elemBytes = Serializer<T>::Serialize(elem);
+                    buffer.insert(buffer.end(),
+                                  elemBytes.begin(), elemBytes.end());
+                }
+                return buffer;
+            }
+
+            static core::Result<std::vector<T>> Deserialize(
+                const std::uint8_t *data,
+                std::size_t size)
+            {
+                auto result = DeserializeAt(data, size);
+                if (!result.HasValue())
+                {
+                    return core::Result<std::vector<T>>::FromError(
+                        result.Error());
+                }
+                return core::Result<std::vector<T>>::FromValue(
+                    std::move(result).Value().first);
+            }
+
+            static core::Result<std::pair<std::vector<T>, std::size_t>>
+            DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                if (maxSize < sizeof(std::uint32_t))
+                {
+                    return core::Result<std::pair<std::vector<T>, std::size_t>>::
+                        FromError(MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                std::uint32_t count;
+                std::memcpy(&count, data, sizeof(count));
+                std::size_t offset = sizeof(count);
+                std::vector<T> result;
+                result.reserve(count);
+
+                for (std::uint32_t i = 0; i < count; ++i)
+                {
+                    if (offset > maxSize)
+                    {
+                        return core::Result<std::pair<std::vector<T>, std::size_t>>::
+                            FromError(MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                    }
+                    auto elemResult = Serializer<T>::DeserializeAt(
+                        data + offset, maxSize - offset);
+                    if (!elemResult.HasValue())
+                    {
+                        return core::Result<std::pair<std::vector<T>, std::size_t>>::
+                            FromError(elemResult.Error());
+                    }
+                    result.push_back(std::move(elemResult).Value().first);
+                    offset += elemResult.Value().second;
+                }
+
+                return core::Result<std::pair<std::vector<T>, std::size_t>>::
+                    FromValue(std::make_pair(std::move(result), offset));
+            }
+        };
+
+        /// @brief Serializer for std::map<K, V>.
+        ///        Format: [uint32_t count][key0][val0][key1][val1]...
+        template <typename K, typename V>
+        struct Serializer<std::map<K, V>, void>
+        {
+            static std::vector<std::uint8_t> Serialize(
+                const std::map<K, V> &value)
+            {
+                std::vector<std::uint8_t> buffer;
+                const std::uint32_t count =
+                    static_cast<std::uint32_t>(value.size());
+                buffer.resize(sizeof(count));
+                std::memcpy(buffer.data(), &count, sizeof(count));
+
+                for (const auto &kv : value)
+                {
+                    auto keyBytes = Serializer<K>::Serialize(kv.first);
+                    buffer.insert(buffer.end(),
+                                  keyBytes.begin(), keyBytes.end());
+                    auto valBytes = Serializer<V>::Serialize(kv.second);
+                    buffer.insert(buffer.end(),
+                                  valBytes.begin(), valBytes.end());
+                }
+                return buffer;
+            }
+
+            static core::Result<std::map<K, V>> Deserialize(
+                const std::uint8_t *data,
+                std::size_t size)
+            {
+                auto result = DeserializeAt(data, size);
+                if (!result.HasValue())
+                {
+                    return core::Result<std::map<K, V>>::FromError(
+                        result.Error());
+                }
+                return core::Result<std::map<K, V>>::FromValue(
+                    std::move(result).Value().first);
+            }
+
+            static core::Result<std::pair<std::map<K, V>, std::size_t>>
+            DeserializeAt(
+                const std::uint8_t *data,
+                std::size_t maxSize)
+            {
+                if (maxSize < sizeof(std::uint32_t))
+                {
+                    return core::Result<std::pair<std::map<K, V>, std::size_t>>::
+                        FromError(MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                }
+
+                std::uint32_t count;
+                std::memcpy(&count, data, sizeof(count));
+                std::size_t offset = sizeof(count);
+                std::map<K, V> result;
+
+                for (std::uint32_t i = 0; i < count; ++i)
+                {
+                    if (offset > maxSize)
+                    {
+                        return core::Result<std::pair<std::map<K, V>, std::size_t>>::
+                            FromError(MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                    }
+                    auto keyResult = Serializer<K>::DeserializeAt(
+                        data + offset, maxSize - offset);
+                    if (!keyResult.HasValue())
+                    {
+                        return core::Result<std::pair<std::map<K, V>, std::size_t>>::
+                            FromError(keyResult.Error());
+                    }
+                    offset += keyResult.Value().second;
+
+                    auto valResult = Serializer<V>::DeserializeAt(
+                        data + offset, maxSize - offset);
+                    if (!valResult.HasValue())
+                    {
+                        return core::Result<std::pair<std::map<K, V>, std::size_t>>::
+                            FromError(valResult.Error());
+                    }
+                    offset += valResult.Value().second;
+
+                    result.emplace(
+                        std::move(keyResult).Value().first,
+                        std::move(valResult).Value().first);
+                }
+
+                return core::Result<std::pair<std::map<K, V>, std::size_t>>::
+                    FromValue(std::make_pair(std::move(result), offset));
             }
         };
     } // namespace com

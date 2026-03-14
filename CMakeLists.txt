@@ -494,6 +494,7 @@ add_library(
   ${source_ara_core_dir}/instance_specifier.cpp
   ${source_ara_core_dir}/initialization.h
   ${source_ara_core_dir}/initialization.cpp
+  ${source_ara_core_dir}/scale_linear_and_round.h
 )
 
 add_library(
@@ -551,6 +552,8 @@ add_library(
   ${source_ara_com_secoc_dir}/secoc_pdu.cpp
   ${source_ara_com_secoc_dir}/secoc_key_manager.h
   ${source_ara_com_secoc_dir}/secoc_key_manager.cpp
+  ${source_ara_com_secoc_dir}/secoc_pdu_collective.h
+  ${source_ara_com_secoc_dir}/secoc_pdu_collective.cpp
   ${source_ara_com_cg_dir}/communication_group_client.h
   ${source_ara_com_cg_dir}/communication_group_server.h
   ${source_ara_com_e2e_dir}/profile01.h
@@ -566,6 +569,8 @@ add_library(
   ${source_ara_com_e2e_dir}/profile11.h
   ${source_ara_com_e2e_dir}/profile11.cpp
   ${source_ara_com_e2e_dir}/e2e_event.h
+  ${source_ara_com_e2e_dir}/e2e_state_machine.h
+  ${source_ara_com_e2e_dir}/e2e_state_machine.cpp
   ${source_ara_com_helper_dir}/payload_helper.h
   ${source_ara_com_helper_dir}/payload_helper.cpp
   ${source_ara_com_helper_dir}/ipv4_address.h
@@ -686,6 +691,12 @@ add_library(
   ${source_ara_sm_dir}/power_mode.h
   ${source_ara_sm_dir}/function_group_state_machine.h
   ${source_ara_sm_dir}/function_group_state_machine.cpp
+  ${source_ara_sm_dir}/power_mode_manager.h
+  ${source_ara_sm_dir}/power_mode_manager.cpp
+  ${source_ara_sm_dir}/recovery_handler.h
+  ${source_ara_sm_dir}/recovery_handler.cpp
+  ${source_ara_sm_dir}/update_request_handler.h
+  ${source_ara_sm_dir}/update_request_handler.cpp
 )
 
 add_library(
@@ -721,6 +732,7 @@ add_library(
   ${source_ara_exec_helper_dir}/process_watchdog.cpp
   ${source_ara_exec_dir}/execution_manager.h
   ${source_ara_exec_dir}/execution_manager.cpp
+  ${source_ara_exec_dir}/startup_config.h
 )
 
 add_library(
@@ -774,6 +786,8 @@ add_library(
   ${source_ara_diag_debouncing_dir}/counter_based_debouncer.cpp
   ${source_ara_diag_debouncing_dir}/timer_based_debouncer.h
   ${source_ara_diag_debouncing_dir}/timer_based_debouncer.cpp
+  ${source_ara_diag_dir}/event_memory.h
+  ${source_ara_diag_dir}/event_memory.cpp
 )
 
 add_library(
@@ -804,6 +818,7 @@ add_library(
   ${source_ara_phm_supervisors_dir}/deadline_supervision.cpp
   ${source_ara_phm_supervisors_dir}/global_supervision.h
   ${source_ara_phm_supervisors_dir}/global_supervision.cpp
+  ${source_ara_phm_dir}/supervision_status.h
 )
 
 add_library(
@@ -839,6 +854,18 @@ add_library(
   ${source_ara_crypto_dir}/ecdsa_provider.cpp
   ${source_ara_crypto_dir}/x509_provider.h
   ${source_ara_crypto_dir}/x509_provider.cpp
+  ${source_ara_crypto_dir}/hash_function_ctx.h
+  ${source_ara_crypto_dir}/hash_function_ctx.cpp
+  ${source_ara_crypto_dir}/mac_function_ctx.h
+  ${source_ara_crypto_dir}/mac_function_ctx.cpp
+  ${source_ara_crypto_dir}/ecdh_provider.h
+  ${source_ara_crypto_dir}/ecdh_provider.cpp
+  ${source_ara_crypto_dir}/symmetric_block_cipher_ctx.h
+  ${source_ara_crypto_dir}/symmetric_block_cipher_ctx.cpp
+  ${source_ara_crypto_dir}/signer_private_ctx.h
+  ${source_ara_crypto_dir}/signer_private_ctx.cpp
+  ${source_ara_crypto_dir}/verifier_public_ctx.h
+  ${source_ara_crypto_dir}/verifier_public_ctx.cpp
 )
 
 add_library(
@@ -859,6 +886,12 @@ add_library(
   ${source_ara_iam_dir}/abac_policy_engine.cpp
   ${source_ara_iam_dir}/policy_signer.h
   ${source_ara_iam_dir}/policy_signer.cpp
+  ${source_ara_iam_dir}/identity_manager.h
+  ${source_ara_iam_dir}/identity_manager.cpp
+  ${source_ara_iam_dir}/audit_trail.h
+  ${source_ara_iam_dir}/audit_trail.cpp
+  ${source_ara_iam_dir}/capability_manager.h
+  ${source_ara_iam_dir}/capability_manager.cpp
 )
 
 add_library(
@@ -874,6 +907,8 @@ add_library(
   ${source_ara_tsync_dir}/ntp_time_base_provider.cpp
   ${source_ara_tsync_dir}/time_sync_server.h
   ${source_ara_tsync_dir}/time_sync_server.cpp
+  ${source_ara_tsync_dir}/time_base_status.h
+  ${source_ara_tsync_dir}/time_base_status.cpp
 )
 
 add_library(
@@ -888,6 +923,7 @@ add_library(
   ${source_ara_ucm_dir}/update_history.cpp
   ${source_ara_ucm_dir}/dependency_checker.h
   ${source_ara_ucm_dir}/dependency_checker.cpp
+  ${source_ara_ucm_dir}/sw_cluster.h
 )
 
 add_library(

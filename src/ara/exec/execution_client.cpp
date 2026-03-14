@@ -195,6 +195,17 @@ namespace ara
             }
         }
 
+        std::string ExecutionClient::GetProcessName() const noexcept
+        {
+            return mInstanceSpecifier.ToString();
+        }
+
+        std::string ExecutionClient::GetFunctionGroup() const noexcept
+        {
+            // In a full platform, this comes from the execution manifest.
+            return std::string{};
+        }
+
         ExecutionClient::~ExecutionClient()
         {
             std::map<uint16_t, std::shared_ptr<PendingRequest>> _pendingRequests;

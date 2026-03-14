@@ -26,7 +26,8 @@ namespace ara
             kServiceDiscovery = 1, ///< Application shall discover its service server
             kInit = 2,             ///< Application shall intialize itself
             kRun = 3,              ///< Application shall perform its normal operation
-            kTerminate = 4         ///< Application shall terminate itself
+            kTerminate = 4,        ///< Application shall terminate itself
+            kWait = 5              ///< No work available; application should wait (SWS_EM_02003)
         };
 
         /// @brief Class that utilizes a client to have deterministic behaviour
@@ -111,6 +112,10 @@ namespace ara
             /// @brief Get the next comming activation time
             /// @returns Time that WaitForActivation returns ActivationReturnType::kRun at a new cycle
             core::Result<TimeStamp> GetNextActivationTime();
+
+            /// @brief SWS standard-named alias for WaitForActivation (SWS_EM_02001).
+            /// @returns Value that controls the caller's internal lifecycle
+            core::Result<ActivationReturnType> WaitForNextActivation();
         };
     }
 }

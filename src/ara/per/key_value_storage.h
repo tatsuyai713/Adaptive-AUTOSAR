@@ -136,6 +136,14 @@ namespace ara
             /// @brief Get number of pending (uncommitted) changes since last sync.
             std::size_t GetPendingChangeCount() const noexcept;
 
+            /// @brief Get the total byte size of all stored key-value pairs (SWS_PER_00409).
+            /// @returns Total byte footprint of committed data.
+            std::size_t GetCurrentStorageSize() const noexcept;
+
+            /// @brief Get the storage quota for this KVS instance (SWS_PER_00408).
+            /// @returns Maximum allowed storage size (0 = no quota configured).
+            std::uint64_t GetStorageQuota() const noexcept;
+
             // ----------------------------------------------------------------
             // Persistence operations
             // ----------------------------------------------------------------

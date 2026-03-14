@@ -68,5 +68,11 @@ namespace ara
         {
             return mInstance;
         }
+
+        bool NetworkHandle::GetNetworkState() const noexcept
+        {
+            std::lock_guard<std::mutex> _lock{mMutex};
+            return mCurrentMode == ComMode::kFull;
+        }
     }
 }

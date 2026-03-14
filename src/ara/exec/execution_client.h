@@ -80,6 +80,14 @@ namespace ara
             /// @returns Void Result if the state reporting was successful, otherwise a Result containing the occurred error
             ara::core::Result<void> ReportExecutionState(
                 ExecutionState state) const;
+
+            /// @brief Get the process name from the execution manifest (SWS_EM_02030).
+            /// @returns The process name string.
+            std::string GetProcessName() const noexcept;
+
+            /// @brief Get the function group this process belongs to (SWS_EM_02031).
+            /// @returns The function group name string.
+            std::string GetFunctionGroup() const noexcept;
         };
     }
 }

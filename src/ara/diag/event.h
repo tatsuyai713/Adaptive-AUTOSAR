@@ -107,6 +107,10 @@ namespace ara
             /// @returns No error
             ara::core::Result<void> SetDTCNumber(uint32_t dtcNumber);
 
+            /// @brief Get the unique event identifier (SWS_Diag_00501).
+            /// @returns The instance specifier string for this event
+            const core::InstanceSpecifier &GetEventId() const noexcept;
+
             /// @brief Get the event debounding state
             /// @returns Event current debouncing state
             ara::core::Result<DebouncingState> GetDebouncingStatus();

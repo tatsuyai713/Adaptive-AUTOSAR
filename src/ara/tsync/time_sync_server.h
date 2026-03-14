@@ -118,6 +118,14 @@ namespace ara
             /// @brief Set the provider poll interval (milliseconds, min 10).
             void SetPollIntervalMs(uint32_t ms) noexcept;
 
+            /// @brief Callback type for time correction notifications (SWS_TS_00300).
+            using CorrectionCallback = std::function<void(
+                std::chrono::nanoseconds correctionAmount,
+                std::chrono::system_clock::time_point correctedTime)>;
+
+            /// @brief Register a callback invoked when clock correction is applied (SWS_TS_00300).
+            void SetCorrectionCallback(CorrectionCallback cb);
+
         private:
             SynchronizedTimeBaseProvider &mProvider;
             TimeSyncServerConfig mConfig;
@@ -133,6 +141,7 @@ namespace ara
             std::atomic<bool> mProviderAvailable{false};
 
             uint32_t mConsecutiveFailures{0};
+            CorrectionCallback mCorrectionCallback;
 
             void pollLoop();
             void distributeToConsumers(

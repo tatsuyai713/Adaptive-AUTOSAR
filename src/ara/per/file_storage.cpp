@@ -259,5 +259,34 @@ namespace ara
 
             return core::Result<uint64_t>::FromValue(totalSize);
         }
+
+        core::Result<FileInfo> FileStorage::GetFileInfo(
+            const std::string &fileName) const
+        {
+            std::string fullPath = GetFullPath(fileName);
+            struct stat st;
+            if (::stat(fullPath.c_str(), &st) != 0)
+            {
+                return core::Result<FileInfo>::FromError(
+                    MakeErrorCode(PerErrc::kKeyNotFound));
+            }
+
+            FileInfo info;
+            info.fileName = fileName;
+            info.size = static_cast<std::uint64_t>(st.st_size);
+            info.creationTime = std::chrono::system_clock::from_time_t(st.st_ctime);
+            info.modificationTime = std::chrono::system_clock::from_time_t(st.st_mtime);
+            info.accessTime = std::chrono::system_clock::from_time_t(st.st_atime);
+            info.isReadOnly = ((st.st_mode & S_IWUSR) == 0);
+
+            return core::Result<FileInfo>::FromValue(std::move(info));
+        }
+
+        core::Result<uint64_t> FileStorage::GetCurrentFileStorageQuota() const
+        {
+            // In a full platform, quota is read from the ARXML manifest.
+            // For this educational implementation, return 0 (no quota configured).
+            return core::Result<uint64_t>::FromValue(0);
+        }
     }
 }

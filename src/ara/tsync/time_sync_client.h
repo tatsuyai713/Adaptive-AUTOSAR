@@ -12,6 +12,7 @@
 #include <mutex>
 #include "../core/result.h"
 #include "./tsync_error_domain.h"
+#include "./time_base_status.h"
 
 namespace ara
 {
@@ -157,6 +158,20 @@ namespace ara
 
             /// @brief Remove the sync quality change notifier.
             void ClearQualityChangeNotifier() noexcept;
+
+            /// @brief Get detailed time base status (SWS_TS_00100).
+            /// @returns Current TimeBaseStatusType for this client.
+            TimeBaseStatusType GetTimeBaseStatus() const noexcept;
+
+            /// @brief Callback type for time leap notifications (SWS_TS_00110).
+            using TimeLeapCallback = std::function<void(std::chrono::nanoseconds leapAmount)>;
+
+            /// @brief Register a callback invoked when a time leap is detected (SWS_TS_00110).
+            void SetTimeLeapCallback(TimeLeapCallback callback) noexcept;
+
+            /// @brief Get leap second information (SWS_TS_00201).
+            /// @returns Current leap second info if available.
+            core::Result<LeapSecondInfo> GetLeapSecondInfo() const;
         };
     }
 }
