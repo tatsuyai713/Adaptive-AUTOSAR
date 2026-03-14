@@ -41,13 +41,19 @@ int main()
     // ── Create in-process binding pairs ──────────────────────────────────────
 
     // Notifier: skeleton sends field update events to the proxy.
-    auto [proxyEvtBind, skelEvtBind] = sample::MakeEventPair();
+    auto evtPair = sample::MakeEventPair();
+    auto proxyEvtBind = std::move(evtPair.first);
+    auto skelEvtBind  = std::move(evtPair.second);
 
     // Get method channel: proxy calls GET → skeleton returns current value.
-    auto [proxyGetBind, skelGetBind] = sample::MakeMethodPair();
+    auto getPair = sample::MakeMethodPair();
+    auto proxyGetBind = std::move(getPair.first);
+    auto skelGetBind  = std::move(getPair.second);
 
     // Set method channel: proxy sends new value → skeleton validates and stores.
-    auto [proxySetBind, skelSetBind] = sample::MakeMethodPair();
+    auto setPair = sample::MakeMethodPair();
+    auto proxySetBind = std::move(setPair.first);
+    auto skelSetBind  = std::move(setPair.second);
 
     // ── Skeleton field ────────────────────────────────────────────────────────
 

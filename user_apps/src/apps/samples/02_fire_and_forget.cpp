@@ -29,7 +29,9 @@ int main()
 
     // ── Setup: create one shared channel ─────────────────────────────────────
 
-    auto [proxyBind, skelBind] = sample::MakeMethodPair();
+    auto methodPair = sample::MakeMethodPair();
+    auto proxyBind = std::move(methodPair.first);
+    auto skelBind  = std::move(methodPair.second);
 
     // ── Skeleton side: register a void handler ────────────────────────────────
     //

@@ -49,7 +49,9 @@ int main()
 
     // ── Create connected binding pair ─────────────────────────────────────────
 
-    auto [proxyBind, skelBind] = sample::MakeEventPair();
+    auto eventPair = sample::MakeEventPair();
+    auto proxyBind = std::move(eventPair.first);
+    auto skelBind  = std::move(eventPair.second);
 
     SkeletonEvent<VehicleStatus> skeletonEvent{std::move(skelBind)};
     ProxyEvent<VehicleStatus> proxyEvent{std::move(proxyBind)};
