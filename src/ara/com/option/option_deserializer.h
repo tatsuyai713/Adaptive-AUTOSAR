@@ -5,6 +5,7 @@
 #ifndef OPTION_DESERIALIZER_H
 #define OPTION_DESERIALIZER_H
 
+#include "./configuration_option.h"
 #include "./ipv4_endpoint_option.h"
 #include "./ipv6_endpoint_option.h"
 #include "./loadbalancing_option.h"

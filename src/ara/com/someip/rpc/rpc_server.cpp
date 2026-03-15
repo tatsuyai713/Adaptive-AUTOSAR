@@ -29,7 +29,8 @@ namespace ara
                 SomeIpReturnCode RpcServer::validate(
                     const SomeIpRpcMessage &request) const
                 {
-                    if (request.MessageType() != SomeIpMessageType::Request)
+                    if (request.MessageType() != SomeIpMessageType::Request &&
+                        request.MessageType() != SomeIpMessageType::RequestNoReturn)
                     {
                         return SomeIpReturnCode::eWrongMessageType;
                     }

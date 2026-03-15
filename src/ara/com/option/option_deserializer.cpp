@@ -14,14 +14,18 @@ namespace ara
                 const std::vector<uint8_t> &payload,
                 std::size_t &offset)
             {
-                // Apply the option length field offset
-                offset += 2;
+                // Read the option length field
+                uint16_t _optionLength = helper::ExtractShort(payload, offset);
 
                 auto _type = static_cast<OptionType>(payload.at(offset++));
                 auto _discardable = static_cast<bool>(payload.at(offset++));
 
                 switch (_type)
                 {
+                case OptionType::Configuration:
+                    return ConfigurationOption::Deserialize(
+                        payload, offset, _discardable, _optionLength);
+
                 case OptionType::IPv4Endpoint:
                 case OptionType::IPv4Multicast:
                 case OptionType::IPv4SdEndpoint:

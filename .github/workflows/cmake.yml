@@ -63,6 +63,8 @@ jobs:
           -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
 
     - name: Build
+      env:
+        LD_LIBRARY_PATH: /opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib
       run: |
         set -euxo pipefail
         cmake --build "${GITHUB_WORKSPACE}/build" --config "${BUILD_TYPE}" -j"$(nproc)"

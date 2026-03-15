@@ -545,10 +545,18 @@ add_library(
   ${source_ara_com_dds_dir}/dds_pubsub.h
   ${source_ara_com_dds_dir}/cyclonedds_pubsub.h
   ${source_ara_com_dds_dir}/dds_qos_config.h
+  ${source_ara_com_dds_dir}/dds_participant_factory.h
+  ${source_ara_com_dds_dir}/dds_participant_factory.cpp
+  ${source_ara_com_dds_dir}/dds_status_condition.h
+  ${source_ara_com_dds_dir}/dds_content_filter.h
   ${source_ara_com_zerocopy_dir}/zero_copy.h
   ${source_ara_com_zerocopy_dir}/zero_copy_binding.h
   ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.h
   ${source_ara_com_zerocopy_dir}/iceoryx_zerocopy.cpp
+  ${source_ara_com_zerocopy_dir}/zerocopy_config.h
+  ${source_ara_com_zerocopy_dir}/zerocopy_service_discovery.h
+  ${source_ara_com_zerocopy_dir}/zerocopy_service_discovery.cpp
+  ${source_ara_com_zerocopy_dir}/port_introspection.h
   ${source_ara_com_secoc_dir}/secoc_error_domain.h
   ${source_ara_com_secoc_dir}/freshness_manager.h
   ${source_ara_com_secoc_dir}/freshness_manager.cpp
@@ -610,10 +618,17 @@ add_library(
   ${source_ara_com_option_dir}/loadbalancing_option.cpp
   ${source_ara_com_option_dir}/option_deserializer.h
   ${source_ara_com_option_dir}/option_deserializer.cpp
+  ${source_ara_com_option_dir}/configuration_option.h
+  ${source_ara_com_option_dir}/configuration_option.cpp
   ${source_ara_com_someip_dir}/someip_message.h
   ${source_ara_com_someip_dir}/someip_message.cpp
   ${source_ara_com_someip_dir}/someip_tp.h
   ${source_ara_com_someip_dir}/someip_tp.cpp
+  ${source_ara_com_someip_dir}/magic_cookie.h
+  ${source_ara_com_someip_dir}/tp_reassembly_manager.h
+  ${source_ara_com_someip_dir}/tp_reassembly_manager.cpp
+  ${source_ara_com_someip_dir}/session_handler.h
+  ${source_ara_com_someip_dir}/session_handler.cpp
   ${source_ara_com_someip_dir}/vsomeip_application.h
   ${source_ara_com_someip_dir}/vsomeip_application.cpp
   ${source_ara_com_someip_rpc_dir}/someip_rpc_message.h
@@ -1770,10 +1785,12 @@ if(build_tests)
     ${test_ara_com_option_dir}/ipv4_endpoint_option_test.cpp
     ${test_ara_com_option_dir}/ipv6_endpoint_option_test.cpp
     ${test_ara_com_option_dir}/loadbalancing_option_test.cpp
+    ${test_ara_com_option_dir}/configuration_option_test.cpp
     ${test_ara_com_someip_pubsub_dir}/someip_pubsub_test.cpp
     ${test_ara_com_someip_pubsub_fsm_dir}/pubsub_state_test.cpp
     ${test_ara_com_someip_dir}/someip_message_test.cpp
     ${test_ara_com_someip_dir}/someip_tp_test.cpp
+    ${test_ara_com_someip_dir}/someip_extended_test.cpp
     ${test_ara_com_someip_rpc_dir}/someip_rpc_message_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_server_test.cpp
     ${test_ara_com_someip_rpc_dir}/rpc_client_test.cpp
@@ -1869,7 +1886,9 @@ if(build_tests)
     ${test_ara_com_dir}/event_extended_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_binding_test.cpp
+    ${test_ara_com_zerocopy_dir}/zerocopy_extended_test.cpp
     ${test_ara_com_dds_dir}/dds_binding_test.cpp
+    ${test_ara_com_dds_dir}/dds_extended_test.cpp
     ${test_ara_com_e2e_dir}/e2e_event_test.cpp
     ${test_ara_exec_dir}/signal_handler_test.cpp
     ${test_ara_exec_dir}/process_watchdog_test.cpp
@@ -1968,6 +1987,7 @@ if(build_tests)
   gtest_discover_tests(
     ara_unit_test
     TEST_LIST ara_unit_test_cases
+    DISCOVERY_MODE PRE_TEST
     PROPERTIES
     ${ara_unit_test_properties}
   )
