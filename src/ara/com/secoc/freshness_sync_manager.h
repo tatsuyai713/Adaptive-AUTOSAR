@@ -79,6 +79,10 @@ namespace ara
             {
                 uint64_t LocalCounter{0};
                 uint64_t RemoteCounter{0};
+                /// @brief True once the first counter has been accepted.
+                /// @details The initial RemoteCounter=0 is an uninitialized sentinel;
+                ///          replay protection only activates after the first acceptance.
+                bool HasAny{false};
                 FreshnessSyncState State{FreshnessSyncState::kUnsynchronized};
                 ReplayWindowConfig Window;
                 std::chrono::steady_clock::time_point LastSyncTime;
@@ -112,8 +116,9 @@ namespace ara
                 core::Result<uint64_t> IncrementCounter(PduId pdu);
 
                 /// @brief Verify a received freshness value against the window.
+                /// @details Advances RemoteCounter on acceptance to prevent replay.
                 FreshnessVerifyResult VerifyFreshness(
-                    PduId pdu, uint64_t receivedCounter) const;
+                    PduId pdu, uint64_t receivedCounter);
 
                 /// @brief Process an incoming sync response from a remote ECU.
                 core::Result<void> ProcessSyncResponse(
@@ -125,6 +130,13 @@ namespace ara
 
                 /// @brief Set the callback for sending sync messages.
                 void SetSyncMessageSender(SyncMessageSender sender);
+
+                /// @brief Build and immediately dispatch a sync request for a PDU.
+                /// @details Creates a FreshnessSyncRequest and passes it to the registered
+                ///          SyncMessageSender callback if one is set.
+                /// @returns The request on success, or an error if the PDU is unknown or
+                ///          no sender has been registered.
+                core::Result<FreshnessSyncRequest> SendSyncRequest(PduId pdu);
 
                 /// @brief Get the current sync state for a PDU.
                 FreshnessSyncState GetSyncState(PduId pdu) const;

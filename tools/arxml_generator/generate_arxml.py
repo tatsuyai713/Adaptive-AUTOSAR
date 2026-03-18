@@ -42,6 +42,8 @@ class GenerationSummary:
     dds_binding_count: int = 0
     zerocopy_binding_count: int = 0
     custom_element_count: int = 0
+    service_interface_count: int = 0
+    execution_manifest_count: int = 0
 
 
 @dataclass
@@ -383,6 +385,180 @@ def _build_connector(
     gen_ctx.summary.connector_count += 1
 
 
+def _build_service_interface(
+    elements_parent: ET.Element,
+    si: Dict[str, Any],
+    context: str,
+    gen_ctx: GenerationContext,
+) -> None:
+    """Build a SERVICE-INTERFACE element (events, methods, fields)."""
+    si_map = _as_mapping(si, context)
+    _warn_unknown_keys(
+        si_map,
+        {"short_name", "events", "methods", "fields"},
+        context,
+        gen_ctx,
+    )
+
+    elem = ET.SubElement(elements_parent, "SERVICE-INTERFACE")
+    _add_text(elem, "SHORT-NAME", _as_str(si_map.get("short_name"), f"{context}.short_name"))
+
+    events = _listify(si_map.get("events"), f"{context}.events")
+    if events:
+        events_parent = ET.SubElement(elem, "EVENTS")
+        for idx, event in enumerate(events):
+            event_ctx = f"{context}.events[{idx}]"
+            event_map = _as_mapping(event, event_ctx)
+            _warn_unknown_keys(event_map, {"short_name", "type_ref"}, event_ctx, gen_ctx)
+            proto = ET.SubElement(events_parent, "VARIABLE-DATA-PROTOTYPE")
+            _add_text(proto, "SHORT-NAME", _as_str(event_map.get("short_name"), f"{event_ctx}.short_name"))
+            type_ref = event_map.get("type_ref")
+            if type_ref is not None:
+                tr = ET.SubElement(proto, "TYPE-TREF")
+                tr.set("DEST", "IMPLEMENTATION-DATA-TYPE")
+                tr.text = _as_str(type_ref, f"{event_ctx}.type_ref")
+
+    methods = _listify(si_map.get("methods"), f"{context}.methods")
+    if methods:
+        methods_parent = ET.SubElement(elem, "METHODS")
+        for idx, method in enumerate(methods):
+            method_ctx = f"{context}.methods[{idx}]"
+            method_map = _as_mapping(method, method_ctx)
+            _warn_unknown_keys(
+                method_map,
+                {"short_name", "arguments", "fire_and_forget"},
+                method_ctx,
+                gen_ctx,
+            )
+            op = ET.SubElement(methods_parent, "CLIENT-SERVER-OPERATION")
+            _add_text(op, "SHORT-NAME", _as_str(method_map.get("short_name"), f"{method_ctx}.short_name"))
+            if _parse_bool(method_map.get("fire_and_forget"), f"{method_ctx}.fire_and_forget"):
+                _add_text(op, "FIRE-AND-FORGET", "true")
+            arguments = _listify(method_map.get("arguments"), f"{method_ctx}.arguments")
+            if arguments:
+                args_parent = ET.SubElement(op, "ARGUMENTS")
+                for aidx, arg in enumerate(arguments):
+                    arg_ctx = f"{method_ctx}.arguments[{aidx}]"
+                    arg_map = _as_mapping(arg, arg_ctx)
+                    _warn_unknown_keys(arg_map, {"short_name", "direction", "type_ref"}, arg_ctx, gen_ctx)
+                    arg_elem = ET.SubElement(args_parent, "ARGUMENT-DATA-PROTOTYPE")
+                    _add_text(arg_elem, "SHORT-NAME", _as_str(arg_map.get("short_name"), f"{arg_ctx}.short_name"))
+                    direction = _as_str(arg_map.get("direction", "in"), f"{arg_ctx}.direction").upper()
+                    _add_text(arg_elem, "DIRECTION", direction)
+                    type_ref = arg_map.get("type_ref")
+                    if type_ref is not None:
+                        tr = ET.SubElement(arg_elem, "TYPE-TREF")
+                        tr.set("DEST", "IMPLEMENTATION-DATA-TYPE")
+                        tr.text = _as_str(type_ref, f"{arg_ctx}.type_ref")
+
+    fields = _listify(si_map.get("fields"), f"{context}.fields")
+    if fields:
+        fields_parent = ET.SubElement(elem, "FIELDS")
+        for idx, field in enumerate(fields):
+            field_ctx = f"{context}.fields[{idx}]"
+            field_map = _as_mapping(field, field_ctx)
+            _warn_unknown_keys(
+                field_map,
+                {"short_name", "has_getter", "has_setter", "has_notifier", "type_ref"},
+                field_ctx,
+                gen_ctx,
+            )
+            field_elem = ET.SubElement(fields_parent, "FIELD")
+            _add_text(field_elem, "SHORT-NAME", _as_str(field_map.get("short_name"), f"{field_ctx}.short_name"))
+            _add_text(field_elem, "HAS-GETTER", str(_parse_bool(field_map.get("has_getter", True), f"{field_ctx}.has_getter")).lower())
+            _add_text(field_elem, "HAS-SETTER", str(_parse_bool(field_map.get("has_setter", False), f"{field_ctx}.has_setter")).lower())
+            _add_text(field_elem, "HAS-NOTIFIER", str(_parse_bool(field_map.get("has_notifier", False), f"{field_ctx}.has_notifier")).lower())
+            type_ref = field_map.get("type_ref")
+            if type_ref is not None:
+                tr = ET.SubElement(field_elem, "TYPE-TREF")
+                tr.set("DEST", "IMPLEMENTATION-DATA-TYPE")
+                tr.text = _as_str(type_ref, f"{field_ctx}.type_ref")
+
+    gen_ctx.summary.service_interface_count += 1
+
+
+def _build_execution_manifest(
+    elements_parent: ET.Element,
+    em: Dict[str, Any],
+    context: str,
+    gen_ctx: GenerationContext,
+) -> None:
+    """Build an EXECUTION-MANIFEST element (process-to-machine mappings, startup configs)."""
+    em_map = _as_mapping(em, context)
+    _warn_unknown_keys(
+        em_map,
+        {"short_name", "process_to_machine_mappings", "startup_configs"},
+        context,
+        gen_ctx,
+    )
+
+    elem = ET.SubElement(elements_parent, "EXECUTION-MANIFEST")
+    _add_text(elem, "SHORT-NAME", _as_str(em_map.get("short_name"), f"{context}.short_name"))
+
+    mappings = _listify(em_map.get("process_to_machine_mappings"), f"{context}.process_to_machine_mappings")
+    if mappings:
+        mappings_parent = ET.SubElement(elem, "PROCESS-TO-MACHINE-MAPPINGS")
+        for idx, mapping in enumerate(mappings):
+            mapping_ctx = f"{context}.process_to_machine_mappings[{idx}]"
+            mapping_map = _as_mapping(mapping, mapping_ctx)
+            _warn_unknown_keys(
+                mapping_map,
+                {"short_name", "process_ref", "machine_ref"},
+                mapping_ctx,
+                gen_ctx,
+            )
+            m_elem = ET.SubElement(mappings_parent, "PROCESS-TO-MACHINE-MAPPING")
+            _add_text(
+                m_elem,
+                "SHORT-NAME",
+                _as_str(mapping_map.get("short_name", f"Mapping{idx + 1}"), f"{mapping_ctx}.short_name"),
+            )
+            process_ref = mapping_map.get("process_ref")
+            if process_ref is not None:
+                pr = ET.SubElement(m_elem, "PROCESS-REF")
+                pr.set("DEST", "PROCESS")
+                pr.text = _as_str(process_ref, f"{mapping_ctx}.process_ref")
+            machine_ref = mapping_map.get("machine_ref")
+            if machine_ref is not None:
+                mr = ET.SubElement(m_elem, "MACHINE-REF")
+                mr.set("DEST", "MACHINE")
+                mr.text = _as_str(machine_ref, f"{mapping_ctx}.machine_ref")
+
+    startup_configs = _listify(em_map.get("startup_configs"), f"{context}.startup_configs")
+    if startup_configs:
+        configs_parent = ET.SubElement(elem, "STARTUP-CONFIGS")
+        for idx, config in enumerate(startup_configs):
+            config_ctx = f"{context}.startup_configs[{idx}]"
+            config_map = _as_mapping(config, config_ctx)
+            _warn_unknown_keys(config_map, {"short_name", "arguments"}, config_ctx, gen_ctx)
+            cfg_elem = ET.SubElement(configs_parent, "STARTUP-CONFIG")
+            _add_text(
+                cfg_elem,
+                "SHORT-NAME",
+                _as_str(config_map.get("short_name", f"StartupConfig{idx + 1}"), f"{config_ctx}.short_name"),
+            )
+            arguments = _listify(config_map.get("arguments"), f"{config_ctx}.arguments")
+            if arguments:
+                args_parent = ET.SubElement(cfg_elem, "ARGUMENTS")
+                for aidx, arg in enumerate(arguments):
+                    arg_ctx = f"{config_ctx}.arguments[{aidx}]"
+                    arg_map = _as_mapping(arg, arg_ctx)
+                    _warn_unknown_keys(arg_map, {"short_name", "value"}, arg_ctx, gen_ctx)
+                    arg_elem = ET.SubElement(args_parent, "STARTUP-ARGUMENT")
+                    _add_text(
+                        arg_elem,
+                        "SHORT-NAME",
+                        _as_str(arg_map.get("short_name", f"Arg{aidx + 1}"), f"{arg_ctx}.short_name"),
+                    )
+                    _add_text(
+                        arg_elem,
+                        "VALUE",
+                        _as_str(arg_map.get("value", ""), f"{arg_ctx}.value", required=False),
+                    )
+
+    gen_ctx.summary.execution_manifest_count += 1
+
+
 def _build_provided_someip_instance(
     elements_parent: ET.Element,
     instance: Dict[str, Any],
@@ -400,6 +576,7 @@ def _build_provided_someip_instance(
             "minor_version",
             "service_instance_id",
             "event_groups",
+            "methods",
             "sd_server",
         },
         context,
@@ -416,6 +593,21 @@ def _build_provided_someip_instance(
     version = ET.SubElement(deployment, "SERVICE-INTERFACE-VERSION")
     _add_text(version, "MAJOR-VERSION", major)
     _add_text(version, "MINOR-VERSION", minor)
+
+    methods = _listify(instance_map.get("methods"), f"{context}.methods")
+    if methods:
+        method_deployments = ET.SubElement(deployment, "METHOD-DEPLOYMENTS")
+        for idx, method in enumerate(methods):
+            method_ctx = f"{context}.methods[{idx}]"
+            method_map = _as_mapping(method, method_ctx)
+            _warn_unknown_keys(method_map, {"short_name", "method_id"}, method_ctx, gen_ctx)
+            md_elem = ET.SubElement(method_deployments, "SOMEIP-METHOD-DEPLOYMENT")
+            _add_text(md_elem, "SHORT-NAME", _as_str(method_map.get("short_name"), f"{method_ctx}.short_name"))
+            _add_text(
+                md_elem,
+                "METHOD-ID",
+                _parse_int(method_map.get("method_id"), f"{method_ctx}.method_id", 0, 0xFFFF),
+            )
 
     event_groups = _listify(instance_map.get("event_groups"), f"{context}.event_groups")
     if event_groups:
@@ -797,6 +989,10 @@ def _build_package(ar_packages: ET.Element, package: Dict[str, Any], package_ind
             "zerocopy",
             "provided_someip_service_instances",
             "required_someip_service_instances",
+            "service_interfaces",
+            "service_interface",
+            "execution_manifests",
+            "execution_manifest",
             "custom_elements",
             "runtime",
         },
@@ -851,6 +1047,20 @@ def _build_package(ar_packages: ET.Element, package: Dict[str, Any], package_ind
 
     for idx, instance in enumerate(required_instances):
         _build_required_someip_instance(elements, instance, f"{package_ctx}.required_someip_service_instances[{idx}]", gen_ctx)
+
+    service_interfaces = []
+    service_interfaces.extend(_listify(package_map.get("service_interfaces"), f"{package_ctx}.service_interfaces"))
+    service_interfaces.extend(_listify(package_map.get("service_interface"), f"{package_ctx}.service_interface"))
+
+    for idx, si in enumerate(service_interfaces):
+        _build_service_interface(elements, si, f"{package_ctx}.service_interfaces[{idx}]", gen_ctx)
+
+    execution_manifests = []
+    execution_manifests.extend(_listify(package_map.get("execution_manifests"), f"{package_ctx}.execution_manifests"))
+    execution_manifests.extend(_listify(package_map.get("execution_manifest"), f"{package_ctx}.execution_manifest"))
+
+    for idx, em in enumerate(execution_manifests):
+        _build_execution_manifest(elements, em, f"{package_ctx}.execution_manifests[{idx}]", gen_ctx)
 
     custom_elements = _listify(package_map.get("custom_elements"), f"{package_ctx}.custom_elements")
 
@@ -1006,6 +1216,8 @@ def _print_summary(gen_ctx: GenerationContext, output_target: str) -> None:
         f"  required SOME/IP instances: {summary.required_someip_count}",
         f"  DDS bindings: {summary.dds_binding_count}",
         f"  ZeroCopy bindings: {summary.zerocopy_binding_count}",
+        f"  service interfaces: {summary.service_interface_count}",
+        f"  execution manifests: {summary.execution_manifest_count}",
         f"  custom elements: {summary.custom_element_count}",
     ]
 

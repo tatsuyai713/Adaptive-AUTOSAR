@@ -114,6 +114,11 @@ namespace ara
             std::atomic<uint64_t> mSentCount{0};
             std::atomic<uint64_t> mReceivedCount{0};
 
+            /// @brief Unix domain socket fd for inter-process bus simulation (-1 = disabled).
+            int mSocket{-1};
+            /// @brief Bound socket path (empty if socket not created).
+            std::string mSocketPath;
+
             void CycleLoop();
         };
     }

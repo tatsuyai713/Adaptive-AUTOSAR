@@ -5,7 +5,6 @@
 #include "./campaign_manager.h"
 
 #include <algorithm>
-#include "../crypto/crypto_provider.h"
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -240,21 +239,8 @@ namespace ara
                 }
             }
 
-            // Use SHA-256 + ECDSA/RSA via OpenSSL EVP
-            auto digestResult = ara::crypto::ComputeDigest(
-                std::vector<std::uint8_t>(manifestData.begin(),
-                                          manifestData.end()),
-                ara::crypto::DigestAlgorithm::kSha256);
-
-            if (!digestResult.HasValue())
-            {
-                return core::Result<std::vector<std::uint8_t>>::FromError(
-                    MakeErrorCode(UcmErrc::kInvalidArgument));
-            }
-
-            (void)digestResult; // digest computed above was for illustration
-
-            // Sign the manifest data using ECDSA/RSA with the provided private key.
+            // Sign the manifest data using ECDSA/RSA + SHA-256 via OpenSSL EVP.
+            // EVP_DigestSign handles the SHA-256 hashing internally.
             BIO *bio = ::BIO_new_mem_buf(
                 privateKeyPem.data(),
                 static_cast<int>(privateKeyPem.size()));

@@ -63,7 +63,7 @@ namespace ara
             }
 
             FreshnessVerifyResult FreshnessSyncManager::VerifyFreshness(
-                PduId pdu, uint64_t receivedCounter) const
+                PduId pdu, uint64_t receivedCounter)
             {
                 std::lock_guard<std::mutex> lock(mMutex);
                 auto it = mEntries.find(pdu);
@@ -72,10 +72,10 @@ namespace ara
                     return FreshnessVerifyResult::kRejectedUnknownPdu;
                 }
 
-                const auto &entry = it->second;
+                auto &entry = it->second;
                 uint64_t localVal = entry.RemoteCounter;
 
-                // Check age
+                // Check age since last sync
                 auto elapsed = std::chrono::steady_clock::now() - entry.LastSyncTime;
                 auto elapsedMs = std::chrono::duration_cast<
                     std::chrono::milliseconds>(elapsed).count();
@@ -85,24 +85,32 @@ namespace ara
                     return FreshnessVerifyResult::kRejectedExpired;
                 }
 
-                // Check backward tolerance
-                if (receivedCounter < localVal)
+                // Replay / backward tolerance check.
+                // The initial RemoteCounter=0 is a sentinel (no counter accepted yet);
+                // replay protection only activates once HasAny is true to avoid
+                // incorrectly rejecting a legitimate first counter of value 0.
+                if (entry.HasAny && receivedCounter <= localVal)
                 {
                     uint64_t diff = localVal - receivedCounter;
-                    if (diff > entry.Window.BackwardTolerance)
+                    // diff==0 is an exact replay; diff>BackwardTolerance is too far back.
+                    if (diff == 0 || diff > entry.Window.BackwardTolerance)
                     {
                         return FreshnessVerifyResult::kRejectedTooOld;
                     }
                 }
 
                 // Check forward tolerance
-                if (receivedCounter > localVal)
+                if (receivedCounter > localVal + entry.Window.ForwardTolerance)
                 {
-                    uint64_t diff = receivedCounter - localVal;
-                    if (diff > entry.Window.ForwardTolerance)
-                    {
-                        return FreshnessVerifyResult::kRejectedTooNew;
-                    }
+                    return FreshnessVerifyResult::kRejectedTooNew;
+                }
+
+                // Advance the window to prevent replay: RemoteCounter tracks the
+                // highest accepted counter from the remote ECU (SecOC monotonic window).
+                entry.HasAny = true;
+                if (receivedCounter > entry.RemoteCounter)
+                {
+                    entry.RemoteCounter = receivedCounter;
                 }
 
                 return FreshnessVerifyResult::kAccepted;
@@ -153,6 +161,38 @@ namespace ara
                 mSender = std::move(sender);
             }
 
+            core::Result<FreshnessSyncRequest>
+            FreshnessSyncManager::SendSyncRequest(PduId pdu)
+            {
+                SyncMessageSender sender;
+                FreshnessSyncRequest req;
+
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    auto it = mEntries.find(pdu);
+                    if (it == mEntries.end())
+                    {
+                        return core::Result<FreshnessSyncRequest>::FromError(
+                            MakeErrorCode(SecOcErrc::kFreshnessCounterFailed));
+                    }
+                    if (!mSender)
+                    {
+                        return core::Result<FreshnessSyncRequest>::FromError(
+                            MakeErrorCode(SecOcErrc::kConfigurationError));
+                    }
+                    req.Pdu = pdu;
+                    req.CounterValue = it->second.LocalCounter;
+                    req.TimestampMs = NowMs();
+                    req.SourceEcuId = mLocalEcuId;
+                    sender = mSender;
+                }
+
+                // Invoke the sender outside the lock to avoid potential deadlocks
+                // if the callback re-enters the manager.
+                sender(req);
+                return core::Result<FreshnessSyncRequest>::FromValue(req);
+            }
+
             FreshnessSyncState FreshnessSyncManager::GetSyncState(
                 PduId pdu) const
             {
@@ -181,13 +221,22 @@ namespace ara
 
                 for (const auto &kv : mEntries)
                 {
-                    // PduId (2 bytes) + LocalCounter (8 bytes)
+                    // Per-entry layout (19 bytes):
+                    //   2B  PduId
+                    //   8B  LocalCounter
+                    //   8B  RemoteCounter   (for replay protection across restarts)
+                    //   1B  HasAny flag
+                    static constexpr size_t cEntryBytes = 19u;
                     size_t pos = result.size();
-                    result.resize(pos + 10);
+                    result.resize(pos + cEntryBytes);
                     uint16_t pdu = kv.first;
-                    uint64_t counter = kv.second.LocalCounter;
-                    std::memcpy(result.data() + pos, &pdu, 2);
-                    std::memcpy(result.data() + pos + 2, &counter, 8);
+                    uint64_t local = kv.second.LocalCounter;
+                    uint64_t remote = kv.second.RemoteCounter;
+                    uint8_t hasAny = kv.second.HasAny ? 1u : 0u;
+                    std::memcpy(result.data() + pos,      &pdu,    2);
+                    std::memcpy(result.data() + pos + 2,  &local,  8);
+                    std::memcpy(result.data() + pos + 10, &remote, 8);
+                    result[pos + 18] = hasAny;
                 }
 
                 return result;
@@ -201,33 +250,37 @@ namespace ara
                 if (data.size() < 4)
                 {
                     return core::Result<void>::FromError(
-                        MakeErrorCode(
-                            SecOcErrc::kInvalidPayloadLength));
+                        MakeErrorCode(SecOcErrc::kInvalidPayloadLength));
                 }
 
                 uint32_t count = 0;
                 std::memcpy(&count, data.data(), 4);
 
-                if (data.size() < 4 + count * 10)
+                static constexpr size_t cEntryBytes = 19u;
+                if (data.size() < 4 + static_cast<size_t>(count) * cEntryBytes)
                 {
                     return core::Result<void>::FromError(
-                        MakeErrorCode(
-                            SecOcErrc::kInvalidPayloadLength));
+                        MakeErrorCode(SecOcErrc::kInvalidPayloadLength));
                 }
 
                 size_t offset = 4;
                 for (uint32_t i = 0; i < count; ++i)
                 {
                     uint16_t pdu = 0;
-                    uint64_t counter = 0;
-                    std::memcpy(&pdu, data.data() + offset, 2);
-                    std::memcpy(&counter, data.data() + offset + 2, 8);
-                    offset += 10;
+                    uint64_t local = 0;
+                    uint64_t remote = 0;
+                    std::memcpy(&pdu,    data.data() + offset,      2);
+                    std::memcpy(&local,  data.data() + offset + 2,  8);
+                    std::memcpy(&remote, data.data() + offset + 10, 8);
+                    uint8_t hasAny = data[offset + 18];
+                    offset += cEntryBytes;
 
                     auto it = mEntries.find(pdu);
                     if (it != mEntries.end())
                     {
-                        it->second.LocalCounter = counter;
+                        it->second.LocalCounter  = local;
+                        it->second.RemoteCounter = remote;
+                        it->second.HasAny        = (hasAny != 0u);
                     }
                 }
 

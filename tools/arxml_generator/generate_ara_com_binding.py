@@ -25,6 +25,10 @@ class SomeIpBinding:
     minor_version: int
     event_group_id: int
     event_id: int
+    # Sequence of (method_short_name: str, method_id: int) tuples
+    method_bindings: tuple = ()
+    # Sequence of (event_group_short_name: str, event_id: int, group_id: int) for additional events
+    extra_events: tuple = ()
 
 
 def _find_child_text(element: ET.Element, tag_name: str) -> str:
@@ -57,6 +61,17 @@ def _to_header_guard(output_path: pathlib.Path) -> str:
     for token in ("/", "\\", ".", "-", " ", ":"):
         guard = guard.replace(token, "_")
     return f"GEN_{guard}_INCLUDED"
+
+
+def _to_pascal_case(name: str) -> str:
+    """Convert snake_case or kebab-case identifier to PascalCase.
+
+    Names that contain no separators (already PascalCase/camelCase) are returned
+    with just the first character uppercased to preserve the original casing.
+    """
+    if "_" not in name and "-" not in name:
+        return name[0].upper() + name[1:] if name else name
+    return "".join(word.capitalize() for word in name.replace("-", "_").split("_"))
 
 
 def _open_namespace(namespace_value: str) -> str:
@@ -149,6 +164,32 @@ def extract_someip_binding(
     )
     event_id = _parse_int(_find_child_text(selected_event_group, "EVENT-ID"), "EVENT-ID")
 
+    # Collect additional event groups (all groups except the primary one).
+    extra_events_list = []
+    for eg in provided_event_groups:
+        eg_name = _find_optional_child_text(eg, "SHORT-NAME") or ""
+        if eg_name == event_group_short_name:
+            continue
+        eg_event_id_text = _find_optional_child_text(eg, "EVENT-ID")
+        eg_group_id_text = _find_optional_child_text(eg, "EVENT-GROUP-ID")
+        if eg_event_id_text and eg_group_id_text:
+            extra_events_list.append((
+                eg_name,
+                _parse_int(eg_event_id_text, "EVENT-ID"),
+                _parse_int(eg_group_id_text, "EVENT-GROUP-ID"),
+            ))
+
+    # Collect SOME/IP method deployments (METHOD-DEPLOYMENTS/SOMEIP-METHOD-DEPLOYMENT).
+    method_elements = selected_instance.findall(
+        "./{*}SERVICE-INTERFACE-DEPLOYMENT/{*}METHOD-DEPLOYMENTS/{*}SOMEIP-METHOD-DEPLOYMENT"
+    )
+    method_bindings_list = []
+    for me in method_elements:
+        me_name = _find_optional_child_text(me, "SHORT-NAME") or ""
+        me_id_text = _find_optional_child_text(me, "METHOD-ID")
+        if me_name and me_id_text:
+            method_bindings_list.append((me_name, _parse_int(me_id_text, "METHOD-ID")))
+
     return SomeIpBinding(
         provided_service_short_name=instance_short_name,
         provided_event_group_short_name=event_group_short_name,
@@ -158,6 +199,8 @@ def extract_someip_binding(
         minor_version=minor_version,
         event_group_id=event_group_id,
         event_id=event_id,
+        method_bindings=tuple(method_bindings_list),
+        extra_events=tuple(extra_events_list),
     )
 
 
@@ -169,6 +212,23 @@ def generate_header_text(
     guard = _to_header_guard(output_path)
     open_ns = _open_namespace(namespace_value)
     close_ns = _close_namespace(namespace_value)
+
+    # Build dynamic method ID constants.
+    method_constants = ""
+    for method_name, method_id in binding.method_bindings:
+        pascal = _to_pascal_case(method_name)
+        method_constants += f"constexpr std::uint16_t kMethod{pascal}Id{{0x{method_id:04X}U}};\n"
+
+    # Build extra event group constants (for services with multiple event groups).
+    extra_event_constants = ""
+    for event_name, ev_id, grp_id in binding.extra_events:
+        pascal = _to_pascal_case(event_name)
+        extra_event_constants += f"constexpr std::uint16_t k{pascal}EventId{{0x{ev_id:04X}U}};\n"
+        extra_event_constants += f"constexpr std::uint16_t k{pascal}EventGroupId{{0x{grp_id:04X}U}};\n"
+
+    optional_section = ""
+    if method_constants or extra_event_constants:
+        optional_section = method_constants + extra_event_constants
 
     return f"""#ifndef {guard}
 #define {guard}
@@ -185,7 +245,7 @@ constexpr std::uint8_t kMajorVersion{{0x{binding.major_version:02X}U}};
 constexpr std::uint8_t kMinorVersion{{0x{binding.minor_version:02X}U}};
 constexpr const char *kProvidedServiceShortName{{"{binding.provided_service_short_name}"}};
 constexpr const char *kProvidedEventGroupShortName{{"{binding.provided_event_group_short_name}"}};
-{close_ns}
+{optional_section}{close_ns}
 
 #endif
 """
@@ -250,12 +310,16 @@ def main() -> int:
         sys.stderr.write(f"[ara-com-codegen] error: {exc}\n")
         return 1
 
+    method_count = len(binding.method_bindings)
+    extra_event_count = len(binding.extra_events)
     print(
         "[ara-com-codegen] generated"
         f" service=0x{binding.service_interface_id:04X}"
         f" instance=0x{binding.service_instance_id:04X}"
         f" event=0x{binding.event_id:04X}"
         f" event_group=0x{binding.event_group_id:04X}"
+        f" methods={method_count}"
+        f" extra_events={extra_event_count}"
         f" -> {output_path}"
     )
     return 0

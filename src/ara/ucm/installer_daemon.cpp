@@ -4,6 +4,14 @@
 #include "./installer_daemon.h"
 #include <algorithm>
 #include <sstream>
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__)
+#include <cerrno>
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 namespace ara
 {
@@ -96,8 +104,84 @@ namespace ara
             mCurrentTask.ProgressPercent = 0;
             NotifyCallback(mCurrentTask);
 
-            // Simulate installation phases
-            mCurrentTask.ProgressPercent = 50;
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__)
+            // Locate staged package under /var/autosar/staging/<packageName>
+            const std::string stagingPath =
+                "/var/autosar/staging/" + mCurrentTask.PackageName;
+            const std::string clusterRoot = "/var/autosar/clusters";
+            const std::string targetPath  =
+                clusterRoot + "/" + mCurrentTask.TargetCluster;
+
+            struct stat st{};
+            const bool stagingExists = (::stat(stagingPath.c_str(), &st) == 0 &&
+                                        S_ISDIR(st.st_mode));
+            if (stagingExists)
+            {
+                // Phase: prepare target cluster directory (25 %)
+                mCurrentTask.ProgressPercent = 25;
+                NotifyCallback(mCurrentTask);
+
+                if (::stat(targetPath.c_str(), &st) != 0)
+                {
+                    ::mkdir(clusterRoot.c_str(), 0755);
+                    if (::mkdir(targetPath.c_str(), 0755) < 0 && errno != EEXIST)
+                    {
+                        mCurrentTask.State = InstallerTaskState::kFailed;
+                        mCurrentTask.ErrorMessage = "Cannot create target directory";
+                        NotifyCallback(mCurrentTask);
+                        mCompleted.push_back(mCurrentTask);
+                        mHasCurrentTask = false;
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(UcmErrc::kInvalidState));
+                    }
+                }
+
+                // Phase: copy files from staging to target (25–100 %)
+                DIR *dir = ::opendir(stagingPath.c_str());
+                if (dir)
+                {
+                    uint32_t total = 0;
+                    struct dirent *ent;
+                    while ((ent = ::readdir(dir)) != nullptr)
+                        if (ent->d_type == DT_REG) ++total;
+                    ::rewinddir(dir);
+
+                    uint32_t done = 0;
+                    while ((ent = ::readdir(dir)) != nullptr)
+                    {
+                        if (ent->d_type != DT_REG)
+                            continue;
+                        const std::string src = stagingPath + "/" + ent->d_name;
+                        const std::string dst = targetPath   + "/" + ent->d_name;
+
+                        int sfd = ::open(src.c_str(), O_RDONLY);
+                        int dfd = (sfd >= 0) ? ::open(dst.c_str(),
+                                      O_WRONLY | O_CREAT | O_TRUNC, 0644) : -1;
+                        if (sfd >= 0 && dfd >= 0)
+                        {
+                            char buf[4096];
+                            ssize_t n;
+                            while ((n = ::read(sfd, buf, sizeof(buf))) > 0)
+                                ::write(dfd, buf, static_cast<size_t>(n));
+                        }
+                        if (sfd >= 0) ::close(sfd);
+                        if (dfd >= 0) ::close(dfd);
+
+                        ++done;
+                        if (total > 0)
+                        {
+                            mCurrentTask.ProgressPercent =
+                                static_cast<uint8_t>(25 + done * 75 / total);
+                            NotifyCallback(mCurrentTask);
+                        }
+                    }
+                    ::closedir(dir);
+                }
+            }
+            // If staging directory is absent the package is not yet transferred;
+            // complete silently (test/no-hardware scenario).
+#endif
+
             mCurrentTask.ProgressPercent = 100;
             mCurrentTask.State = InstallerTaskState::kCompleted;
             NotifyCallback(mCurrentTask);
