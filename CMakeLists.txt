@@ -498,6 +498,8 @@ add_library(
   ${source_ara_core_dir}/initialization.h
   ${source_ara_core_dir}/initialization.cpp
   ${source_ara_core_dir}/scale_linear_and_round.h
+  ${source_ara_core_dir}/abort_handler.h
+  ${source_ara_core_dir}/abort_handler.cpp
 )
 
 add_library(
@@ -523,6 +525,8 @@ add_library(
   ${source_ara_log_sink_dir}/dlt_log_sink.cpp
   ${source_ara_log_sink_dir}/async_log_sink.h
   ${source_ara_log_sink_dir}/async_log_sink.cpp
+  ${source_ara_log_dir}/formatter_plugin.h
+  ${source_ara_log_dir}/formatter_plugin.cpp
 )
 
 add_library(
@@ -566,6 +570,8 @@ add_library(
   ${source_ara_com_secoc_dir}/secoc_key_manager.cpp
   ${source_ara_com_secoc_dir}/secoc_pdu_collective.h
   ${source_ara_com_secoc_dir}/secoc_pdu_collective.cpp
+  ${source_ara_com_secoc_dir}/freshness_sync_manager.h
+  ${source_ara_com_secoc_dir}/freshness_sync_manager.cpp
   ${source_ara_com_cg_dir}/communication_group_client.h
   ${source_ara_com_cg_dir}/communication_group_server.h
   ${source_ara_com_e2e_dir}/profile01.h
@@ -736,6 +742,8 @@ add_library(
   ${source_ara_sm_dir}/recovery_handler.cpp
   ${source_ara_sm_dir}/update_request_handler.h
   ${source_ara_sm_dir}/update_request_handler.cpp
+  ${source_ara_sm_dir}/network_interface_controller.h
+  ${source_ara_sm_dir}/network_interface_controller.cpp
 )
 
 add_library(
@@ -772,6 +780,10 @@ add_library(
   ${source_ara_exec_dir}/execution_manager.h
   ${source_ara_exec_dir}/execution_manager.cpp
   ${source_ara_exec_dir}/startup_config.h
+  ${source_ara_exec_dir}/manifest_loader.h
+  ${source_ara_exec_dir}/manifest_loader.cpp
+  ${source_ara_exec_dir}/cluster_monitor.h
+  ${source_ara_exec_dir}/cluster_monitor.cpp
 )
 
 add_library(
@@ -827,6 +839,8 @@ add_library(
   ${source_ara_diag_debouncing_dir}/timer_based_debouncer.cpp
   ${source_ara_diag_dir}/event_memory.h
   ${source_ara_diag_dir}/event_memory.cpp
+  ${source_ara_diag_dir}/diagnostic_manager.h
+  ${source_ara_diag_dir}/diagnostic_manager.cpp
 )
 
 add_library(
@@ -858,6 +872,8 @@ add_library(
   ${source_ara_phm_supervisors_dir}/global_supervision.h
   ${source_ara_phm_supervisors_dir}/global_supervision.cpp
   ${source_ara_phm_dir}/supervision_status.h
+  ${source_ara_phm_dir}/phm_orchestrator.h
+  ${source_ara_phm_dir}/phm_orchestrator.cpp
 )
 
 add_library(
@@ -875,6 +891,8 @@ add_library(
   ${source_ara_per_dir}/file_storage.cpp
   ${source_ara_per_dir}/persistency.h
   ${source_ara_per_dir}/persistency.cpp
+  ${source_ara_per_dir}/redundant_storage.h
+  ${source_ara_per_dir}/redundant_storage.cpp
 )
 
 add_library(
@@ -905,6 +923,8 @@ add_library(
   ${source_ara_crypto_dir}/signer_private_ctx.cpp
   ${source_ara_crypto_dir}/verifier_public_ctx.h
   ${source_ara_crypto_dir}/verifier_public_ctx.cpp
+  ${source_ara_crypto_dir}/hsm_provider.h
+  ${source_ara_crypto_dir}/hsm_provider.cpp
 )
 
 add_library(
@@ -931,6 +951,8 @@ add_library(
   ${source_ara_iam_dir}/audit_trail.cpp
   ${source_ara_iam_dir}/capability_manager.h
   ${source_ara_iam_dir}/capability_manager.cpp
+  ${source_ara_iam_dir}/biometric_interface.h
+  ${source_ara_iam_dir}/biometric_interface.cpp
 )
 
 add_library(
@@ -948,6 +970,8 @@ add_library(
   ${source_ara_tsync_dir}/time_sync_server.cpp
   ${source_ara_tsync_dir}/time_base_status.h
   ${source_ara_tsync_dir}/time_base_status.cpp
+  ${source_ara_tsync_dir}/rate_corrector.h
+  ${source_ara_tsync_dir}/rate_corrector.cpp
 )
 
 add_library(
@@ -963,6 +987,10 @@ add_library(
   ${source_ara_ucm_dir}/dependency_checker.h
   ${source_ara_ucm_dir}/dependency_checker.cpp
   ${source_ara_ucm_dir}/sw_cluster.h
+  ${source_ara_ucm_dir}/secure_boot_manager.h
+  ${source_ara_ucm_dir}/secure_boot_manager.cpp
+  ${source_ara_ucm_dir}/installer_daemon.h
+  ${source_ara_ucm_dir}/installer_daemon.cpp
 )
 
 add_library(
@@ -976,6 +1004,10 @@ add_library(
   ${source_ara_nm_dir}/nm_coordinator.cpp
   ${source_ara_nm_dir}/nm_pdu.h
   ${source_ara_nm_dir}/nm_pdu.cpp
+  ${source_ara_nm_dir}/cantp_nm_adapter.h
+  ${source_ara_nm_dir}/cantp_nm_adapter.cpp
+  ${source_ara_nm_dir}/flexray_nm_adapter.h
+  ${source_ara_nm_dir}/flexray_nm_adapter.cpp
 )
 
 target_link_libraries(
@@ -1927,6 +1959,22 @@ if(build_tests)
     ${test_ara_nm_dir}/nm_coordinator_test.cpp
     ${test_ara_nm_dir}/nm_transport_adapter_test.cpp
     ${test_ara_nm_dir}/nm_pdu_test.cpp
+    ${test_ara_nm_dir}/cantp_nm_adapter_test.cpp
+    ${test_ara_nm_dir}/flexray_nm_adapter_test.cpp
+    ${test_ara_com_secoc_dir}/freshness_sync_manager_test.cpp
+    ${test_ara_ucm_dir}/secure_boot_manager_test.cpp
+    ${test_ara_ucm_dir}/installer_daemon_test.cpp
+    ${test_ara_exec_dir}/manifest_loader_test.cpp
+    ${test_ara_exec_dir}/cluster_monitor_test.cpp
+    ${test_ara_diag_dir}/diagnostic_manager_test.cpp
+    ${test_ara_phm_dir}/phm_orchestrator_test.cpp
+    ${test_ara_sm_dir}/network_interface_controller_test.cpp
+    ${test_ara_iam_dir}/biometric_interface_test.cpp
+    ${test_ara_tsync_dir}/rate_corrector_test.cpp
+    ${test_ara_per_dir}/redundant_storage_test.cpp
+    ${test_ara_crypto_dir}/hsm_provider_test.cpp
+    ${test_ara_core_dir}/abort_handler_test.cpp
+    ${test_ara_log_dir}/formatter_plugin_test.cpp
   )
 
   target_link_libraries(
