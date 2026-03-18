@@ -64,6 +64,13 @@ namespace ara
             /// @brief Stop offering the recovery action
             /// @remark It is safe to call the function, if the action offer has been already stopped.
             void StopOffer() noexcept;
+
+            /// @brief Execute the recovery action (SWS_PHM_01100).
+            /// @details Delegates to RecoveryHandler() with a default-constructed
+            ///          ExecutionErrorEvent and AliveSupervision type. The action
+            ///          must be offered first.
+            /// @returns Void Result on success, error if the action has not been offered.
+            core::Result<void> Execute();
         };
     }
 }

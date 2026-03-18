@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./recovery_action.h"
+#include "./phm_error_domain.h"
 
 namespace ara
 {
@@ -35,6 +36,19 @@ namespace ara
         void RecoveryAction::StopOffer() noexcept
         {
             mOffered = false;
+        }
+
+        core::Result<void> RecoveryAction::Execute()
+        {
+            if (!mOffered)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PhmErrc::kNotOffered));
+            }
+
+            exec::ExecutionErrorEvent defaultEvent{0U, nullptr};
+            RecoveryHandler(defaultEvent, TypeOfSupervision::AliveSupervision);
+            return core::Result<void>::FromValue();
         }
     }
 }

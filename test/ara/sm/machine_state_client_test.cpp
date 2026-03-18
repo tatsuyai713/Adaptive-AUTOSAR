@@ -88,5 +88,39 @@ namespace ara
             auto _result = _client.SetNotifier(nullptr);
             EXPECT_FALSE(_result.HasValue());
         }
+
+        TEST(MachineStateClientTest, SetDiagnosticState)
+        {
+            MachineStateClient _client;
+            ASSERT_TRUE(
+                _client.SetMachineState(MachineState::kDiagnostic).HasValue());
+
+            auto _result = _client.GetMachineState();
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value(), MachineState::kDiagnostic);
+        }
+
+        TEST(MachineStateClientTest, SetUpdateState)
+        {
+            MachineStateClient _client;
+            ASSERT_TRUE(
+                _client.SetMachineState(MachineState::kUpdate).HasValue());
+
+            auto _result = _client.GetMachineState();
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value(), MachineState::kUpdate);
+        }
+
+        TEST(MachineStateClientTest, TransitionFromUpdateToRunning)
+        {
+            MachineStateClient _client;
+            _client.SetMachineState(MachineState::kUpdate);
+            ASSERT_TRUE(
+                _client.SetMachineState(MachineState::kRunning).HasValue());
+
+            auto _result = _client.GetMachineState();
+            ASSERT_TRUE(_result.HasValue());
+            EXPECT_EQ(_result.Value(), MachineState::kRunning);
+        }
     }
 }

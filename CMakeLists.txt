@@ -784,6 +784,8 @@ add_library(
   ${source_ara_exec_dir}/manifest_loader.cpp
   ${source_ara_exec_dir}/cluster_monitor.h
   ${source_ara_exec_dir}/cluster_monitor.cpp
+  ${source_ara_exec_dir}/application_client.h
+  ${source_ara_exec_dir}/application_client.cpp
 )
 
 add_library(
@@ -925,6 +927,9 @@ add_library(
   ${source_ara_crypto_dir}/verifier_public_ctx.cpp
   ${source_ara_crypto_dir}/hsm_provider.h
   ${source_ara_crypto_dir}/hsm_provider.cpp
+  ${source_ara_crypto_dir}/crypto_context.h
+  ${source_ara_crypto_dir}/crypto_service_provider.h
+  ${source_ara_crypto_dir}/crypto_service_provider.cpp
 )
 
 add_library(
@@ -1975,6 +1980,9 @@ if(build_tests)
     ${test_ara_crypto_dir}/hsm_provider_test.cpp
     ${test_ara_core_dir}/abort_handler_test.cpp
     ${test_ara_log_dir}/formatter_plugin_test.cpp
+    ${test_ara_exec_dir}/application_client_test.cpp
+    ${test_ara_crypto_dir}/crypto_service_provider_test.cpp
+    ${test_ara_per_dir}/persistency_registered_ids_test.cpp
   )
 
   target_link_libraries(

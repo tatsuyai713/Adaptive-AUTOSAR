@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/phm/recovery_action.h"
+#include "../../../src/ara/phm/phm_error_domain.h"
 
 namespace ara
 {
@@ -14,11 +15,15 @@ namespace ara
             {
             }
 
+            int mRecoveryHandlerCallCount{0};
+            TypeOfSupervision mLastSupervision{TypeOfSupervision::DeadlineSupervision};
+
             void RecoveryHandler(
                 const exec::ExecutionErrorEvent &executionError,
                 TypeOfSupervision supervision) override
             {
-                // Empty body
+                ++mRecoveryHandlerCallCount;
+                mLastSupervision = supervision;
             }
         };
 
@@ -39,6 +44,30 @@ namespace ara
             Offer();
             StopOffer();
             EXPECT_FALSE(IsOffered());
+        }
+
+        TEST_F(RecoveryActionTest, ExecuteFailsWhenNotOffered)
+        {
+            auto _result = Execute();
+            EXPECT_FALSE(_result.HasValue());
+        }
+
+        TEST_F(RecoveryActionTest, ExecuteSucceedsWhenOffered)
+        {
+            Offer();
+            auto _result = Execute();
+            EXPECT_TRUE(_result.HasValue());
+            EXPECT_EQ(mRecoveryHandlerCallCount, 1);
+            EXPECT_EQ(mLastSupervision, TypeOfSupervision::AliveSupervision);
+        }
+
+        TEST_F(RecoveryActionTest, ExecuteCallsHandlerMultipleTimes)
+        {
+            Offer();
+            Execute();
+            Execute();
+            Execute();
+            EXPECT_EQ(mRecoveryHandlerCallCount, 3);
         }
     }
 }

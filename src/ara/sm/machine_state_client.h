@@ -19,11 +19,13 @@ namespace ara
         /// @brief Machine lifecycle state.
         enum class MachineState : uint8_t
         {
-            kStartup = 0,  ///< Machine is starting up.
-            kRunning = 1,   ///< Machine is in normal operation.
-            kShutdown = 2,  ///< Machine is shutting down.
-            kRestart = 3,   ///< Machine is restarting.
-            kSuspend = 4    ///< Machine is suspending.
+            kStartup = 0,    ///< Machine is starting up.
+            kRunning = 1,     ///< Machine is in normal operation.
+            kShutdown = 2,    ///< Machine is shutting down.
+            kRestart = 3,     ///< Machine is restarting.
+            kSuspend = 4,     ///< Machine is suspending.
+            kDiagnostic = 5,  ///< Machine is in diagnostic session (SWS_SM_00800).
+            kUpdate = 6       ///< Machine is performing a software update (SWS_SM_00801).
         };
 
         /// @brief Machine lifecycle state management client.

@@ -600,5 +600,82 @@ namespace ara
         {
             sDataTypeFaultHandler = std::move(handler);
         }
+
+        core::Result<std::vector<std::string>> GetRegisteredKvsIds()
+        {
+            std::vector<std::string> ids;
+            DIR *dir = ::opendir(cStorageRoot.c_str());
+            if (dir == nullptr)
+            {
+                // Root doesn't exist yet — no registrations.
+                return core::Result<std::vector<std::string>>::FromValue(
+                    std::move(ids));
+            }
+
+            struct dirent *entry;
+            while ((entry = ::readdir(dir)) != nullptr)
+            {
+                std::string name = entry->d_name;
+                if (name == "." || name == "..")
+                {
+                    continue;
+                }
+
+                const std::string basePath{cStorageRoot + "/" + name};
+                if (!IsDirectory(basePath))
+                {
+                    continue;
+                }
+
+                const std::string kvsFile{
+                    basePath + "/" + cKeyValueStorageFileName};
+                if (PathExists(kvsFile))
+                {
+                    ids.push_back(name);
+                }
+            }
+            ::closedir(dir);
+
+            return core::Result<std::vector<std::string>>::FromValue(
+                std::move(ids));
+        }
+
+        core::Result<std::vector<std::string>> GetRegisteredFileStorageIds()
+        {
+            std::vector<std::string> ids;
+            DIR *dir = ::opendir(cStorageRoot.c_str());
+            if (dir == nullptr)
+            {
+                return core::Result<std::vector<std::string>>::FromValue(
+                    std::move(ids));
+            }
+
+            struct dirent *entry;
+            while ((entry = ::readdir(dir)) != nullptr)
+            {
+                std::string name = entry->d_name;
+                if (name == "." || name == "..")
+                {
+                    continue;
+                }
+
+                const std::string basePath{cStorageRoot + "/" + name};
+                if (!IsDirectory(basePath))
+                {
+                    continue;
+                }
+
+                const std::string filesDir{
+                    basePath + "/" + cFileStorageDirName};
+                if (IsDirectory(filesDir))
+                {
+                    ids.push_back(name);
+                }
+            }
+            ::closedir(dir);
+
+            return core::Result<std::vector<std::string>>::FromValue(
+                std::move(ids));
+        }
     }
 }

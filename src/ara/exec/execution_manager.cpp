@@ -11,6 +11,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#if defined(__QNX__) || !defined(__linux__)
+#include <spawn.h>  // posix_spawn (POSIX, preferred on QNX)
+#endif
+
 namespace ara
 {
     namespace exec
@@ -290,36 +294,54 @@ namespace ara
 
         int ExecutionManager::launchProcess(ManagedProcess &proc)
         {
+            const std::string &cExe{proc.descriptor.executable};
+
+            // Build argv: argv[0] = exe path, then arguments, then nullptr
+            std::vector<const char *> _argv;
+            _argv.push_back(cExe.c_str());
+            for (const auto &_arg : proc.descriptor.arguments)
+            {
+                _argv.push_back(_arg.c_str());
+            }
+            _argv.push_back(nullptr);
+
+#if defined(__QNX__) || !defined(__linux__)
+            // POSIX posix_spawn — preferred on QNX where fork() only copies
+            // the calling thread and may leave mutexes in undefined states.
+            pid_t _pid{-1};
+            posix_spawnattr_t _attr;
+            posix_spawnattr_init(&_attr);
+            posix_spawn_file_actions_t _fileActions;
+            posix_spawn_file_actions_init(&_fileActions);
+
+            const int _rc = ::posix_spawn(
+                &_pid, cExe.c_str(), &_fileActions, &_attr,
+                const_cast<char *const *>(_argv.data()), environ);
+
+            posix_spawn_file_actions_destroy(&_fileActions);
+            posix_spawnattr_destroy(&_attr);
+
+            if (_rc != 0)
+            {
+                return -1;
+            }
+            return static_cast<int>(_pid);
+#else
+            // Linux: traditional fork()/exec() path.
             const pid_t _pid{::fork()};
             if (_pid < 0)
             {
-                // fork() failed
                 return -1;
             }
 
             if (_pid == 0)
             {
-                // Child process
-                const std::string &cExe{proc.descriptor.executable};
-                // Build argv: argv[0] = exe path, then arguments, then nullptr
-                std::vector<const char *> _argv;
-                _argv.push_back(cExe.c_str());
-                for (const auto &_arg : proc.descriptor.arguments)
-                {
-                    _argv.push_back(_arg.c_str());
-                }
-                _argv.push_back(nullptr);
-
-                // Replace child image
-                // NOLINTNEXTLINE: execv is the portable Linux way
                 ::execv(cExe.c_str(), const_cast<char *const *>(_argv.data()));
-
-                // execv() only returns on error
                 ::_exit(1);
             }
 
-            // Parent: return child PID
             return static_cast<int>(_pid);
+#endif
         }
 
         void ExecutionManager::terminateProcess(ManagedProcess &proc)

@@ -3,7 +3,11 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include <thread>
+#if defined(__QNX__)
+#include <sys/neutrino.h>  // ThreadCtl, _NTO_TCTL_RUNMASK
+#else
 #include <sched.h>
+#endif
 #include "./deterministic_client.h"
 #include "./exec_error_domain.h"
 
@@ -171,6 +175,19 @@ namespace ara
                     MakeErrorCode(ExecErrc::kInvalidArguments));
             }
 
+#if defined(__QNX__)
+            // QNX: ThreadCtl with _NTO_TCTL_RUNMASK (simple bitmask)
+            unsigned runmask = 0;
+            for (int core : cpuCores)
+            {
+                if (core >= 0 && core < static_cast<int>(sizeof(unsigned) * 8))
+                {
+                    runmask |= (1U << static_cast<unsigned>(core));
+                }
+            }
+            int rc = ThreadCtl(_NTO_TCTL_RUNMASK, reinterpret_cast<void *>(static_cast<uintptr_t>(runmask)));
+#else
+            // Linux: sched_setaffinity with cpu_set_t
             cpu_set_t cpuSet;
             CPU_ZERO(&cpuSet);
             for (int core : cpuCores)
@@ -180,8 +197,8 @@ namespace ara
                     CPU_SET(core, &cpuSet);
                 }
             }
-
             int rc = sched_setaffinity(0, sizeof(cpuSet), &cpuSet);
+#endif
             if (rc != 0)
             {
                 return core::Result<void>::FromError(

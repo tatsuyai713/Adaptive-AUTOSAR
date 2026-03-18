@@ -11,6 +11,12 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#elif defined(__QNX__)
+#include <fcntl.h>
+#include <devctl.h>
+#include <unistd.h>
+// QNX CAN resource-manager interface — /dev/can<N>/...
+// struct can_msg equivalent is used through a portable shim below.
 #endif
 
 #include <algorithm>
@@ -82,6 +88,37 @@ namespace ara
                 return core::Result<void>::FromError(
                     MakeErrorCode(NmErrc::kTransportError));
             }
+#elif defined(__QNX__)
+            if (mTxFd < 0)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kNotStarted));
+            }
+
+            // QNX CAN: write a raw frame via the resource-manager tx path.
+            // Frame format: [4B CAN-ID (network order)] [1B DLC] [0-8B data]
+            const uint32_t canId = it->second;
+            const uint8_t dlc = static_cast<uint8_t>(
+                std::min(pduData.size(), static_cast<size_t>(mConfig.MaxPayload)));
+            uint8_t buf[4 + 1 + 8];
+            std::memset(buf, 0, sizeof(buf));
+            buf[0] = static_cast<uint8_t>((canId >> 24) & 0xFF);
+            buf[1] = static_cast<uint8_t>((canId >> 16) & 0xFF);
+            buf[2] = static_cast<uint8_t>((canId >>  8) & 0xFF);
+            buf[3] = static_cast<uint8_t>((canId      ) & 0xFF);
+            if (mConfig.UseExtendedId)
+            {
+                buf[0] |= 0x80; // EFF flag in MSB
+            }
+            buf[4] = dlc;
+            std::memcpy(buf + 5, pduData.data(), dlc);
+
+            ssize_t nbytes = ::write(mTxFd, buf, 5 + dlc);
+            if (nbytes < 0)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kTransportError));
+            }
 #endif
 
             ++mSentCount;
@@ -137,6 +174,26 @@ namespace ara
                 return core::Result<void>::FromError(
                     MakeErrorCode(NmErrc::kTransportError));
             }
+#elif defined(__QNX__)
+            // QNX CAN: open the resource-manager rx path for the interface.
+            // Convention: /dev/can<N>/rx0 for receive, /dev/can<N>/tx0 for transmit.
+            std::string rxPath = "/dev/" + mConfig.InterfaceName + "/rx0";
+            mSocket = ::open(rxPath.c_str(), O_RDONLY | O_NONBLOCK);
+            if (mSocket < 0)
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kTransportError));
+            }
+
+            std::string txPath = "/dev/" + mConfig.InterfaceName + "/tx0";
+            mTxFd = ::open(txPath.c_str(), O_WRONLY);
+            if (mTxFd < 0)
+            {
+                ::close(mSocket);
+                mSocket = -1;
+                return core::Result<void>::FromError(
+                    MakeErrorCode(NmErrc::kTransportError));
+            }
 #endif
 
             mRunning.store(true);
@@ -152,6 +209,17 @@ namespace ara
                 mReceiveThread.join();
             }
 #ifdef __linux__
+            if (mSocket >= 0)
+            {
+                ::close(mSocket);
+                mSocket = -1;
+            }
+#elif defined(__QNX__)
+            if (mTxFd >= 0)
+            {
+                ::close(mTxFd);
+                mTxFd = -1;
+            }
             if (mSocket >= 0)
             {
                 ::close(mSocket);
@@ -201,6 +269,46 @@ namespace ara
 
                 std::vector<uint8_t> data(frame.data,
                                           frame.data + frame.can_dlc);
+                ++mReceivedCount;
+
+                NmPduHandler handler;
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    handler = mHandler;
+                }
+                if (handler)
+                {
+                    handler(channel, data);
+                }
+            }
+#elif defined(__QNX__)
+            // QNX CAN resource-manager receive loop.
+            // Read raw frames from /dev/can<N>/rx0.
+            // Frame wire format: [4B CAN-ID (network order)] [1B DLC] [0-8B data]
+            while (mRunning.load())
+            {
+                uint8_t buf[4 + 1 + 8];
+                ssize_t n = ::read(mSocket, buf, sizeof(buf));
+                if (n < 5)
+                {
+                    // No frame available or short read — wait and retry
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(mConfig.PollTimeoutMs));
+                    continue;
+                }
+
+                uint32_t rawId = (static_cast<uint32_t>(buf[0] & 0x7F) << 24)
+                               | (static_cast<uint32_t>(buf[1]) << 16)
+                               | (static_cast<uint32_t>(buf[2]) <<  8)
+                               |  static_cast<uint32_t>(buf[3]);
+                uint8_t dlc = buf[4];
+                if (dlc > 8) dlc = 8;
+
+                std::string channel = FindChannelByCanId(rawId);
+                if (channel.empty())
+                    continue;
+
+                std::vector<uint8_t> data(buf + 5, buf + 5 + dlc);
                 ++mReceivedCount;
 
                 NmPduHandler handler;

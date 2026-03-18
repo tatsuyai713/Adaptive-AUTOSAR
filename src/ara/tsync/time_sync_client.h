@@ -127,6 +127,13 @@ namespace ara
             /// @returns Drift estimate, or `kNotSynchronized` if less than two samples.
             core::Result<std::chrono::nanoseconds> GetDriftEstimate() const;
 
+            /// @brief Get the rate deviation of the local clock (SWS_TS_00330).
+            /// @details Returns the same value as GetDriftEstimate(), expressed as
+            ///          nanoseconds per second. Positive means the local clock
+            ///          runs faster than the reference.
+            /// @returns Rate deviation, or `kNotSynchronized` if unavailable.
+            core::Result<std::chrono::nanoseconds> GetRateDeviation() const;
+
             /// @brief Get synchronization state.
             SynchronizationState GetState() const noexcept;
 

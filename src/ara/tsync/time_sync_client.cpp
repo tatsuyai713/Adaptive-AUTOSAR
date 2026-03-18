@@ -277,6 +277,11 @@ namespace ara
             return core::Result<std::chrono::nanoseconds>::FromValue(mDriftNsPerSec);
         }
 
+        core::Result<std::chrono::nanoseconds> TimeSyncClient::GetRateDeviation() const
+        {
+            return GetDriftEstimate();
+        }
+
         SynchronizationState TimeSyncClient::GetState() const noexcept
         {
             std::lock_guard<std::mutex> lock{mMutex};

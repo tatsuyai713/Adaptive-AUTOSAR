@@ -1,6 +1,7 @@
 /// @file src/ara/nm/cantp_nm_adapter.h
 /// @brief CAN-TP NM transport adapter for bus-level NM PDU exchange.
-/// @details Implements NmTransportAdapter over Linux SocketCAN (PF_CAN).
+/// @details Implements NmTransportAdapter over Linux SocketCAN (PF_CAN)
+///          or QNX CAN resource-manager (/dev/can<N>/).
 
 #ifndef CANTP_NM_ADAPTER_H
 #define CANTP_NM_ADAPTER_H
@@ -36,7 +37,8 @@ namespace ara
             uint32_t PollTimeoutMs{50};
         };
 
-        /// @brief CAN-TP NM transport adapter using Linux SocketCAN.
+        /// @brief CAN-TP NM transport adapter using SocketCAN (Linux) or
+    ///        CAN resource-manager (QNX).
         /// @details Sends/receives NM PDUs as CAN frames. Each channel maps to
         ///          a CAN arbitration ID offset from BaseCanId.
         class CanTpNmAdapter : public NmTransportAdapter
@@ -70,6 +72,9 @@ namespace ara
         private:
             CanNmConfig mConfig;
             int mSocket{-1};
+#if defined(__QNX__)
+            int mTxFd{-1}; ///< QNX: separate fd for /dev/can<N>/tx0
+#endif
             std::atomic<bool> mRunning{false};
             std::thread mReceiveThread;
             mutable std::mutex mMutex;

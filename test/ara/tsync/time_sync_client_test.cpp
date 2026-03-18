@@ -125,5 +125,31 @@ namespace ara
             auto _result = _client.SetStateChangeNotifier(nullptr);
             EXPECT_FALSE(_result.HasValue());
         }
+
+        TEST(TimeSyncClientTest, GetRateDeviationFailsBeforeSynchronization)
+        {
+            TimeSyncClient _client;
+            auto _result = _client.GetRateDeviation();
+            EXPECT_FALSE(_result.HasValue());
+        }
+
+        TEST(TimeSyncClientTest, GetRateDeviationMatchesDriftEstimate)
+        {
+            TimeSyncClient _client;
+            const auto _steady1 = std::chrono::steady_clock::now();
+            const auto _global1 = std::chrono::system_clock::now();
+            _client.UpdateReferenceTime(_global1, _steady1);
+
+            const auto _steady2 = _steady1 + std::chrono::milliseconds(100);
+            const auto _global2 = _global1 + std::chrono::milliseconds(100);
+            _client.UpdateReferenceTime(_global2, _steady2);
+
+            auto _deviation = _client.GetRateDeviation();
+            auto _drift = _client.GetDriftEstimate();
+
+            ASSERT_TRUE(_deviation.HasValue());
+            ASSERT_TRUE(_drift.HasValue());
+            EXPECT_EQ(_deviation.Value().count(), _drift.Value().count());
+        }
     }
 }

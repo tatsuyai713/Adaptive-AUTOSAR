@@ -11,6 +11,13 @@
 #if defined(__linux__) || defined(__QNX__)
 #include <dirent.h>
 #endif
+#if defined(__QNX__)
+#include <fcntl.h>
+#include <sys/procfs.h>
+#include <devctl.h>
+#include <unistd.h>
+#include <cstring>
+#endif
 
 namespace ara
 {
@@ -253,7 +260,46 @@ namespace ara
                         continue;
                     }
 
-                    // /proc/<pid>/comm contains the process name (up to 15 chars).
+#if defined(__QNX__)
+                    // QNX: /proc/<pid>/as exists; read process name via
+                    // devctl(DCMD_PROC_INFO) on the address-space file.
+                    const std::string asPath{
+                        std::string("/proc/") + entry->d_name + "/as"};
+                    const int asFd = ::open(asPath.c_str(), O_RDONLY);
+                    if (asFd < 0)
+                    {
+                        continue;
+                    }
+                    struct _proc_name
+                    {
+                        short _zero;
+                        short _pathlen;
+                        char  _name[256];
+                    } pname;
+                    std::memset(&pname, 0, sizeof(pname));
+                    pname._pathlen = sizeof(pname._name);
+                    if (::devctl(asFd, DCMD_PROC_MAPDEBUG_BASE, &pname,
+                                 sizeof(pname), nullptr) == EOK)
+                    {
+                        std::string comm{pname._name};
+                        // Strip leading path to get basename
+                        auto pos = comm.rfind('/');
+                        if (pos != std::string::npos)
+                        {
+                            comm = comm.substr(pos + 1);
+                        }
+                        if (comm == processName)
+                        {
+                            found = true;
+                        }
+                    }
+                    ::close(asFd);
+                    if (found)
+                    {
+                        break;
+                    }
+#else
+                    // Linux: /proc/<pid>/comm contains the process name.
                     const std::string commPath{
                         std::string("/proc/") + entry->d_name + "/comm"};
                     std::ifstream commFile{commPath};
@@ -270,6 +316,7 @@ namespace ara
                         found = true;
                         break;
                     }
+#endif
                 }
                 ::closedir(procDir);
 

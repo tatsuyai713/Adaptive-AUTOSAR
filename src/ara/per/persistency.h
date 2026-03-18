@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace ara
 {
@@ -81,6 +82,20 @@ namespace ara
         /// @brief Register a handler for data type / deserialization faults (SWS_PER_00350).
         /// @param handler Callback invoked when a corrupt or incompatible value is detected.
         void RegisterDataTypeFaultHandler(DataTypeFaultHandler handler);
+
+        /// @brief Get all registered key-value storage identifiers (SWS_PER_00337).
+        /// @details Returns the list of InstanceSpecifier strings for which a
+        ///          key-value storage directory currently exists under the
+        ///          persistency root.
+        /// @returns Vector of storage identifier strings.
+        core::Result<std::vector<std::string>> GetRegisteredKvsIds();
+
+        /// @brief Get all registered file storage identifiers (SWS_PER_00338).
+        /// @details Returns the list of InstanceSpecifier strings for which a
+        ///          file storage directory currently exists under the
+        ///          persistency root.
+        /// @returns Vector of storage identifier strings.
+        core::Result<std::vector<std::string>> GetRegisteredFileStorageIds();
     }
 }
 
