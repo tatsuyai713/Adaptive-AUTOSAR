@@ -4,6 +4,9 @@
 
 #include "./rate_corrector.h"
 #include <cmath>
+#if defined(__linux__) || defined(__QNX__)
+#include <sys/timex.h>
+#endif
 
 namespace ara
 {
@@ -47,6 +50,17 @@ namespace ara
                 mConfig.Kd * derivative;
 
             mCorrectionPpb = Clamp(correction, mConfig.MaxCorrectionPpb);
+
+#if defined(__linux__) || defined(__QNX__)
+            // Apply the computed frequency correction to the kernel clock.
+            // Kernel ADJ_FREQUENCY unit: parts-per-million scaled by 2^16.
+            // 1 ppb = 1e-3 ppm, so kernel_freq = ppb * 65536 / 1000.
+            struct timex tx{};
+            tx.modes = ADJ_FREQUENCY;
+            tx.freq = static_cast<long>(mCorrectionPpb * 65.536);
+            ::adjtimex(&tx);
+#endif
+
             return mCorrectionPpb;
         }
 

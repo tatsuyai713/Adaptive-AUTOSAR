@@ -62,8 +62,6 @@ namespace ara
             uint16_t subFunction,
             const std::vector<uint8_t> &payload)
         {
-            (void)payload; // Payload stored by routing layer.
-
             std::lock_guard<std::mutex> lock(mMutex);
             auto svcIt = mServices.find(serviceId);
             if (svcIt == mServices.end())
@@ -77,6 +75,7 @@ namespace ara
             req.RequestId = reqId;
             req.ServiceId = serviceId;
             req.SubFunction = subFunction;
+            req.Payload = payload;
             req.ArrivalTime = std::chrono::steady_clock::now();
             req.ResponsePending = false;
             mPending[reqId] = req;
@@ -111,7 +110,6 @@ namespace ara
         core::Result<void> DiagnosticManager::RejectRequest(
             uint32_t requestId, uint8_t nrc)
         {
-            (void)nrc;
             std::lock_guard<std::mutex> lock(mMutex);
             auto it = mPending.find(requestId);
             if (it == mPending.end())
@@ -124,6 +122,7 @@ namespace ara
             if (svcIt != mServices.end())
             {
                 svcIt->second.NrcCount++;
+                svcIt->second.LastNrc = nrc;
             }
             mPending.erase(it);
             return {};

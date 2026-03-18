@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./logger.h"
+#include <sys/stat.h>
 
 namespace ara
 {
@@ -18,7 +19,21 @@ namespace ara
 
         ClientState Logger::RemoteClientState() const noexcept
         {
-            // For now, no client exists for logging modeled messages.
+            // Check whether a DLT daemon Unix-domain socket is present.
+            // Standard DLT daemon socket paths on Linux/QNX.
+            static const char *const cDltSocketPaths[] = {
+                "/var/run/dlt",
+                "/tmp/dlt",
+                nullptr
+            };
+            for (const char *const *p = cDltSocketPaths; *p != nullptr; ++p)
+            {
+                struct stat st;
+                if (::stat(*p, &st) == 0 && S_ISSOCK(st.st_mode))
+                {
+                    return ClientState::kConnected;
+                }
+            }
             return ClientState::kNotConnected;
         }
 

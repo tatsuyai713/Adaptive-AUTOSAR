@@ -3,7 +3,11 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./hsm_provider.h"
+#include "./crypto_provider.h"
 #include <algorithm>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/rand.h>
 
 namespace ara
 {
@@ -51,13 +55,15 @@ namespace ara
             info.KeySizeBits = AlgorithmKeySize(algorithm);
             mSlots[slotId] = info;
 
-            // Generate simulated key data (deterministic for testing).
+            // Generate cryptographically secure random key material.
             uint32_t keyBytes = info.KeySizeBits / 8;
             std::vector<uint8_t> key(keyBytes);
-            for (uint32_t i = 0; i < keyBytes; ++i)
+            if (::RAND_bytes(key.data(), static_cast<int>(keyBytes)) != 1)
             {
-                key[i] = static_cast<uint8_t>(
-                    (slotId * 31 + i * 17) & 0xFF);
+                // RAND_bytes failed; key slot was already registered, clean up.
+                mSlots.erase(slotId);
+                return core::Result<uint32_t>::FromError(
+                    MakeErrorCode(CryptoErrc::kEntropySourceFailure));
             }
             mKeyData[slotId] = std::move(key);
 
@@ -127,13 +133,55 @@ namespace ara
                 return result;
             }
 
-            // Software emulation: XOR with key material (cyclic).
             const auto &key = keyIt->second;
+
+            // For AES-128 or AES-256 keys, use real AES-CBC via ara::crypto.
+            // A fresh 16-byte IV is prepended to the ciphertext output.
+            if (key.size() == 16 || key.size() == 32)
+            {
+                std::vector<uint8_t> iv(16);
+                if (::RAND_bytes(iv.data(), 16) != 1)
+                {
+                    result.ErrorMessage = "IV generation failed";
+                    return result;
+                }
+                auto encResult = ara::crypto::AesEncrypt(plaintext, key, iv);
+                if (!encResult.HasValue())
+                {
+                    result.ErrorMessage = "AES encrypt failed";
+                    return result;
+                }
+                // Output = IV (16 bytes) || ciphertext
+                result.OutputData = iv;
+                const auto &ct = encResult.Value();
+                result.OutputData.insert(
+                    result.OutputData.end(), ct.begin(), ct.end());
+                result.Success = true;
+                return result;
+            }
+
+            // Fallback for non-AES key sizes: use HMAC-based XOR stream cipher.
+            std::vector<uint8_t> keystream;
+            keystream.reserve(plaintext.size());
+            for (size_t block = 0; keystream.size() < plaintext.size(); ++block)
+            {
+                std::vector<uint8_t> counter{
+                    static_cast<uint8_t>(block >> 24),
+                    static_cast<uint8_t>(block >> 16),
+                    static_cast<uint8_t>(block >> 8),
+                    static_cast<uint8_t>(block)};
+                auto hmacResult = ara::crypto::ComputeHmac(counter, key);
+                if (!hmacResult.HasValue()) break;
+                for (auto b : hmacResult.Value())
+                {
+                    keystream.push_back(b);
+                    if (keystream.size() == plaintext.size()) break;
+                }
+            }
             result.OutputData.resize(plaintext.size());
             for (size_t i = 0; i < plaintext.size(); ++i)
             {
-                result.OutputData[i] =
-                    plaintext[i] ^ key[i % key.size()];
+                result.OutputData[i] = plaintext[i] ^ keystream[i];
             }
             result.Success = true;
             return result;
@@ -143,8 +191,62 @@ namespace ara
             uint32_t slotId,
             const std::vector<uint8_t> &ciphertext)
         {
-            // XOR encryption is symmetric, so decrypt == encrypt.
-            return Encrypt(slotId, ciphertext);
+            std::lock_guard<std::mutex> lock(mMutex);
+            HsmOperationResult result;
+
+            auto keyIt = mKeyData.find(slotId);
+            if (keyIt == mKeyData.end() || !mInitialized)
+            {
+                result.ErrorMessage = "Invalid slot or not initialized";
+                return result;
+            }
+
+            const auto &key = keyIt->second;
+
+            // For AES keys, extract the IV (first 16 bytes) and decrypt the rest.
+            if ((key.size() == 16 || key.size() == 32) &&
+                ciphertext.size() > 16)
+            {
+                std::vector<uint8_t> iv(
+                    ciphertext.begin(), ciphertext.begin() + 16);
+                std::vector<uint8_t> data(
+                    ciphertext.begin() + 16, ciphertext.end());
+                auto decResult = ara::crypto::AesDecrypt(data, key, iv);
+                if (!decResult.HasValue())
+                {
+                    result.ErrorMessage = "AES decrypt failed";
+                    return result;
+                }
+                result.OutputData = decResult.Value();
+                result.Success = true;
+                return result;
+            }
+
+            // Fallback: XOR stream (symmetric).
+            std::vector<uint8_t> keystream;
+            keystream.reserve(ciphertext.size());
+            for (size_t block = 0; keystream.size() < ciphertext.size(); ++block)
+            {
+                std::vector<uint8_t> counter{
+                    static_cast<uint8_t>(block >> 24),
+                    static_cast<uint8_t>(block >> 16),
+                    static_cast<uint8_t>(block >> 8),
+                    static_cast<uint8_t>(block)};
+                auto hmacResult = ara::crypto::ComputeHmac(counter, key);
+                if (!hmacResult.HasValue()) break;
+                for (auto b : hmacResult.Value())
+                {
+                    keystream.push_back(b);
+                    if (keystream.size() == ciphertext.size()) break;
+                }
+            }
+            result.OutputData.resize(ciphertext.size());
+            for (size_t i = 0; i < ciphertext.size(); ++i)
+            {
+                result.OutputData[i] = ciphertext[i] ^ keystream[i];
+            }
+            result.Success = true;
+            return result;
         }
 
         HsmOperationResult HsmProvider::Sign(
@@ -161,18 +263,16 @@ namespace ara
                 return result;
             }
 
-            // Software emulation: HMAC-like hash (XOR-fold with key).
             const auto &key = keyIt->second;
-            std::vector<uint8_t> sig(32, 0);
-            for (size_t i = 0; i < data.size(); ++i)
+
+            // Use real HMAC-SHA256 via ara::crypto.
+            auto hmacResult = ara::crypto::ComputeHmac(data, key);
+            if (!hmacResult.HasValue())
             {
-                sig[i % 32] ^= data[i];
+                result.ErrorMessage = "HMAC-SHA256 computation failed";
+                return result;
             }
-            for (size_t i = 0; i < 32; ++i)
-            {
-                sig[i] ^= key[i % key.size()];
-            }
-            result.OutputData = std::move(sig);
+            result.OutputData = hmacResult.Value();
             result.Success = true;
             return result;
         }

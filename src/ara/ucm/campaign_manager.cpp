@@ -6,6 +6,9 @@
 
 #include <algorithm>
 #include "../crypto/crypto_provider.h"
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
 
 namespace ara
 {
@@ -249,10 +252,56 @@ namespace ara
                     MakeErrorCode(UcmErrc::kInvalidArgument));
             }
 
-            // Return the digest as the "signature" (educational placeholder).
-            // A full implementation would use EVP_DigestSign with the private key.
+            (void)digestResult; // digest computed above was for illustration
+
+            // Sign the manifest data using ECDSA/RSA with the provided private key.
+            BIO *bio = ::BIO_new_mem_buf(
+                privateKeyPem.data(),
+                static_cast<int>(privateKeyPem.size()));
+            if (bio == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+            EVP_PKEY *pkey = ::PEM_read_bio_PrivateKey(
+                bio, nullptr, nullptr, nullptr);
+            ::BIO_free(bio);
+            if (pkey == nullptr)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            EVP_MD_CTX *ctx = ::EVP_MD_CTX_new();
+            if (ctx == nullptr ||
+                ::EVP_DigestSignInit(
+                    ctx, nullptr, EVP_sha256(), nullptr, pkey) != 1 ||
+                ::EVP_DigestSignUpdate(
+                    ctx, manifestData.data(), manifestData.size()) != 1)
+            {
+                if (ctx) ::EVP_MD_CTX_free(ctx);
+                ::EVP_PKEY_free(pkey);
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+            std::size_t sigLen = 0;
+            ::EVP_DigestSignFinal(ctx, nullptr, &sigLen);
+            std::vector<std::uint8_t> sig(sigLen);
+            if (::EVP_DigestSignFinal(
+                    ctx, sig.data(), &sigLen) != 1)
+            {
+                ::EVP_MD_CTX_free(ctx);
+                ::EVP_PKEY_free(pkey);
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+            sig.resize(sigLen);
+            ::EVP_MD_CTX_free(ctx);
+            ::EVP_PKEY_free(pkey);
+
             return core::Result<std::vector<std::uint8_t>>::FromValue(
-                digestResult.Value());
+                std::move(sig));
         }
 
         core::Result<bool> CampaignManager::VerifyCampaignManifest(
@@ -284,19 +333,41 @@ namespace ara
                 }
             }
 
-            auto digestResult = ara::crypto::ComputeDigest(
-                std::vector<std::uint8_t>(manifestData.begin(),
-                                          manifestData.end()),
-                ara::crypto::DigestAlgorithm::kSha256);
-
-            if (!digestResult.HasValue())
+            // Verify the ECDSA/RSA signature with the provided public key.
+            BIO *bio = ::BIO_new_mem_buf(
+                publicKeyPem.data(),
+                static_cast<int>(publicKeyPem.size()));
+            if (bio == nullptr)
+            {
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+            EVP_PKEY *pkey = ::PEM_read_bio_PUBKEY(
+                bio, nullptr, nullptr, nullptr);
+            ::BIO_free(bio);
+            if (pkey == nullptr)
             {
                 return core::Result<bool>::FromError(
                     MakeErrorCode(UcmErrc::kInvalidArgument));
             }
 
-            return core::Result<bool>::FromValue(
-                digestResult.Value() == signature);
+            EVP_MD_CTX *ctx = ::EVP_MD_CTX_new();
+            bool valid = false;
+            if (ctx != nullptr &&
+                ::EVP_DigestVerifyInit(
+                    ctx, nullptr, EVP_sha256(), nullptr, pkey) == 1 &&
+                ::EVP_DigestVerifyUpdate(
+                    ctx, manifestData.data(), manifestData.size()) == 1)
+            {
+                valid = (::EVP_DigestVerifyFinal(
+                    ctx,
+                    signature.data(),
+                    signature.size()) == 1);
+            }
+            if (ctx) ::EVP_MD_CTX_free(ctx);
+            ::EVP_PKEY_free(pkey);
+
+            return core::Result<bool>::FromValue(valid);
         }
     }
 }

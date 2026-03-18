@@ -37,6 +37,7 @@ namespace ara
             uint32_t RequestCount{0};
             uint32_t SuccessCount{0};
             uint32_t NrcCount{0};
+            uint8_t LastNrc{0};     ///< NRC from the most recent rejection.
             std::chrono::steady_clock::time_point LastRequestTime;
         };
 
@@ -46,6 +47,7 @@ namespace ara
             uint32_t RequestId{0};
             uint8_t ServiceId{0};
             uint16_t SubFunction{0};
+            std::vector<uint8_t> Payload; ///< Raw UDS request payload bytes.
             std::chrono::steady_clock::time_point ArrivalTime;
             bool ResponsePending{false};
         };
