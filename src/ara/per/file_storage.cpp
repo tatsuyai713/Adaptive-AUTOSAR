@@ -13,8 +13,10 @@ namespace ara
 {
     namespace per
     {
-        FileStorage::FileStorage(const std::string &basePath)
-            : mBasePath{basePath}
+        FileStorage::FileStorage(const std::string &basePath,
+                                 std::uint64_t quotaBytes)
+            : mBasePath{basePath},
+              mQuotaBytes{quotaBytes}
         {
             // Ensure base directory exists
             ::mkdir(basePath.c_str(), 0755);
@@ -285,9 +287,7 @@ namespace ara
 
         core::Result<uint64_t> FileStorage::GetCurrentFileStorageQuota() const
         {
-            // In a full platform, quota is read from the ARXML manifest.
-            // For this educational implementation, return 0 (no quota configured).
-            return core::Result<uint64_t>::FromValue(0);
+            return core::Result<uint64_t>::FromValue(mQuotaBytes);
         }
 
         core::Result<uint64_t> FileStorage::EstimatedFreeSpace() const

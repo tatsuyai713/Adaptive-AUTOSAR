@@ -4,8 +4,13 @@
 
 #include "./state_client.h"
 #include <chrono>
+#include <fstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#if defined(__linux__) || defined(__QNX__)
+#include <dirent.h>
+#endif
 
 namespace ara
 {
@@ -225,9 +230,56 @@ namespace ara
         core::Result<exec::ExecutionState> StateClient::GetProcessState(
             const std::string &processName) const
         {
-            // In a full platform, this queries the Execution Manager via RPC.
-            // Educational stub: return kRunning for any known process.
-            (void)processName;
+#if defined(__linux__) || defined(__QNX__)
+            // Scan /proc entries to find a running process whose comm name matches.
+            DIR *procDir = ::opendir("/proc");
+            if (procDir != nullptr)
+            {
+                bool found{false};
+                struct dirent *entry;
+                while ((entry = ::readdir(procDir)) != nullptr)
+                {
+                    // PID directories consist only of digits.
+                    bool isPid{entry->d_name[0] != '\0'};
+                    for (const char *ch = entry->d_name; *ch && isPid; ++ch)
+                    {
+                        if (*ch < '0' || *ch > '9')
+                        {
+                            isPid = false;
+                        }
+                    }
+                    if (!isPid)
+                    {
+                        continue;
+                    }
+
+                    // /proc/<pid>/comm contains the process name (up to 15 chars).
+                    const std::string commPath{
+                        std::string("/proc/") + entry->d_name + "/comm"};
+                    std::ifstream commFile{commPath};
+                    if (!commFile.is_open())
+                    {
+                        continue;
+                    }
+
+                    std::string comm;
+                    std::getline(commFile, comm);
+
+                    if (comm == processName)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                ::closedir(procDir);
+
+                const exec::ExecutionState state =
+                    found ? exec::ExecutionState::kRunning
+                          : exec::ExecutionState::kTerminating;
+                return core::Result<exec::ExecutionState>::FromValue(state);
+            }
+#endif
+            // Fallback: assume running (EM would track the actual state).
             return core::Result<exec::ExecutionState>::FromValue(
                 exec::ExecutionState::kRunning);
         }
@@ -236,8 +288,46 @@ namespace ara
             const FunctionGroupState &state,
             std::chrono::milliseconds timeout)
         {
-            (void)timeout;
-            return SetState(state);
+            auto innerFuture = SetState(state);
+
+            // Wrap the inner future in a monitored future that enforces the timeout.
+            auto sharedPromise = std::make_shared<std::promise<void>>();
+            std::shared_future<void> result{sharedPromise->get_future()};
+
+            std::thread([innerFuture, sharedPromise, timeout]() mutable
+            {
+                const auto status = innerFuture.wait_for(timeout);
+                try
+                {
+                    if (status == std::future_status::ready)
+                    {
+                        innerFuture.get(); // propagate any stored exception
+                        sharedPromise->set_value();
+                    }
+                    else
+                    {
+                        // Timeout expired - report as cancelled.
+                        const auto errVal =
+                            static_cast<core::ErrorDomain::CodeType>(
+                                ExecErrc::kCancelled);
+                        core::ErrorCode errCode{errVal, cErrorDomain};
+                        ExecException exc{errCode};
+                        sharedPromise->set_exception(
+                            std::make_exception_ptr(exc));
+                    }
+                }
+                catch (...)
+                {
+                    try
+                    {
+                        sharedPromise->set_exception(
+                            std::current_exception());
+                    }
+                    catch (std::future_error &) {}
+                }
+            }).detach();
+
+            return result;
         }
     }
 }

@@ -579,10 +579,16 @@ namespace ara
         core::Result<std::uint32_t> GetCurrentPersistencyVersion(
             const core::InstanceSpecifier &specifier)
         {
-            // In a full platform, versions are tracked in a metadata file.
-            // For this educational implementation, return version 1 (default).
-            (void)specifier;
-            return core::Result<std::uint32_t>::FromValue(1);
+            const std::string basePath = SpecifierToPath(specifier);
+            std::uint16_t version{0};
+            if (ReadSchemaVersion(basePath, version))
+            {
+                return core::Result<std::uint32_t>::FromValue(
+                    static_cast<std::uint32_t>(version));
+            }
+            // No schema version file found - storage has not been initialized yet.
+            return core::Result<std::uint32_t>::FromError(
+                MakeErrorCode(PerErrc::kKeyNotFound));
         }
 
         namespace

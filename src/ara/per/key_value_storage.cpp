@@ -191,8 +191,10 @@ namespace ara
 
         // ── Public API ───────────────────────────────────────
 
-        KeyValueStorage::KeyValueStorage(const std::string &filePath)
-            : mFilePath{filePath}
+        KeyValueStorage::KeyValueStorage(const std::string &filePath,
+                                         std::uint64_t quotaBytes)
+            : mFilePath{filePath},
+              mQuotaBytes{quotaBytes}
         {
             LoadFromFile();
         }
@@ -285,7 +287,7 @@ namespace ara
 
         std::uint64_t KeyValueStorage::GetStorageQuota() const noexcept
         {
-            return 0U; // No quota configured in this implementation
+            return mQuotaBytes;
         }
 
         // ── Observer helpers ─────────────────────────────────

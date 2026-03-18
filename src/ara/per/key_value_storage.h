@@ -42,6 +42,8 @@ namespace ara
             std::map<std::string, KeyObserverCallback> mKeyObservers;
             KeyObserverCallback mGlobalObserver;
             std::size_t mPendingChanges{0U};
+            /// @brief Storage quota in bytes (0 = unlimited).
+            std::uint64_t mQuotaBytes{0U};
 
             void LoadFromFile();
             void SaveToFile() const;
@@ -55,8 +57,10 @@ namespace ara
 
         public:
             /// @brief Constructor
-            /// @param filePath Path to the key-value storage file
-            explicit KeyValueStorage(const std::string &filePath);
+            /// @param filePath   Path to the key-value storage file.
+            /// @param quotaBytes Maximum storage size in bytes (0 = unlimited).
+            explicit KeyValueStorage(const std::string &filePath,
+                                     std::uint64_t quotaBytes = 0U);
 
             ~KeyValueStorage() noexcept = default;
 

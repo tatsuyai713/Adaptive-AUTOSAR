@@ -36,13 +36,17 @@ namespace ara
         {
         private:
             std::string mBasePath;
+            /// @brief Storage quota in bytes (0 = unlimited).
+            std::uint64_t mQuotaBytes{0U};
 
             std::string GetFullPath(const std::string &fileName) const;
 
         public:
             /// @brief Constructor
-            /// @param basePath Directory path for file storage
-            explicit FileStorage(const std::string &basePath);
+            /// @param basePath   Directory path for file storage.
+            /// @param quotaBytes Maximum total storage size in bytes (0 = unlimited).
+            explicit FileStorage(const std::string &basePath,
+                                 std::uint64_t quotaBytes = 0U);
 
             ~FileStorage() noexcept = default;
 

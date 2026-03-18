@@ -60,6 +60,9 @@ namespace ara
             /// @brief Callback type for sync quality level changes.
             using QualityChangeNotifier = std::function<void(SyncQualityLevel)>;
 
+            /// @brief Callback type for time leap notifications (SWS_TS_00110).
+            using TimeLeapCallback = std::function<void(std::chrono::nanoseconds leapAmount)>;
+
             /// @brief Maximum number of reference samples kept in the sliding window.
             static constexpr std::size_t cMaxSamples{8U};
 
@@ -85,6 +88,12 @@ namespace ara
             std::int64_t                          mQualityThresholdNsPerSec;
             /// Milliseconds without a new sample before sync is considered lost.
             std::uint64_t                         mSyncLossTimeoutMs;
+            /// Callback invoked when a time leap is detected (SWS_TS_00110).
+            TimeLeapCallback                      mLeapCallback;
+            /// Previous raw offset (ns) for leap detection.
+            std::chrono::nanoseconds              mPrevOffsetNs;
+            /// Minimum absolute jump (ns) treated as a leap rather than normal drift.
+            static constexpr std::int64_t         cLeapThresholdNs{100'000'000LL}; // 100 ms
 
             /// Recompute drift from sample window using linear regression (lock held).
             void recomputeDrift() noexcept;
@@ -163,11 +172,11 @@ namespace ara
             /// @returns Current TimeBaseStatusType for this client.
             TimeBaseStatusType GetTimeBaseStatus() const noexcept;
 
-            /// @brief Callback type for time leap notifications (SWS_TS_00110).
-            using TimeLeapCallback = std::function<void(std::chrono::nanoseconds leapAmount)>;
-
             /// @brief Register a callback invoked when a time leap is detected (SWS_TS_00110).
             void SetTimeLeapCallback(TimeLeapCallback callback) noexcept;
+
+            /// @brief Remove the time leap callback.
+            void ClearTimeLeapCallback() noexcept;
 
             /// @brief Get leap second information (SWS_TS_00201).
             /// @returns Current leap second info if available.

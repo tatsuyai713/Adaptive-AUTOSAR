@@ -6,6 +6,11 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <ctime>
+
+#if defined(__linux__) || defined(__QNX__)
+#include <sys/timex.h>
+#endif
 
 namespace ara
 {
@@ -23,6 +28,7 @@ namespace ara
             , mLastSampleSteady{}
             , mQualityThresholdNsPerSec{1000LL}     // 1 µs/s default threshold
             , mSyncLossTimeoutMs{5000U}              // 5 s default timeout
+            , mPrevOffsetNs{std::chrono::nanoseconds::zero()}
         {
         }
 
@@ -123,14 +129,39 @@ namespace ara
 
             StateChangeNotifier stateNotifierCopy;
             QualityChangeNotifier qualityNotifierCopy;
+            TimeLeapCallback leapCallbackCopy;
+            std::chrono::nanoseconds leapAmount{0};
             bool stateChanged{false};
             bool qualityChanged{false};
+            bool leapDetected{false};
 
             {
                 std::lock_guard<std::mutex> lock{mMutex};
 
-                // Raw offset = global - steady (as system_clock duration)
-                mOffset = referenceGlobalTime.time_since_epoch() - cSteadyAsSystemDuration;
+                // Compute new raw offset = global - steady
+                const auto newOffset = referenceGlobalTime.time_since_epoch() -
+                                       cSteadyAsSystemDuration;
+                const auto newOffsetNs =
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(newOffset);
+
+                // Detect time leap: compare new offset to previous.
+                // A jump larger than cLeapThresholdNs is treated as a leap.
+                if (mState == SynchronizationState::kSynchronized &&
+                    mLeapCallback)
+                {
+                    leapAmount = newOffsetNs - mPrevOffsetNs;
+                    const auto absLeap =
+                        leapAmount.count() < 0 ? -leapAmount.count()
+                                               : leapAmount.count();
+                    if (absLeap >= cLeapThresholdNs)
+                    {
+                        leapDetected = true;
+                        leapCallbackCopy = mLeapCallback;
+                    }
+                }
+
+                mOffset = newOffset;
+                mPrevOffsetNs = newOffsetNs;
 
                 // Add to sliding window
                 SyncSample sample{referenceSteadyTime, referenceGlobalTime};
@@ -149,6 +180,8 @@ namespace ara
                     mState = SynchronizationState::kSynchronized;
                     stateChanged = true;
                     stateNotifierCopy = mStateNotifier;
+                    // Record first offset as baseline (no leap on first sync)
+                    mPrevOffsetNs = newOffsetNs;
                 }
 
                 qualityChanged = recomputeQuality();
@@ -166,6 +199,10 @@ namespace ara
             if (qualityChanged && qualityNotifierCopy)
             {
                 qualityNotifierCopy(mQuality);
+            }
+            if (leapDetected && leapCallbackCopy)
+            {
+                leapCallbackCopy(leapAmount);
             }
 
             return core::Result<void>::FromValue();
@@ -413,14 +450,75 @@ namespace ara
         void TimeSyncClient::SetTimeLeapCallback(TimeLeapCallback callback) noexcept
         {
             std::lock_guard<std::mutex> lock{mMutex};
-            (void)callback;
-            // Store callback — would be invoked on time leap detection.
+            mLeapCallback = std::move(callback);
+        }
+
+        void TimeSyncClient::ClearTimeLeapCallback() noexcept
+        {
+            std::lock_guard<std::mutex> lock{mMutex};
+            mLeapCallback = nullptr;
         }
 
         core::Result<LeapSecondInfo> TimeSyncClient::GetLeapSecondInfo() const
         {
-            // Educational stub: return default (no leap second pending).
-            return core::Result<LeapSecondInfo>::FromValue(LeapSecondInfo{});
+            // Query the kernel NTP state for leap second information.
+            // POSIX adjtimex() / ntp_adjtime() (Linux + QNX) provide:
+            //   timex::status : STA_INS (insert) / STA_DEL (delete) leap bits
+            //   timex::tai    : current TAI-UTC offset in seconds
+            LeapSecondInfo info{};
+
+#if defined(__linux__) || defined(__QNX__)
+            struct timex tx{};
+            // adjtimex is POSIX; ntp_adjtime is the same on Linux/QNX.
+            int state = ::adjtimex(&tx);
+
+            // STA_INS (0x0010): next leap second will be inserted.
+            // STA_DEL (0x0020): next leap second will be deleted.
+            static constexpr int cStaIns{0x0010};
+            static constexpr int cStaDel{0x0020};
+
+            if (tx.tai > 0)
+            {
+                info.currentLeapSeconds = tx.tai;
+            }
+
+            if ((tx.status & cStaIns) || (tx.status & cStaDel))
+            {
+                info.futureLeapSecondPending = true;
+                info.futureLeapSecondPositive = (tx.status & cStaIns) != 0;
+
+                // The leap second occurs at the end of the current UTC month.
+                // Compute the start of the next month as the effective time.
+                const auto now =
+                    std::chrono::system_clock::now();
+                const std::time_t nowT =
+                    std::chrono::system_clock::to_time_t(now);
+                std::tm utcTm{};
+#if defined(_POSIX_C_SOURCE) || defined(__linux__) || defined(__QNX__)
+                ::gmtime_r(&nowT, &utcTm);
+#else
+                utcTm = *std::gmtime(&nowT);
+#endif
+                // Advance to the first second of next month.
+                utcTm.tm_sec = 0;
+                utcTm.tm_min = 0;
+                utcTm.tm_hour = 0;
+                utcTm.tm_mday = 1;
+                ++utcTm.tm_mon;
+                if (utcTm.tm_mon >= 12)
+                {
+                    utcTm.tm_mon = 0;
+                    ++utcTm.tm_year;
+                }
+                const std::time_t leapT = ::timegm(&utcTm);
+                info.futureLeapSecondTime =
+                    std::chrono::system_clock::from_time_t(leapT);
+            }
+
+            (void)state; // return value indicates current leap state, not an error
+#endif
+
+            return core::Result<LeapSecondInfo>::FromValue(info);
         }
 
     } // namespace tsync
