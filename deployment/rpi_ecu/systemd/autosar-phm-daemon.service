@@ -1,0 +1,15 @@
+[Unit]
+Description=Adaptive AUTOSAR Platform Health Management orchestrator daemon
+After=autosar-platform-app.service
+Before=autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-phm-daemon
+ExecStart=/usr/local/bin/autosar-phm-daemon-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

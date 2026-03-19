@@ -1386,6 +1386,39 @@ add_executable(
   ${source_dir}/main_dlt_daemon.cpp
 )
 
+add_executable(
+  autosar_diag_server
+  ${source_dir}/main_diag_server.cpp
+)
+
+target_link_libraries(
+  autosar_diag_server
+  ara_core
+  ara_diag
+)
+
+add_executable(
+  autosar_phm_daemon
+  ${source_dir}/main_phm_daemon.cpp
+)
+
+target_link_libraries(
+  autosar_phm_daemon
+  ara_core
+  ara_phm
+)
+
+add_executable(
+  autosar_crypto_provider
+  ${source_dir}/main_crypto_provider.cpp
+)
+
+target_link_libraries(
+  autosar_crypto_provider
+  ara_core
+  ara_crypto
+)
+
 set(has_pubsub_sample_entrypoints OFF)
 if(EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_provider.cpp" AND
    EXISTS "${source_sample_ara_com_pubsub_dir}/pubsub_consumer.cpp")
@@ -1783,6 +1816,43 @@ if(AUTOSAR_AP_BUILD_SAMPLES AND has_ecu_showcase_entrypoints AND ARA_COM_USE_CYC
     )
     configure_ecu_showcase_target(ara_ecu_reference_gateway_sample)
   endif()
+endif()
+
+# --------------------------------------------------------------------------
+# Raspberry Pi / Linux mock ECU sample
+# Full-stack demo using all ara::* modules without external middleware.
+# --------------------------------------------------------------------------
+set(source_raspi_mock_ecu_app
+  "${CMAKE_SOURCE_DIR}/user_apps/src/apps/basic/raspi_mock_ecu_app.cpp")
+
+if(AUTOSAR_AP_BUILD_SAMPLES AND EXISTS "${source_raspi_mock_ecu_app}")
+  find_package(OpenSSL QUIET)
+  if(OpenSSL_FOUND OR OPENSSL_FOUND)
+    add_executable(
+      ara_raspi_mock_ecu_sample
+      "${source_raspi_mock_ecu_app}"
+    )
+    target_link_libraries(
+      ara_raspi_mock_ecu_sample
+      ara_core
+      ara_log
+      ara_exec
+      ara_phm
+      ara_per
+      ara_diag
+      ara_sm
+      ara_tsync
+      ara_nm
+      ara_crypto
+      ara_ucm
+      OpenSSL::Crypto
+    )
+    message(STATUS "Building ara_raspi_mock_ecu_sample (no middleware required)")
+  else()
+    message(STATUS "Skipping ara_raspi_mock_ecu_sample: OpenSSL not found")
+  endif()
+elseif(AUTOSAR_AP_BUILD_SAMPLES)
+  message(STATUS "Skipping ara_raspi_mock_ecu_sample: source file not present")
 endif()
 
 if(build_tests)

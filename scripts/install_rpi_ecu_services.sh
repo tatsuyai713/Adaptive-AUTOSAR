@@ -48,6 +48,24 @@ UCM_WRAPPER_OUTPUT="/usr/local/bin/autosar-ucm-wrapper.sh"
 DLT_ENV_OUTPUT="/etc/default/autosar-dlt"
 DLT_WRAPPER_OUTPUT="/usr/local/bin/autosar-dlt-wrapper.sh"
 
+SM_STATE_ENV_OUTPUT="/etc/default/autosar-sm-state"
+SM_STATE_WRAPPER_OUTPUT="/usr/local/bin/autosar-sm-state-wrapper.sh"
+
+NTP_TIME_PROVIDER_ENV_OUTPUT="/etc/default/autosar-ntp-time-provider"
+NTP_TIME_PROVIDER_WRAPPER_OUTPUT="/usr/local/bin/autosar-ntp-time-provider-wrapper.sh"
+
+PTP_TIME_PROVIDER_ENV_OUTPUT="/etc/default/autosar-ptp-time-provider"
+PTP_TIME_PROVIDER_WRAPPER_OUTPUT="/usr/local/bin/autosar-ptp-time-provider-wrapper.sh"
+
+DIAG_SERVER_ENV_OUTPUT="/etc/default/autosar-diag-server"
+DIAG_SERVER_WRAPPER_OUTPUT="/usr/local/bin/autosar-diag-server-wrapper.sh"
+
+PHM_DAEMON_ENV_OUTPUT="/etc/default/autosar-phm-daemon"
+PHM_DAEMON_WRAPPER_OUTPUT="/usr/local/bin/autosar-phm-daemon-wrapper.sh"
+
+CRYPTO_PROVIDER_ENV_OUTPUT="/etc/default/autosar-crypto-provider"
+CRYPTO_PROVIDER_WRAPPER_OUTPUT="/usr/local/bin/autosar-crypto-provider-wrapper.sh"
+
 BRINGUP_DIR="/etc/autosar"
 BRINGUP_OUTPUT="/etc/autosar/bringup.sh"
 STARTUP_OUTPUT="/etc/autosar/startup.sh"
@@ -178,6 +196,54 @@ while [[ $# -gt 0 ]]; do
       DLT_WRAPPER_OUTPUT="$2"
       shift 2
       ;;
+    --sm-state-env-output)
+      SM_STATE_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --sm-state-wrapper-output)
+      SM_STATE_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
+    --ntp-time-provider-env-output)
+      NTP_TIME_PROVIDER_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --ntp-time-provider-wrapper-output)
+      NTP_TIME_PROVIDER_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
+    --ptp-time-provider-env-output)
+      PTP_TIME_PROVIDER_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --ptp-time-provider-wrapper-output)
+      PTP_TIME_PROVIDER_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
+    --diag-server-env-output)
+      DIAG_SERVER_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --diag-server-wrapper-output)
+      DIAG_SERVER_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
+    --phm-daemon-env-output)
+      PHM_DAEMON_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --phm-daemon-wrapper-output)
+      PHM_DAEMON_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
+    --crypto-provider-env-output)
+      CRYPTO_PROVIDER_ENV_OUTPUT="$2"
+      shift 2
+      ;;
+    --crypto-provider-wrapper-output)
+      CRYPTO_PROVIDER_WRAPPER_OUTPUT="$2"
+      shift 2
+      ;;
     --bringup-output)
       BRINGUP_OUTPUT="$2"
       BRINGUP_DIR="$(dirname "${BRINGUP_OUTPUT}")"
@@ -255,6 +321,12 @@ USER_APP_MONITOR_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-user-app-monitor-wr
 NM_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-network-manager-wrapper.sh.in"
 UCM_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-ucm-wrapper.sh.in"
 DLT_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-dlt-wrapper.sh.in"
+SM_STATE_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-sm-state-wrapper.sh.in"
+NTP_TIME_PROVIDER_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-ntp-time-provider-wrapper.sh.in"
+PTP_TIME_PROVIDER_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-ptp-time-provider-wrapper.sh.in"
+DIAG_SERVER_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-diag-server-wrapper.sh.in"
+PHM_DAEMON_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-phm-daemon-wrapper.sh.in"
+CRYPTO_PROVIDER_WRAPPER_TEMPLATE="${ASSET_ROOT}/bin/autosar-crypto-provider-wrapper.sh.in"
 
 ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-ecu-full-stack.env.in"
 VSOMEIP_ROUTING_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-vsomeip-routing.env.in"
@@ -269,6 +341,12 @@ USER_APP_MONITOR_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-user-app-monitor.env.in
 NM_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-network-manager.env.in"
 UCM_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-ucm.env.in"
 DLT_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-dlt.env.in"
+SM_STATE_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-sm-state.env.in"
+NTP_TIME_PROVIDER_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-ntp-time-provider.env.in"
+PTP_TIME_PROVIDER_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-ptp-time-provider.env.in"
+DIAG_SERVER_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-diag-server.env.in"
+PHM_DAEMON_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-phm-daemon.env.in"
+CRYPTO_PROVIDER_ENV_TEMPLATE="${ASSET_ROOT}/env/autosar-crypto-provider.env.in"
 
 IAM_POLICY_TEMPLATE="${ASSET_ROOT}/config/iam_policy.csv.in"
 BRINGUP_TEMPLATE="${ASSET_ROOT}/bringup/bringup.sh.in"
@@ -287,6 +365,12 @@ USER_APP_MONITOR_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-user-app-monito
 NM_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-network-manager.service"
 UCM_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-ucm.service"
 DLT_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-dlt.service"
+SM_STATE_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-sm-state.service"
+NTP_TIME_PROVIDER_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-ntp-time-provider.service"
+PTP_TIME_PROVIDER_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-ptp-time-provider.service"
+DIAG_SERVER_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-diag-server.service"
+PHM_DAEMON_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-phm-daemon.service"
+CRYPTO_PROVIDER_SERVICE_TEMPLATE="${ASSET_ROOT}/systemd/autosar-crypto-provider.service"
 
 required_templates=(
   "${WRAPPER_TEMPLATE}"
@@ -315,6 +399,18 @@ required_templates=(
   "${NM_ENV_TEMPLATE}"
   "${UCM_ENV_TEMPLATE}"
   "${DLT_ENV_TEMPLATE}"
+  "${SM_STATE_WRAPPER_TEMPLATE}"
+  "${SM_STATE_ENV_TEMPLATE}"
+  "${NTP_TIME_PROVIDER_WRAPPER_TEMPLATE}"
+  "${NTP_TIME_PROVIDER_ENV_TEMPLATE}"
+  "${PTP_TIME_PROVIDER_WRAPPER_TEMPLATE}"
+  "${PTP_TIME_PROVIDER_ENV_TEMPLATE}"
+  "${DIAG_SERVER_WRAPPER_TEMPLATE}"
+  "${DIAG_SERVER_ENV_TEMPLATE}"
+  "${PHM_DAEMON_WRAPPER_TEMPLATE}"
+  "${PHM_DAEMON_ENV_TEMPLATE}"
+  "${CRYPTO_PROVIDER_WRAPPER_TEMPLATE}"
+  "${CRYPTO_PROVIDER_ENV_TEMPLATE}"
   "${IAM_POLICY_TEMPLATE}"
   "${BRINGUP_TEMPLATE}"
   "${ROUDI_SERVICE_TEMPLATE}"
@@ -331,6 +427,12 @@ required_templates=(
   "${NM_SERVICE_TEMPLATE}"
   "${UCM_SERVICE_TEMPLATE}"
   "${DLT_SERVICE_TEMPLATE}"
+  "${SM_STATE_SERVICE_TEMPLATE}"
+  "${NTP_TIME_PROVIDER_SERVICE_TEMPLATE}"
+  "${PTP_TIME_PROVIDER_SERVICE_TEMPLATE}"
+  "${DIAG_SERVER_SERVICE_TEMPLATE}"
+  "${PHM_DAEMON_SERVICE_TEMPLATE}"
+  "${CRYPTO_PROVIDER_SERVICE_TEMPLATE}"
 )
 
 for template_path in "${required_templates[@]}"; do
@@ -367,6 +469,18 @@ mkdir -p "$(dirname "${UCM_WRAPPER_OUTPUT}")"
 mkdir -p "$(dirname "${UCM_ENV_OUTPUT}")"
 mkdir -p "$(dirname "${DLT_WRAPPER_OUTPUT}")"
 mkdir -p "$(dirname "${DLT_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${SM_STATE_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${SM_STATE_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${NTP_TIME_PROVIDER_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${NTP_TIME_PROVIDER_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${PTP_TIME_PROVIDER_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${PTP_TIME_PROVIDER_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${DIAG_SERVER_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${DIAG_SERVER_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${PHM_DAEMON_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${PHM_DAEMON_ENV_OUTPUT}")"
+mkdir -p "$(dirname "${CRYPTO_PROVIDER_WRAPPER_OUTPUT}")"
+mkdir -p "$(dirname "${CRYPTO_PROVIDER_ENV_OUTPUT}")"
 mkdir -p "${BRINGUP_DIR}"
 mkdir -p "${SYSTEMD_DIR}"
 
@@ -395,6 +509,12 @@ render_template "${USER_APP_MONITOR_WRAPPER_TEMPLATE}" "${USER_APP_MONITOR_WRAPP
 render_template "${NM_WRAPPER_TEMPLATE}" "${NM_WRAPPER_OUTPUT}" 755
 render_template "${UCM_WRAPPER_TEMPLATE}" "${UCM_WRAPPER_OUTPUT}" 755
 render_template "${DLT_WRAPPER_TEMPLATE}" "${DLT_WRAPPER_OUTPUT}" 755
+render_template "${SM_STATE_WRAPPER_TEMPLATE}" "${SM_STATE_WRAPPER_OUTPUT}" 755
+render_template "${NTP_TIME_PROVIDER_WRAPPER_TEMPLATE}" "${NTP_TIME_PROVIDER_WRAPPER_OUTPUT}" 755
+render_template "${PTP_TIME_PROVIDER_WRAPPER_TEMPLATE}" "${PTP_TIME_PROVIDER_WRAPPER_OUTPUT}" 755
+render_template "${DIAG_SERVER_WRAPPER_TEMPLATE}" "${DIAG_SERVER_WRAPPER_OUTPUT}" 755
+render_template "${PHM_DAEMON_WRAPPER_TEMPLATE}" "${PHM_DAEMON_WRAPPER_OUTPUT}" 755
+render_template "${CRYPTO_PROVIDER_WRAPPER_TEMPLATE}" "${CRYPTO_PROVIDER_WRAPPER_OUTPUT}" 755
 
 render_optional_env() {
   local template_path="$1"
@@ -421,6 +541,12 @@ render_optional_env "${USER_APP_MONITOR_ENV_TEMPLATE}" "${USER_APP_MONITOR_ENV_O
 render_optional_env "${NM_ENV_TEMPLATE}" "${NM_ENV_OUTPUT}" "network manager env file"
 render_optional_env "${UCM_ENV_TEMPLATE}" "${UCM_ENV_OUTPUT}" "UCM env file"
 render_optional_env "${DLT_ENV_TEMPLATE}" "${DLT_ENV_OUTPUT}" "DLT env file"
+render_optional_env "${SM_STATE_ENV_TEMPLATE}" "${SM_STATE_ENV_OUTPUT}" "SM state env file"
+render_optional_env "${NTP_TIME_PROVIDER_ENV_TEMPLATE}" "${NTP_TIME_PROVIDER_ENV_OUTPUT}" "NTP time provider env file"
+render_optional_env "${PTP_TIME_PROVIDER_ENV_TEMPLATE}" "${PTP_TIME_PROVIDER_ENV_OUTPUT}" "PTP time provider env file"
+render_optional_env "${DIAG_SERVER_ENV_TEMPLATE}" "${DIAG_SERVER_ENV_OUTPUT}" "diagnostic server env file"
+render_optional_env "${PHM_DAEMON_ENV_TEMPLATE}" "${PHM_DAEMON_ENV_OUTPUT}" "PHM daemon env file"
+render_optional_env "${CRYPTO_PROVIDER_ENV_TEMPLATE}" "${CRYPTO_PROVIDER_ENV_OUTPUT}" "crypto provider env file"
 
 if [[ -f "${IAM_POLICY_OUTPUT}" && "${FORCE_OVERWRITE}" != "ON" ]]; then
   echo "[INFO] Keep existing IAM policy file: ${IAM_POLICY_OUTPUT} (use --force to overwrite)"
@@ -455,6 +581,12 @@ install -m 644 "${USER_APP_MONITOR_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-us
 install -m 644 "${NM_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-network-manager.service"
 install -m 644 "${UCM_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-ucm.service"
 install -m 644 "${DLT_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-dlt.service"
+install -m 644 "${SM_STATE_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-sm-state.service"
+install -m 644 "${NTP_TIME_PROVIDER_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-ntp-time-provider.service"
+install -m 644 "${PTP_TIME_PROVIDER_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-ptp-time-provider.service"
+install -m 644 "${DIAG_SERVER_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-diag-server.service"
+install -m 644 "${PHM_DAEMON_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-phm-daemon.service"
+install -m 644 "${CRYPTO_PROVIDER_SERVICE_TEMPLATE}" "${SYSTEMD_DIR}/autosar-crypto-provider.service"
 
 enable_if_binary_exists() {
   local unit_name="$1"
@@ -482,6 +614,12 @@ if [[ "${RUN_SYSTEMCTL}" == "ON" ]]; then
     enable_if_binary_exists autosar-network-manager.service "${AUTOSAR_AP_PREFIX}/bin/autosar_network_manager"
     enable_if_binary_exists autosar-ucm.service "${AUTOSAR_AP_PREFIX}/bin/autosar_ucm_daemon"
     enable_if_binary_exists autosar-dlt.service "${AUTOSAR_AP_PREFIX}/bin/autosar_dlt_daemon"
+    enable_if_binary_exists autosar-sm-state.service "${AUTOSAR_AP_PREFIX}/bin/autosar_sm_state_daemon"
+    enable_if_binary_exists autosar-ntp-time-provider.service "${AUTOSAR_AP_PREFIX}/bin/autosar_ntp_time_provider"
+    enable_if_binary_exists autosar-ptp-time-provider.service "${AUTOSAR_AP_PREFIX}/bin/autosar_ptp_time_provider"
+    enable_if_binary_exists autosar-diag-server.service "${AUTOSAR_AP_PREFIX}/bin/autosar_diag_server"
+    enable_if_binary_exists autosar-phm-daemon.service "${AUTOSAR_AP_PREFIX}/bin/autosar_phm_daemon"
+    enable_if_binary_exists autosar-crypto-provider.service "${AUTOSAR_AP_PREFIX}/bin/autosar_crypto_provider"
 
     if [[ -x "${AUTOSAR_AP_PREFIX}/bin/adaptive_autosar" ]]; then
       systemctl enable autosar-platform-app.service
@@ -510,6 +648,12 @@ echo "[INFO] User app monitor wrapper: ${USER_APP_MONITOR_WRAPPER_OUTPUT}"
 echo "[INFO] Network manager wrapper: ${NM_WRAPPER_OUTPUT}"
 echo "[INFO] UCM wrapper: ${UCM_WRAPPER_OUTPUT}"
 echo "[INFO] DLT wrapper: ${DLT_WRAPPER_OUTPUT}"
+echo "[INFO] SM state wrapper: ${SM_STATE_WRAPPER_OUTPUT}"
+echo "[INFO] NTP time provider wrapper: ${NTP_TIME_PROVIDER_WRAPPER_OUTPUT}"
+echo "[INFO] PTP time provider wrapper: ${PTP_TIME_PROVIDER_WRAPPER_OUTPUT}"
+echo "[INFO] Diagnostic server wrapper: ${DIAG_SERVER_WRAPPER_OUTPUT}"
+echo "[INFO] PHM daemon wrapper: ${PHM_DAEMON_WRAPPER_OUTPUT}"
+echo "[INFO] Crypto provider wrapper: ${CRYPTO_PROVIDER_WRAPPER_OUTPUT}"
 
 echo "[INFO] Env file: ${ENV_OUTPUT}"
 echo "[INFO] vSomeIP routing env file: ${VSOMEIP_ROUTING_ENV_OUTPUT}"
@@ -524,6 +668,12 @@ echo "[INFO] User app monitor env file: ${USER_APP_MONITOR_ENV_OUTPUT}"
 echo "[INFO] Network manager env file: ${NM_ENV_OUTPUT}"
 echo "[INFO] UCM env file: ${UCM_ENV_OUTPUT}"
 echo "[INFO] DLT env file: ${DLT_ENV_OUTPUT}"
+echo "[INFO] SM state env file: ${SM_STATE_ENV_OUTPUT}"
+echo "[INFO] NTP time provider env file: ${NTP_TIME_PROVIDER_ENV_OUTPUT}"
+echo "[INFO] PTP time provider env file: ${PTP_TIME_PROVIDER_ENV_OUTPUT}"
+echo "[INFO] Diagnostic server env file: ${DIAG_SERVER_ENV_OUTPUT}"
+echo "[INFO] PHM daemon env file: ${PHM_DAEMON_ENV_OUTPUT}"
+echo "[INFO] Crypto provider env file: ${CRYPTO_PROVIDER_ENV_OUTPUT}"
 echo "[INFO] IAM policy file: ${IAM_POLICY_OUTPUT}"
 
 echo "[INFO] Bringup script: ${BRINGUP_OUTPUT}"
@@ -543,6 +693,12 @@ echo "       ${SYSTEMD_DIR}/autosar-user-app-monitor.service"
 echo "       ${SYSTEMD_DIR}/autosar-network-manager.service"
 echo "       ${SYSTEMD_DIR}/autosar-ucm.service"
 echo "       ${SYSTEMD_DIR}/autosar-dlt.service"
+echo "       ${SYSTEMD_DIR}/autosar-sm-state.service"
+echo "       ${SYSTEMD_DIR}/autosar-ntp-time-provider.service"
+echo "       ${SYSTEMD_DIR}/autosar-ptp-time-provider.service"
+echo "       ${SYSTEMD_DIR}/autosar-diag-server.service"
+echo "       ${SYSTEMD_DIR}/autosar-phm-daemon.service"
+echo "       ${SYSTEMD_DIR}/autosar-crypto-provider.service"
 echo "       ${SYSTEMD_DIR}/autosar-ecu-full-stack.service"
 
 echo "[INFO] Next commands:"
@@ -559,6 +715,12 @@ echo "       sudo systemctl start autosar-user-app-monitor.service"
 echo "       sudo systemctl start autosar-network-manager.service"
 echo "       sudo systemctl start autosar-ucm.service"
 echo "       sudo systemctl start autosar-dlt.service"
+echo "       sudo systemctl start autosar-sm-state.service"
+echo "       sudo systemctl start autosar-ntp-time-provider.service"
+echo "       sudo systemctl start autosar-ptp-time-provider.service"
+echo "       sudo systemctl start autosar-diag-server.service"
+echo "       sudo systemctl start autosar-phm-daemon.service"
+echo "       sudo systemctl start autosar-crypto-provider.service"
 echo "       sudo systemctl start autosar-ecu-full-stack.service"
 echo "       sudo systemctl status autosar-vsomeip-routing.service --no-pager"
 echo "       sudo systemctl status autosar-platform-app.service --no-pager"

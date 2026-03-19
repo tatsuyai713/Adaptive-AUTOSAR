@@ -1,0 +1,15 @@
+[Unit]
+Description=Adaptive AUTOSAR Cryptography key management provider daemon
+After=local-fs.target
+Before=autosar-platform-app.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-crypto-provider
+ExecStart=/usr/local/bin/autosar-crypto-provider-wrapper.sh
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

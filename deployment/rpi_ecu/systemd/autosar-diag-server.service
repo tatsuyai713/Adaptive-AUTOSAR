@@ -1,0 +1,17 @@
+[Unit]
+Description=Adaptive AUTOSAR Diagnostic Server daemon (UDS/DoIP)
+After=network-online.target autosar-platform-app.service
+Wants=network-online.target
+Before=autosar-exec-manager.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/autosar-diag-server
+ExecStart=/usr/local/bin/autosar-diag-server-wrapper.sh
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
