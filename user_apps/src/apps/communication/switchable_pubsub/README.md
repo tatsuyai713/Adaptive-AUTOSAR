@@ -49,7 +49,7 @@ Set `ARA_COM_BINDING_MANIFEST` to one of the generated profile manifests.
 Set runtime libraries:
 
 ```bash
-export LD_LIBRARY_PATH=/opt/autosar_ap/lib:/opt/cyclonedds/lib:/opt/vsomeip/lib:/opt/iceoryx/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/opt/autosar-ap/lib:/opt/cyclonedds/lib:/opt/vsomeip/lib:/opt/iceoryx/lib:${LD_LIBRARY_PATH}
 ```
 
 DDS profile:
@@ -76,8 +76,8 @@ vSomeIP profile:
 ```bash
 unset ARA_COM_EVENT_BINDING
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_vsomeip.yaml
-export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
-/opt/autosar_ap/bin/autosar_vsomeip_routing_manager &
+export VSOMEIP_CONFIGURATION=/opt/autosar-ap/configuration/vsomeip-rpi.json
+/opt/autosar-ap/bin/autosar_vsomeip_routing_manager &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 ```

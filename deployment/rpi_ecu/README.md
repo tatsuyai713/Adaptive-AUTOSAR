@@ -5,7 +5,7 @@ using this repository runtime and user apps.
 
 ## What This Profile Covers
 
-- Build/install runtime to `/opt/autosar_ap`
+- Build/install runtime to `/opt/autosar-ap`
 - Build `user_apps` against installed runtime only
 - Configure SocketCAN on Linux
 - Install `systemd` units for:
@@ -42,9 +42,9 @@ sudo ./scripts/install_middleware_stack.sh --install-base-deps
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 ```
 
@@ -66,8 +66,8 @@ sudo ./scripts/setup_socketcan_interface.sh --ifname vcan0 --vcan
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -119,7 +119,7 @@ sudo systemctl disable --now autosar-ecu-full-stack.service
 
 ## User bringup workflow
 
-1. Build your application into `${AUTOSAR_USER_APPS_BUILD_DIR}` (default: `/opt/autosar_ap/user_apps_build`).
+1. Build your application into `${AUTOSAR_USER_APPS_BUILD_DIR}` (default: `/opt/autosar-ap/user_apps_build`).
 2. Edit `/etc/autosar/bringup.sh`.
 3. Add your launch commands via helper functions (`launch_app` / `launch_app_with_heartbeat` / `launch_app_managed`).
 4. Restart execution-manager service:
@@ -160,8 +160,8 @@ Runtime files used by registration/monitoring:
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -170,8 +170,8 @@ For real CAN input:
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend socketcan \
   --can-if can0 \
   --require-platform-binary

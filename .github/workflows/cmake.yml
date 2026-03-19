@@ -109,26 +109,26 @@ jobs:
       run: |
         set -euxo pipefail
         ./scripts/build_and_install_autosar_ap.sh \
-          --prefix /tmp/autosar_ap \
+          --prefix /tmp/autosar-ap \
           --build-dir build-install-ci \
           --build-type Release \
           --source-dir "${GITHUB_WORKSPACE}" \
           --with-platform-app
 
         ./scripts/build_switchable_pubsub_sample.sh \
-          --prefix /tmp/autosar_ap \
+          --prefix /tmp/autosar-ap \
           --cyclonedds-prefix "${CYCLONEDDS_PREFIX}" \
           --build-dir build-switchable-pubsub-sample-ci \
           --run-smoke
 
         ./scripts/build_user_apps_from_opt.sh \
-          --prefix /tmp/autosar_ap \
-          --source-dir /tmp/autosar_ap/user_apps \
+          --prefix /tmp/autosar-ap \
+          --source-dir /tmp/autosar-ap/user_apps \
           --build-dir build-user-apps-ci
 
         ./scripts/build_user_apps_from_opt.sh \
-          --prefix /tmp/autosar_ap \
-          --source-dir /tmp/autosar_ap/user_apps \
+          --prefix /tmp/autosar-ap \
+          --source-dir /tmp/autosar-ap/user_apps \
           --build-dir build-user-apps-ci-run \
           --run
 

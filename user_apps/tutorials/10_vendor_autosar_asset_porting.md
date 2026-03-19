@@ -33,16 +33,16 @@ Important:
 First install this implementation:
 
 ```bash
-sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
+sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar-ap
 ```
 
 For Raspberry Pi ECU use:
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar-ap/user_apps_build
 ```
 
 ## 2) Inventory Existing Assets (Portability Assessment)
@@ -66,25 +66,25 @@ rg -n "ara::com|ara::core|ara::exec|ara::log" /path/to/your_asset
 Use existing `user_apps` as a template or prepare an external source tree:
 
 ```bash
-cp -r /opt/autosar_ap/user_apps /path/to/your_user_apps
+cp -r /opt/autosar-ap/user_apps /path/to/your_user_apps
 ```
 
 Build:
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir /path/to/your_user_apps \
   --build-dir build-your-user-apps
 ```
 
 ## 4) Align CMake to Standard Targets
 
-Link against imported targets from `/opt/autosar_ap`:
+Link against imported targets from `/opt/autosar-ap`:
 
 ```cmake
 find_package(AdaptiveAutosarAP REQUIRED CONFIG
-  PATHS /opt/autosar_ap/lib/cmake/AdaptiveAutosarAP
+  PATHS /opt/autosar-ap/lib/cmake/AdaptiveAutosarAP
   NO_DEFAULT_PATH)
 
 add_executable(my_ecu_app src/my_ecu_app.cpp)
@@ -105,7 +105,7 @@ target_link_libraries(my_ecu_app
 3. Match Service/Instance/Event IDs with the peer UNIT
 
 ```bash
-export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample.json
+export VSOMEIP_CONFIGURATION=/opt/autosar-ap/configuration/vsomeip-pubsub-sample.json
 ```
 
 ### Using DDS
@@ -125,7 +125,7 @@ As a principle, keep the application layer using only `ara::` APIs:
 1. Isolate vendor-specific wrappers to a single location
 2. Keep the application body to `ara::com` API calls only
 3. Make IDs and topics configurable values
-4. Restrict CMake dependencies to `/opt/autosar_ap` only
+4. Restrict CMake dependencies to `/opt/autosar-ap` only
 
 ## 7) Communication Verification with Existing UNITs
 
@@ -133,8 +133,8 @@ As a principle, keep the application layer using only `ara::` APIs:
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -158,8 +158,8 @@ Run like an ECU with `systemd`:
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -189,7 +189,7 @@ Environment variable configuration:
 
 1. Eliminated vendor-specific API dependencies
 2. Can build with `ara::` APIs only
-3. Can build referencing only `/opt/autosar_ap`
+3. Can build referencing only `/opt/autosar-ap`
 4. Aligned IDs / topics / versions with peer UNITs
 5. Documented the communication verification procedure including startup order
 6. Confirmed restart and log retrieval procedures for `systemd` persistent operation

@@ -9,7 +9,7 @@
 
 ## 目的
 
-- `/opt/autosar_ap` へランタイムと user_apps をインストールする
+- `/opt/autosar-ap` へランタイムと user_apps をインストールする
 - `systemd` で ECU アプリを常駐実行する
 - CAN/SOME-IP/DDS/ZeroCopy をまとめて検証する
 
@@ -17,9 +17,9 @@
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar-ap/user_apps_build
 ```
 
 ## 2) CAN インターフェースを準備
@@ -40,8 +40,8 @@ sudo ./scripts/setup_socketcan_interface.sh --ifname vcan0 --vcan
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -71,8 +71,8 @@ mock CAN で統合チェック:
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -81,8 +81,8 @@ socketcan で統合チェック:
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend socketcan \
   --can-if can0 \
   --require-platform-binary

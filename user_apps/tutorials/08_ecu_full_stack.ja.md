@@ -15,7 +15,7 @@
 ## 実行前準備
 
 ```bash
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/vsomeip/lib:/opt/cyclonedds/lib:/opt/iceoryx/lib:${LD_LIBRARY_PATH:-}
 ```

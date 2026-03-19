@@ -65,7 +65,7 @@ Install location: `/opt/qnx/` (boost → `third_party/`, iceoryx / cyclonedds / 
 ./qnx/scripts/build_autosar_ap_qnx.sh install
 ```
 
-Install location: `/opt/qnx/autosar_ap/aarch64le/`
+Install location: `/opt/qnx/autosar-ap/aarch64le/`
 
 ### 5. Cross-Build user\_apps
 
@@ -131,7 +131,7 @@ Key options:
 
 The script automatically:
 
-1. SCP transfers `out/qnx/deploy/autosar_ap-aarch64le.tar.gz`
+1. SCP transfers `out/qnx/deploy/autosar-ap-aarch64le.tar.gz`
 2. Connects via SSH and extracts to `/autosar` on the target
 3. Updates vsomeip unicast IP to the target IP
 
@@ -140,7 +140,7 @@ The script automatically:
 ```bash
 ./qnx/scripts/deploy_to_qnx_target.sh \
   --host 192.168.1.100 \
-  --image out/qnx/deploy/autosar_ap-aarch64le.ifs \
+  --image out/qnx/deploy/autosar-ap-aarch64le.ifs \
   --image-type ifs
 ```
 
@@ -402,7 +402,7 @@ iceoryx is built and installed for QNX, but the RouDi daemon must be started at 
 
 ### AUTOSAR AP Platform Daemons
 
-14 daemons are built and installed to `/opt/qnx/autosar_ap/aarch64le/bin/`:
+14 daemons are built and installed to `/opt/qnx/autosar-ap/aarch64le/bin/`:
 
 | Daemon | Function | QNX Status |
 | --- | --- | --- |

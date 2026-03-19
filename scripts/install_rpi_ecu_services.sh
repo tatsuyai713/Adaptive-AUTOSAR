@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-AUTOSAR_AP_PREFIX="/opt/autosar_ap"
-USER_APP_BUILD_DIR="/opt/autosar_ap/user_apps_build"
+AUTOSAR_AP_PREFIX="/opt/autosar-ap"
+USER_APP_BUILD_DIR="/opt/autosar-ap/user_apps_build"
 SYSTEMD_DIR="/etc/systemd/system"
 
 ENV_OUTPUT="/etc/default/autosar-ecu-full-stack"

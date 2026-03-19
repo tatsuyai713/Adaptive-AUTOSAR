@@ -17,7 +17,7 @@ TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 BUILD_TYPE="Release"
 
 SOURCE_DIR="${REPO_ROOT}/user_apps"
-AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
+AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar-ap/${ARCH}"
 BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/user_apps-${ARCH}"
 INSTALL_PREFIX="${OUT_ROOT}/user_apps/${ARCH}"
 
@@ -105,7 +105,7 @@ if [[ "${SOURCE_DIR_EXPLICIT}" != "ON" ]]; then
   SOURCE_DIR="${REPO_ROOT}/user_apps"
 fi
 if [[ "${AUTOSAR_AP_PREFIX_EXPLICIT}" != "ON" ]]; then
-  AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
+  AUTOSAR_AP_PREFIX="${OUT_ROOT}/autosar-ap/${ARCH}"
 fi
 if [[ "${BUILD_DIR_EXPLICIT}" != "ON" ]]; then
   BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/user_apps-${ARCH}"

@@ -519,11 +519,11 @@ ALL TESTS PASSED
 
 ```bash
 # 1. AUTOSAR AP をローカルにインストール
-cmake --install build --prefix /tmp/autosar_ap_local
+cmake --install build --prefix /tmp/autosar-ap_local
 
 # 2. ユーザーアプリをビルド
 cmake -S user_apps -B build-user-apps \
-  -DAUTOSAR_AP_PREFIX=/tmp/autosar_ap_local
+  -DAUTOSAR_AP_PREFIX=/tmp/autosar-ap_local
 cmake --build build-user-apps -j$(nproc)
 
 # 3. 本番用 ECU アプリを実行
@@ -813,8 +813,8 @@ add_user_template_target(
 
 ```bash
 # インストール方式
-cmake --install build --prefix /tmp/autosar_ap_local
-cmake -S user_apps -B build-user-apps -DAUTOSAR_AP_PREFIX=/tmp/autosar_ap_local
+cmake --install build --prefix /tmp/autosar-ap_local
+cmake -S user_apps -B build-user-apps -DAUTOSAR_AP_PREFIX=/tmp/autosar-ap_local
 cmake --build build-user-apps -j$(nproc)
 ./build-user-apps/src/apps/basic/my_ecu_app
 ```
@@ -824,7 +824,7 @@ cmake --build build-user-apps -j$(nproc)
 ```xml
 <PROCESS-DESIGN>
   <SHORT-NAME>MyEcuApp</SHORT-NAME>
-  <EXECUTABLE-REF>/tmp/autosar_ap_local/user_apps_build/src/apps/basic/my_ecu_app</EXECUTABLE-REF>
+  <EXECUTABLE-REF>/tmp/autosar-ap_local/user_apps_build/src/apps/basic/my_ecu_app</EXECUTABLE-REF>
   <FUNCTION-GROUP-REF>MachineFG</FUNCTION-GROUP-REF>
   <STATE-REF>Running</STATE-REF>
   <STARTUP-PRIORITY>10</STARTUP-PRIORITY>

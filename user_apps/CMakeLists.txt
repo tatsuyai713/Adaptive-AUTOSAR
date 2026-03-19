@@ -11,7 +11,7 @@ option(USER_APPS_BUILD_APPS_COMMUNICATION "Build user apps/communication targets
 option(USER_APPS_BUILD_APPS_FEATURE "Build user apps/feature targets" ON)
 option(USER_APPS_BUILD_APPS_SAMPLES "Build ara::com API samples (in-process)" ON)
 
-set(AUTOSAR_AP_PREFIX "/opt/autosar_ap" CACHE PATH "Installed AUTOSAR AP prefix")
+set(AUTOSAR_AP_PREFIX "/opt/autosar-ap" CACHE PATH "Installed AUTOSAR AP prefix")
 set(_autosar_ap_cmake_libdir "${CMAKE_INSTALL_LIBDIR}")
 if(NOT EXISTS "${AUTOSAR_AP_PREFIX}/${_autosar_ap_cmake_libdir}/cmake/AdaptiveAutosarAP/AdaptiveAutosarAPConfig.cmake")
   if(EXISTS "${AUTOSAR_AP_PREFIX}/lib/cmake/AdaptiveAutosarAP/AdaptiveAutosarAPConfig.cmake")

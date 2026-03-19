@@ -3,7 +3,7 @@
 
 > **Audience**: Developers new to Adaptive AUTOSAR who want to get Pub/Sub working quickly.
 > **Estimated time**: 45–60 minutes.
-> **Prerequisite**: AUTOSAR AP runtime installed at `/opt/autosar_ap`.
+> **Prerequisite**: AUTOSAR AP runtime installed at `/opt/autosar-ap`.
 >
 > **Important**: This tutorial uses a SOME/IP-focused app path to keep the first learning step simple.
 > The primary production strategy is manifest-profile backend switching with one binary.
@@ -56,7 +56,7 @@ Your communication design
 
 ```bash
 # Verify AUTOSAR AP is installed
-ls /opt/autosar_ap/lib/
+ls /opt/autosar-ap/lib/
 
 # Verify vSomeIP is installed
 ls /opt/vsomeip/lib/
@@ -533,7 +533,7 @@ add_subdirectory(my_vehiclespeed)
 ### 5-1. Build from installed runtime (recommended)
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 Expected output:
@@ -553,7 +553,7 @@ build-user-apps-opt/src/apps/my_vehiclespeed/
 
 ```bash
 cmake -S user_apps -B build-user-apps \
-  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar_ap \
+  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar-ap \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build-user-apps -j$(nproc) \
@@ -596,7 +596,7 @@ endif()
 ### 6-1. Set environment variables
 
 ```bash
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 # This tutorial uses a SOME/IP-specific app path.
 # ARA_COM_BINDING_MANIFEST is not used in this section.
 export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
@@ -795,10 +795,10 @@ python3 tools/arxml_generator/generate_arxml.py \
   --input my_service.yaml --validate-only --strict --print-summary
 
 # Build user apps
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 
 # Set runtime environment
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 # This tutorial uses a SOME/IP-specific app path.
 # ARA_COM_BINDING_MANIFEST is not used in this quick reference block.
 export VSOMEIP_CONFIGURATION=$AUTOSAR_AP_PREFIX/configuration/vsomeip-pubsub-sample.json

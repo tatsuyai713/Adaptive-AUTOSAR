@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(GNUInstallDirs)
 
-set(AUTOSAR_AP_PREFIX "/opt/autosar_ap" CACHE PATH "Installed Adaptive AUTOSAR AP prefix")
+set(AUTOSAR_AP_PREFIX "/opt/autosar-ap" CACHE PATH "Installed Adaptive AUTOSAR AP prefix")
 set(CYCLONEDDS_PREFIX "/opt/cyclonedds" CACHE PATH "CycloneDDS install prefix")
 set(ICEORYX_PREFIX "/opt/iceoryx" CACHE PATH "iceoryx install prefix")
 

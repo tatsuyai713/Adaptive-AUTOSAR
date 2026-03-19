@@ -615,9 +615,9 @@ ls /opt/cyclonedds/lib/   # libddsc.so should exist
 ```bash
 cd ~/Adaptive-AUTOSAR
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 ```
 
@@ -628,19 +628,19 @@ sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
 ### 8.2 Verify Installation
 
 ```bash
-ls /opt/autosar_ap/lib/         # AUTOSAR AP libraries
-ls /opt/autosar_ap/include/     # header files
-ls /opt/autosar_ap/bin/         # binaries (adaptive_autosar, etc.)
-ls /opt/autosar_ap/user_apps_build/  # user app binaries
+ls /opt/autosar-ap/lib/         # AUTOSAR AP libraries
+ls /opt/autosar-ap/include/     # header files
+ls /opt/autosar-ap/bin/         # binaries (adaptive_autosar, etc.)
+ls /opt/autosar-ap/user_apps_build/  # user app binaries
 ```
 
 ### 8.3 Configure Library PATH
 
 ```bash
-echo '/opt/autosar_ap/lib' | sudo tee /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/vsomeip/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/iceoryx/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/cyclonedds/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
+echo '/opt/autosar-ap/lib' | sudo tee /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/vsomeip/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/iceoryx/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/cyclonedds/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
 sudo ldconfig
 ```
 
@@ -653,8 +653,8 @@ sudo ldconfig
 ```bash
 cd ~/Adaptive-AUTOSAR
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -703,7 +703,7 @@ sudo nano /etc/default/autosar-vsomeip-routing
 ```
 
 ```bash
-VSOMEIP_CONFIGURATION=/opt/autosar_ap/etc/vsomeip-rpi.json
+VSOMEIP_CONFIGURATION=/opt/autosar-ap/etc/vsomeip-rpi.json
 VSOMEIP_APPLICATION_NAME=routingmanagerd
 ```
 
@@ -787,7 +787,7 @@ sudo nano /etc/autosar/bringup.sh
 #!/usr/bin/env bash
 # /etc/autosar/bringup.sh
 
-APP_DIR="${AUTOSAR_USER_APPS_BUILD_DIR:-/opt/autosar_ap/user_apps_build}"
+APP_DIR="${AUTOSAR_USER_APPS_BUILD_DIR:-/opt/autosar-ap/user_apps_build}"
 
 # Basic launch (PID monitoring only)
 launch_app "my_app" "${APP_DIR}/my_application" --param1 value1
@@ -821,7 +821,7 @@ cat /run/autosar/user_apps_registry.csv
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir user_apps \
   --build-dir build-user-apps
 ```
@@ -834,15 +834,15 @@ cat /run/autosar/user_apps_registry.csv
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 
 # With physical CAN
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend socketcan \
   --can-if can0 \
   --require-platform-binary
@@ -920,7 +920,7 @@ sudo systemctl restart autosar-iox-roudi.service
 ```bash
 sudo journalctl -u autosar-vsomeip-routing.service --no-pager -n 50
 cat /etc/default/autosar-vsomeip-routing
-ls /opt/autosar_ap/etc/vsomeip-rpi.json
+ls /opt/autosar-ap/etc/vsomeip-rpi.json
 ```
 
 ### 13.3 gPTP Issues
@@ -979,7 +979,7 @@ sudo dmesg -w | grep -iE "(can|spi|ptp|eth)"
 
 # SOME/IP debug logging (vSomeIP)
 export VSOMEIP_LOG_LEVEL=debug
-/opt/autosar_ap/bin/adaptive_autosar
+/opt/autosar-ap/bin/adaptive_autosar
 ```
 
 ---

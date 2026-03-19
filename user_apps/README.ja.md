@@ -1,6 +1,6 @@
 # User Apps（AUTOSAR AP 外部コンシューマプロジェクト）
 
-`user_apps` は、インストール済みの AUTOSAR AP 成果物（例: `/opt/autosar_ap`）に対して
+`user_apps` は、インストール済みの AUTOSAR AP 成果物（例: `/opt/autosar-ap`）に対して
 ビルドされる外部コンシューマプロジェクトです。
 
 このディレクトリは責務ごとに構成されています:
@@ -12,7 +12,7 @@
 リポジトリルートから:
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 ビルドされた実行ファイルは以下のようなサブディレクトリに生成されます:
@@ -30,7 +30,7 @@ find build-user-apps-opt -type f -name "autosar_user_*" -perm -111 | sort
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir /path/to/your_user_apps
 ```
 
@@ -54,13 +54,13 @@ CMake オプションで選択したグループのみビルドできます:
 例（フィーチャーアプリのみビルド）:
 
 ```bash
-AP_CMAKE_DIR=/opt/autosar_ap/lib/cmake/AdaptiveAutosarAP
+AP_CMAKE_DIR=/opt/autosar-ap/lib/cmake/AdaptiveAutosarAP
 if [ ! -f "${AP_CMAKE_DIR}/AdaptiveAutosarAPConfig.cmake" ]; then
-  AP_CMAKE_DIR=/opt/autosar_ap/lib64/cmake/AdaptiveAutosarAP
+  AP_CMAKE_DIR=/opt/autosar-ap/lib64/cmake/AdaptiveAutosarAP
 fi
 
 cmake -S user_apps -B build-user-apps-feature-only \
-  -DAUTOSAR_AP_PREFIX=/opt/autosar_ap \
+  -DAUTOSAR_AP_PREFIX=/opt/autosar-ap \
   -DAdaptiveAutosarAP_DIR="${AP_CMAKE_DIR}" \
   -DUSER_APPS_BUILD_APPS_BASIC=OFF \
   -DUSER_APPS_BUILD_APPS_COMMUNICATION=OFF \

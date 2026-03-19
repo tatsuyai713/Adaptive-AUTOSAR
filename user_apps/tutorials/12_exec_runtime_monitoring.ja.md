@@ -21,7 +21,7 @@
 まず通常の user_apps ビルドを行います。
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 故障注入ありで起動します。

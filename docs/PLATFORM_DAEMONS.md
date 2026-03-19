@@ -519,11 +519,11 @@ adaptive_autosar <exec_manifest> <ev_manifest> <dm_manifest> <phm_manifest>
 
 ```bash
 # 明示的なマニフェスト指定
-/opt/autosar_ap/bin/adaptive_autosar \
-  /opt/autosar_ap/configuration/execution_manifest.arxml \
-  /opt/autosar_ap/configuration/extended_vehicle_manifest.arxml \
-  /opt/autosar_ap/configuration/diagnostic_manager_manifest.arxml \
-  /opt/autosar_ap/configuration/health_monitoring_manifest.arxml
+/opt/autosar-ap/bin/adaptive_autosar \
+  /opt/autosar-ap/configuration/execution_manifest.arxml \
+  /opt/autosar-ap/configuration/extended_vehicle_manifest.arxml \
+  /opt/autosar-ap/configuration/diagnostic_manager_manifest.arxml \
+  /opt/autosar-ap/configuration/health_monitoring_manifest.arxml
 
 # TTY 接続時は Enter キーで終了、非 TTY 時は SIGTERM/SIGINT で終了
 ```

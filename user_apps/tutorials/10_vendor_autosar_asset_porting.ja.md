@@ -33,16 +33,16 @@
 まず本実装をインストールします。
 
 ```bash
-sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
+sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar-ap
 ```
 
 Raspberry Pi ECU として使う場合:
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build
+  --user-app-build-dir /opt/autosar-ap/user_apps_build
 ```
 
 ## 2) 既存資産の棚卸し (移植判定)
@@ -66,27 +66,27 @@ rg -n "ara::com|ara::core|ara::exec|ara::log" /path/to/your_asset
 既存 `user_apps` を雛形にするか、外部ツリーを用意します。
 
 ```bash
-cp -r /opt/autosar_ap/user_apps /path/to/your_user_apps
+cp -r /opt/autosar-ap/user_apps /path/to/your_user_apps
 ```
 
 ビルド:
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir /path/to/your_user_apps \
   --build-dir build-your-user-apps
 ```
 
 ## 4) CMake を標準ターゲットに合わせる
 
-`/opt/autosar_ap` の imported targets を使ってリンクします。
+`/opt/autosar-ap` の imported targets を使ってリンクします。
 
 最小例:
 
 ```cmake
 find_package(AdaptiveAutosarAP REQUIRED CONFIG
-  PATHS /opt/autosar_ap/lib/cmake/AdaptiveAutosarAP
+  PATHS /opt/autosar-ap/lib/cmake/AdaptiveAutosarAP
   NO_DEFAULT_PATH)
 
 add_executable(my_ecu_app src/my_ecu_app.cpp)
@@ -107,7 +107,7 @@ target_link_libraries(my_ecu_app
 3. Service/Instance/Event IDs を相手 UNIT と一致させる
 
 ```bash
-export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample.json
+export VSOMEIP_CONFIGURATION=/opt/autosar-ap/configuration/vsomeip-pubsub-sample.json
 ```
 
 ### DDS を使う場合
@@ -127,7 +127,7 @@ export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample
 1. ベンダ独自ラッパを 1 箇所に隔離する
 2. アプリ本体は `ara::com` API 呼び出しだけにする
 3. ID や topic は設定値化する
-4. 依存を `CMakeLists.txt` で `/opt/autosar_ap` に限定する
+4. 依存を `CMakeLists.txt` で `/opt/autosar-ap` に限定する
 
 ## 7) 既存 UNIT と疎通確認
 
@@ -135,8 +135,8 @@ export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -160,8 +160,8 @@ export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-pubsub-sample
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -191,7 +191,7 @@ sudo ./scripts/install_rpi_ecu_services.sh \
 
 1. ベンダ固有 API 依存を排除した
 2. `ara::` API のみでビルド可能
-3. `/opt/autosar_ap` のみ参照してビルド可能
+3. `/opt/autosar-ap` のみ参照してビルド可能
 4. 相手 UNIT と ID / topic / version を一致させた
 5. 起動順を含めた疎通手順を文書化した
 6. `systemd` 常駐時の再起動/ログ取得手順を確認した

@@ -9,7 +9,7 @@
 ///          ara::exec::ExecutionManager em(execServer, stateServer);
 ///          em.RegisterProcess({
 ///              "MyApp",
-///              "/opt/autosar_ap/bin/my_app",
+///              "/opt/autosar-ap/bin/my_app",
 ///              "MachineFG", "Running",
 ///              {}, 3s, 5s
 ///          });

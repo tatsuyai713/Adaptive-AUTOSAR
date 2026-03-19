@@ -214,16 +214,16 @@ autosar-persistency-guard   ← 永続データ保護
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 ```
 
 このスクリプトが行うこと:
 
 1. ミドルウェア（iceoryx / vSomeIP / CycloneDDS）のインストール（`--install-middleware` 指定時）
-2. AUTOSAR AP ランタイムのビルドと `/opt/autosar_ap` へのインストール
+2. AUTOSAR AP ランタイムのビルドと `/opt/autosar-ap` へのインストール
 3. `user_apps` テンプレートのビルド
 4. デプロイメント設定ファイルのコピー
 
@@ -247,8 +247,8 @@ sudo ./scripts/setup_socketcan_interface.sh --ifname vcan0 --vcan
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -296,7 +296,7 @@ autosar-exec-manager.service
     │
     └─ exec /etc/autosar/bringup.sh
          │
-         ├─ launch_app "my_app" /opt/autosar_ap/user_apps_build/bin/my_app
+         ├─ launch_app "my_app" /opt/autosar-ap/user_apps_build/bin/my_app
          │     └─ PID/名前を /run/autosar/user_apps_registry.csv に登録
          │
          ├─ launch_app_with_heartbeat "my_app2" "$HB_FILE" "5000" /path/to/my_app2
@@ -421,8 +421,8 @@ ls /run/autosar/phm/health/
 
 ```csv
 # name,pid,heartbeat_file,heartbeat_timeout_ms,instance_specifier,restart_limit,restart_window_ms,restart_command
-minimal_runtime,12345,,0,AdaptiveAutosar/UserApps/minimal_runtime,5,60000,/opt/autosar_ap/user_apps_build/src/apps/basic/autosar_user_minimal_runtime
-exec_signal_app,12346,/run/autosar/user_apps/exec_signal_app.heartbeat,5000,AdaptiveAutosar/UserApps/exec_signal_app,5,60000,/opt/autosar_ap/user_apps_build/src/apps/basic/autosar_user_exec_signal_template
+minimal_runtime,12345,,0,AdaptiveAutosar/UserApps/minimal_runtime,5,60000,/opt/autosar-ap/user_apps_build/src/apps/basic/autosar_user_minimal_runtime
+exec_signal_app,12346,/run/autosar/user_apps/exec_signal_app.heartbeat,5000,AdaptiveAutosar/UserApps/exec_signal_app,5,60000,/opt/autosar-ap/user_apps_build/src/apps/basic/autosar_user_exec_signal_template
 ```
 
 ### 4.5 User App Monitor の設定パラメータ
@@ -446,7 +446,7 @@ exec_signal_app,12346,/run/autosar/user_apps/exec_signal_app.heartbeat,5000,Adap
 
 ```bash
 # 1) アプリを再ビルド
-cd /opt/autosar_ap/user_apps_build && make -j$(nproc)
+cd /opt/autosar-ap/user_apps_build && make -j$(nproc)
 
 # 2) bringup.sh を編集（必要に応じて）
 sudo vi /etc/autosar/bringup.sh
@@ -463,8 +463,8 @@ sudo systemctl restart autosar-exec-manager.service
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -582,7 +582,7 @@ add_user_template_target(
 ### 6.3 ビルド
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ls build-user-apps-opt/src/apps/basic/autosar_user_my_custom_app
 ```
 
@@ -721,13 +721,13 @@ cat /run/autosar/user_app_monitor.status
 | ステップ | コマンド |
 |---|---|
 | 1. ミドルウェアインストール | `sudo ./scripts/install_middleware_stack.sh --install-base-deps` |
-| 2. ランタイムビルド＆インストール | `sudo ./scripts/build_and_install_rpi_ecu_profile.sh --prefix /opt/autosar_ap ...` |
+| 2. ランタイムビルド＆インストール | `sudo ./scripts/build_and_install_rpi_ecu_profile.sh --prefix /opt/autosar-ap ...` |
 | 3. CAN 準備 (必要時) | `sudo ./scripts/setup_socketcan_interface.sh --ifname vcan0 --vcan` |
-| 4. サービスインストール | `sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap ... --enable` |
+| 4. サービスインストール | `sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar-ap ... --enable` |
 | 5. 不要サービス無効化 | `sudo systemctl disable --now autosar-ecu-full-stack.service` |
 | 6. bringup.sh 編集 | `sudo vi /etc/autosar/bringup.sh` (アプリ登録) |
 | 7. サービス起動 | `sudo systemctl start autosar-iox-roudi autosar-vsomeip-routing ...` |
-| 8. 検証 | `./scripts/verify_rpi_ecu_profile.sh --prefix /opt/autosar_ap ... --can-backend mock` |
+| 8. 検証 | `./scripts/verify_rpi_ecu_profile.sh --prefix /opt/autosar-ap ... --can-backend mock` |
 
 ### 最小構成クイックリファレンス
 

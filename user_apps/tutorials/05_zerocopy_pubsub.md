@@ -22,7 +22,7 @@
 ## Prerequisites
 
 ```bash
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 export LD_LIBRARY_PATH=${AUTOSAR_AP_PREFIX}/lib:${AUTOSAR_AP_PREFIX}/lib64:/opt/iceoryx/lib:${LD_LIBRARY_PATH:-}
 ```
 

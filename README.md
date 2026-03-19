@@ -73,21 +73,21 @@ sudo ./scripts/install_middleware_stack.sh
 ```bash
 # Quick install to /tmp (no root required)
 ./scripts/build_and_install_autosar_ap.sh \
-  --prefix /tmp/autosar_ap \
+  --prefix /tmp/autosar-ap \
   --build-dir build-install-autosar-ap
 ```
 
 For a production-like layout:
 
 ```bash
-sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
+sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar-ap
 ```
 
 If middleware is not yet installed, the build script can handle it:
 
 ```bash
 sudo ./scripts/build_and_install_autosar_ap.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --install-middleware \
   --install-base-deps
 ```
@@ -96,8 +96,8 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /tmp/autosar_ap \
-  --source-dir /tmp/autosar_ap/user_apps \
+  --prefix /tmp/autosar-ap \
+  --source-dir /tmp/autosar-ap/user_apps \
   --build-dir build-user-apps-opt
 ```
 
@@ -105,8 +105,8 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /tmp/autosar_ap \
-  --source-dir /tmp/autosar_ap/user_apps \
+  --prefix /tmp/autosar-ap \
+  --source-dir /tmp/autosar-ap/user_apps \
   --build-dir build-user-apps-opt-run \
   --run
 ```
@@ -137,8 +137,8 @@ iox-roudi &
 
 # SOME/IP profile
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_vsomeip.yaml
-export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
-/opt/autosar_ap/bin/autosar_vsomeip_routing_manager &
+export VSOMEIP_CONFIGURATION=/opt/autosar-ap/configuration/vsomeip-rpi.json
+/opt/autosar-ap/bin/autosar_vsomeip_routing_manager &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 ```
@@ -175,9 +175,9 @@ User apps are launched via `/etc/autosar/bringup.sh`.
 ```bash
 # 1. Build runtime + user apps + install middleware
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 
 # 2. Setup SocketCAN interface
@@ -185,14 +185,14 @@ sudo ./scripts/setup_socketcan_interface.sh --ifname can0 --bitrate 500000
 
 # 3. Install and enable systemd services
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 
 # 4. Verify the deployment
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```

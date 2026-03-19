@@ -711,7 +711,7 @@ namespace ara
                     paths.emplace_back("./autosar/autosar_topic_mapping.yaml");
                     paths.emplace_back("./apps/build-adaptive-autosar/autosar/autosar_topic_mapping.yaml");
                     paths.emplace_back("/opt/autosar-ap-libs/share/autosar/com/autosar_topic_mapping.yaml");
-                    paths.emplace_back("/opt/autosar_ap/configuration/autosar_topic_mapping.yaml");
+                    paths.emplace_back("/opt/autosar-ap/configuration/autosar_topic_mapping.yaml");
                     return paths;
                 }
 

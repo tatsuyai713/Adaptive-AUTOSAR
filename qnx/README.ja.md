@@ -65,7 +65,7 @@ source qnx/env/qnx800.env.example   # 必要に応じてコピーして値を調
 ./qnx/scripts/build_autosar_ap_qnx.sh install
 ```
 
-インストール先: `/opt/qnx/autosar_ap/aarch64le/`
+インストール先: `/opt/qnx/autosar-ap/aarch64le/`
 
 ### 5. user\_apps をクロスビルド
 
@@ -131,7 +131,7 @@ export AUTOSAR_QNX_JOBS=2
 
 スクリプトが以下を自動で実行します:
 
-1. `out/qnx/deploy/autosar_ap-aarch64le.tar.gz` を SCP 転送
+1. `out/qnx/deploy/autosar-ap-aarch64le.tar.gz` を SCP 転送
 2. SSH 接続してターゲット上の `/autosar` に展開
 3. vsomeip の unicast IP をターゲット IP に書き換え
 
@@ -140,7 +140,7 @@ export AUTOSAR_QNX_JOBS=2
 ```bash
 ./qnx/scripts/deploy_to_qnx_target.sh \
   --host 192.168.1.100 \
-  --image out/qnx/deploy/autosar_ap-aarch64le.ifs \
+  --image out/qnx/deploy/autosar-ap-aarch64le.ifs \
   --image-type ifs
 ```
 
@@ -402,7 +402,7 @@ iceoryx は QNX 向けにビルド・インストール済みですが、runtime
 
 ### AUTOSAR AP プラットフォームデーモン
 
-以下の 14 本のデーモンが `/opt/qnx/autosar_ap/aarch64le/bin/` にビルド・インストールされています。
+以下の 14 本のデーモンが `/opt/qnx/autosar-ap/aarch64le/bin/` にビルド・インストールされています。
 
 | デーモン | 機能 | QNX での状態 |
 | --- | --- | --- |

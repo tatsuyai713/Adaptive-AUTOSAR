@@ -5,7 +5,7 @@
 
 ## このプロファイルでカバーする内容
 
-- ランタイムのビルド・インストール（`/opt/autosar_ap` へ）
+- ランタイムのビルド・インストール（`/opt/autosar-ap` へ）
 - インストール済みランタイムのみに対して `user_apps` をビルド
 - Linux 上での SocketCAN 設定
 - 以下の `systemd` ユニットのインストール:
@@ -42,9 +42,9 @@ sudo ./scripts/install_middleware_stack.sh --install-base-deps
 
 ```bash
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 ```
 
@@ -66,8 +66,8 @@ sudo ./scripts/setup_socketcan_interface.sh --ifname vcan0 --vcan
 
 ```bash
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -119,7 +119,7 @@ sudo systemctl disable --now autosar-ecu-full-stack.service
 
 ## ユーザー bringup ワークフロー
 
-1. `${AUTOSAR_USER_APPS_BUILD_DIR}` へアプリをビルド（デフォルト: `/opt/autosar_ap/user_apps_build`）。
+1. `${AUTOSAR_USER_APPS_BUILD_DIR}` へアプリをビルド（デフォルト: `/opt/autosar-ap/user_apps_build`）。
 2. `/etc/autosar/bringup.sh` を編集。
 3. ヘルパー関数（`launch_app` / `launch_app_with_heartbeat` / `launch_app_managed`）で起動コマンドを追加。
 4. 実行マネージャサービスを再起動:
@@ -160,8 +160,8 @@ sudo systemctl restart autosar-exec-manager.service
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 ```
@@ -170,8 +170,8 @@ sudo systemctl restart autosar-exec-manager.service
 
 ```bash
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend socketcan \
   --can-if can0 \
   --require-platform-binary

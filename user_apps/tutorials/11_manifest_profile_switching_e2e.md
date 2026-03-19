@@ -21,7 +21,7 @@
 ## Prerequisites
 
 ```bash
-export AUTOSAR_AP_PREFIX=/tmp/autosar_ap
+export AUTOSAR_AP_PREFIX=/tmp/autosar-ap
 export CYCLONEDDS_PREFIX=/opt/cyclonedds
 export VSOMEIP_PREFIX=/opt/vsomeip
 ```

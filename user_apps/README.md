@@ -1,7 +1,7 @@
 # User Apps (AUTOSAR AP External Consumer Project)
 
 `user_apps` is an external consumer project built against installed AUTOSAR AP
-artifacts (for example `/opt/autosar_ap`).
+artifacts (for example `/opt/autosar-ap`).
 
 This directory is organized by responsibility:
 - `src/apps`: executable user applications grouped by function
@@ -12,7 +12,7 @@ This directory is organized by responsibility:
 From repository root:
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 Built executables are generated under subdirectories such as:
@@ -30,7 +30,7 @@ From your own external source tree:
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir /path/to/your_user_apps
 ```
 
@@ -54,13 +54,13 @@ You can build only selected groups via CMake options:
 Example (build only feature apps):
 
 ```bash
-AP_CMAKE_DIR=/opt/autosar_ap/lib/cmake/AdaptiveAutosarAP
+AP_CMAKE_DIR=/opt/autosar-ap/lib/cmake/AdaptiveAutosarAP
 if [ ! -f "${AP_CMAKE_DIR}/AdaptiveAutosarAPConfig.cmake" ]; then
-  AP_CMAKE_DIR=/opt/autosar_ap/lib64/cmake/AdaptiveAutosarAP
+  AP_CMAKE_DIR=/opt/autosar-ap/lib64/cmake/AdaptiveAutosarAP
 fi
 
 cmake -S user_apps -B build-user-apps-feature-only \
-  -DAUTOSAR_AP_PREFIX=/opt/autosar_ap \
+  -DAUTOSAR_AP_PREFIX=/opt/autosar-ap \
   -DAdaptiveAutosarAP_DIR="${AP_CMAKE_DIR}" \
   -DUSER_APPS_BUILD_APPS_BASIC=OFF \
   -DUSER_APPS_BUILD_APPS_COMMUNICATION=OFF \

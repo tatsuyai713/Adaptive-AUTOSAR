@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-INSTALL_PREFIX="/opt/autosar_ap"
-USER_APP_BUILD_DIR="/opt/autosar_ap/user_apps_build"
+INSTALL_PREFIX="/opt/autosar-ap"
+USER_APP_BUILD_DIR="/opt/autosar-ap/user_apps_build"
 CAN_BACKEND="mock"
 CAN_IFNAME="can0"
 SMOKE_SECONDS=8

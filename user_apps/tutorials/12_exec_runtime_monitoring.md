@@ -21,7 +21,7 @@
 Build user apps first:
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 Run with fault injection:

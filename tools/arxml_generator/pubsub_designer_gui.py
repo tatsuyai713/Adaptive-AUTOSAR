@@ -604,15 +604,15 @@ add_user_template_target(
 target_include_directories({sname}_consumer PRIVATE {out_dir})
 
 # ── Step 4: Build ──────────────────────────────────────────────
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 
 # Or via cmake directly:
 cmake -S user_apps -B build-user-apps \\
-  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar_ap
+  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar-ap
 cmake --build build-user-apps -j$(nproc)
 
 # ── Step 5: Run (two terminals) ────────────────────────────────
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 export VSOMEIP_CONFIGURATION=$AUTOSAR_AP_PREFIX/configuration/vsomeip-pubsub-sample.json
 export LD_LIBRARY_PATH=$AUTOSAR_AP_PREFIX/lib:/opt/vsomeip/lib:${{LD_LIBRARY_PATH:-}}
 

@@ -3,7 +3,7 @@
 
 > **対象読者**: Adaptive AUTOSAR が初めてで、まず Pub/Sub 通信を動かしたい方
 > **所要時間**: 約 45〜60 分
-> **前提**: AUTOSAR AP ランタイムが `/opt/autosar_ap` にインストール済みであること
+> **前提**: AUTOSAR AP ランタイムが `/opt/autosar-ap` にインストール済みであること
 >
 > **重要**: 本チュートリアルは最初の学習を簡単にするため、SOME/IP 中心のアプリ経路を使います。
 > 本番運用の主軸は、単一バイナリをマニフェストプロファイルで切替える方式です。
@@ -56,7 +56,7 @@
 
 ```bash
 # AUTOSAR AP がインストールされているか確認
-ls /opt/autosar_ap/lib/
+ls /opt/autosar-ap/lib/
 
 # vSomeIP がインストールされているか確認
 ls /opt/vsomeip/lib/
@@ -523,7 +523,7 @@ add_subdirectory(my_vehiclespeed)
 ### 5-1. インストール済みランタイムからビルドする（推奨）
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 成功時の出力:
@@ -543,7 +543,7 @@ build-user-apps-opt/src/apps/my_vehiclespeed/
 
 ```bash
 cmake -S user_apps -B build-user-apps \
-  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar_ap \
+  -DAUTOSAR_AP_INSTALL_PREFIX=/opt/autosar-ap \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build-user-apps -j$(nproc) \
@@ -586,7 +586,7 @@ endif()
 ### 6-1. 環境変数を設定する
 
 ```bash
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 # 本チュートリアルは SOME/IP 固定のアプリ経路を使います。
 # この手順では ARA_COM_BINDING_MANIFEST は使用しません。
 export VSOMEIP_CONFIGURATION=${AUTOSAR_AP_PREFIX}/configuration/vsomeip-pubsub-sample.json
@@ -770,10 +770,10 @@ python3 tools/arxml_generator/generate_arxml.py \
   --input my_service.yaml --validate-only --strict --print-summary
 
 # user_apps ビルド
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 
 # 実行環境変数設定
-export AUTOSAR_AP_PREFIX=/opt/autosar_ap
+export AUTOSAR_AP_PREFIX=/opt/autosar-ap
 # 本チュートリアルは SOME/IP 固定のアプリ経路を使います。
 # このクイックリファレンスでは ARA_COM_BINDING_MANIFEST は使用しません。
 export VSOMEIP_CONFIGURATION=$AUTOSAR_AP_PREFIX/configuration/vsomeip-pubsub-sample.json

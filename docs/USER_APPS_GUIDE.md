@@ -796,11 +796,11 @@ EM_RUN_SECONDS=30 ./autosar_user_em_daemon
 ### インストール済みランタイムに対してビルド (推奨)
 
 ```bash
-# AUTOSAR AP ランタイムが /opt/autosar_ap にインストール済みの場合
+# AUTOSAR AP ランタイムが /opt/autosar-ap にインストール済みの場合
 sudo ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
-  --source-dir /opt/autosar_ap/user_apps \
-  --build-dir /opt/autosar_ap/user_apps_build
+  --prefix /opt/autosar-ap \
+  --source-dir /opt/autosar-ap/user_apps \
+  --build-dir /opt/autosar-ap/user_apps_build
 ```
 
 ### ソースツリー内ビルド (開発時)
@@ -818,7 +818,7 @@ ls build/autosar_user_*
 
 ```bash
 cmake -S user_apps -B build-ua \
-  -DAUTOSAR_AP_PREFIX=/opt/autosar_ap \
+  -DAUTOSAR_AP_PREFIX=/opt/autosar-ap \
   -DARA_COM_USE_VSOMEIP=ON \
   -DARA_COM_USE_ICEORYX=ON \
   -DARA_COM_USE_CYCLONEDDS=ON

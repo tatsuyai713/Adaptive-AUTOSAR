@@ -65,10 +65,10 @@ done
 if [[ -z "${IMAGE_FILE}" ]]; then
   DEPLOY_DIR="${REPO_ROOT}/out/qnx/deploy"
   # Prefer tar.gz; fall back to IFS
-  if ls "${DEPLOY_DIR}/autosar_ap-${ARCH}.tar.gz" &>/dev/null; then
-    IMAGE_FILE="${DEPLOY_DIR}/autosar_ap-${ARCH}.tar.gz"
-  elif ls "${DEPLOY_DIR}/autosar_ap-${ARCH}.ifs" &>/dev/null; then
-    IMAGE_FILE="${DEPLOY_DIR}/autosar_ap-${ARCH}.ifs"
+  if ls "${DEPLOY_DIR}/autosar-ap-${ARCH}.tar.gz" &>/dev/null; then
+    IMAGE_FILE="${DEPLOY_DIR}/autosar-ap-${ARCH}.tar.gz"
+  elif ls "${DEPLOY_DIR}/autosar-ap-${ARCH}.ifs" &>/dev/null; then
+    IMAGE_FILE="${DEPLOY_DIR}/autosar-ap-${ARCH}.ifs"
   else
     qnx_die "No image found in ${DEPLOY_DIR}. Run create_qnx_deploy_image.sh first."
   fi

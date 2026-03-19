@@ -697,9 +697,9 @@ ls /opt/cyclonedds/lib/   # libddsc.so が存在すること
 ```bash
 cd ~/Adaptive-AUTOSAR
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --runtime-build-dir build-rpi-autosar-ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --install-middleware
 ```
 
@@ -714,20 +714,20 @@ sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
 ### 8.2 インストール確認
 
 ```bash
-ls /opt/autosar_ap/lib/         # AUTOSAR AP ライブラリ
-ls /opt/autosar_ap/include/     # ヘッダーファイル
-ls /opt/autosar_ap/bin/         # バイナリ（adaptive_autosar 等）
-ls /opt/autosar_ap/user_apps_build/  # ユーザーアプリバイナリ
+ls /opt/autosar-ap/lib/         # AUTOSAR AP ライブラリ
+ls /opt/autosar-ap/include/     # ヘッダーファイル
+ls /opt/autosar-ap/bin/         # バイナリ（adaptive_autosar 等）
+ls /opt/autosar-ap/user_apps_build/  # ユーザーアプリバイナリ
 ```
 
 ### 8.3 AUTOSAR AP ライブラリへの PATH 設定
 
 ```bash
 # 共有ライブラリのパスを登録
-echo '/opt/autosar_ap/lib' | sudo tee /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/vsomeip/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/iceoryx/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
-echo '/opt/cyclonedds/lib' | sudo tee -a /etc/ld.so.conf.d/autosar_ap.conf
+echo '/opt/autosar-ap/lib' | sudo tee /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/vsomeip/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/iceoryx/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
+echo '/opt/cyclonedds/lib' | sudo tee -a /etc/ld.so.conf.d/autosar-ap.conf
 sudo ldconfig
 ```
 
@@ -740,8 +740,8 @@ sudo ldconfig
 ```bash
 cd ~/Adaptive-AUTOSAR
 sudo ./scripts/install_rpi_ecu_services.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --enable
 ```
 
@@ -791,7 +791,7 @@ sudo nano /etc/default/autosar-vsomeip-routing
 
 ```bash
 # SOME/IP 設定ファイルパス
-VSOMEIP_CONFIGURATION=/opt/autosar_ap/etc/vsomeip-rpi.json
+VSOMEIP_CONFIGURATION=/opt/autosar-ap/etc/vsomeip-rpi.json
 # マルチキャストアドレス（LAN セグメントに合わせて変更）
 VSOMEIP_APPLICATION_NAME=routingmanagerd
 ```
@@ -945,7 +945,7 @@ sudo nano /etc/autosar/bringup.sh
 # Adaptive AUTOSAR ECU bringup script
 # このファイルを編集してユーザーアプリを追加してください。
 
-APP_DIR="${AUTOSAR_USER_APPS_BUILD_DIR:-/opt/autosar_ap/user_apps_build}"
+APP_DIR="${AUTOSAR_USER_APPS_BUILD_DIR:-/opt/autosar-ap/user_apps_build}"
 
 # === ユーザーアプリ追加例 ===
 
@@ -995,13 +995,13 @@ cat /run/autosar/user_apps_registry.csv
 ```bash
 # 外部プロジェクトとしてビルド
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir user_apps \
   --build-dir build-user-apps
 
 # ビルドしてそのまま実行
 ./scripts/build_user_apps_from_opt.sh \
-  --prefix /opt/autosar_ap \
+  --prefix /opt/autosar-ap \
   --source-dir user_apps \
   --build-dir build-user-apps \
   --run
@@ -1016,15 +1016,15 @@ cat /run/autosar/user_apps_registry.csv
 ```bash
 # プロファイル全体の検証
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend mock \
   --require-platform-binary
 
 # 物理 CAN を使う場合
 ./scripts/verify_rpi_ecu_profile.sh \
-  --prefix /opt/autosar_ap \
-  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --prefix /opt/autosar-ap \
+  --user-app-build-dir /opt/autosar-ap/user_apps_build \
   --can-backend socketcan \
   --can-if can0 \
   --require-platform-binary
@@ -1159,7 +1159,7 @@ sudo journalctl -u autosar-vsomeip-routing.service --no-pager -n 50
 
 # 設定ファイル確認
 cat /etc/default/autosar-vsomeip-routing
-ls /opt/autosar_ap/etc/vsomeip-rpi.json
+ls /opt/autosar-ap/etc/vsomeip-rpi.json
 
 # VSOMEIP_CONFIGURATION のパスが正しいか確認
 ```
@@ -1255,7 +1255,7 @@ sudo dmesg -w | grep -iE "(can|spi|ptp|eth)"
 
 # SOME/IP デバッグログ（vSomeIP）
 export VSOMEIP_LOG_LEVEL=debug
-/opt/autosar_ap/bin/adaptive_autosar
+/opt/autosar-ap/bin/adaptive_autosar
 ```
 
 ---

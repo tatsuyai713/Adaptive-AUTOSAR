@@ -55,7 +55,7 @@ done
 
 [[ -z "${IMAGE_NAME}" ]] && IMAGE_NAME="autosar_ap-${ARCH}"
 
-AUTOSAR_AP_BIN="${OUT_ROOT}/autosar_ap/${ARCH}/bin"
+AUTOSAR_AP_BIN="${OUT_ROOT}/autosar-ap/${ARCH}/bin"
 VSOMEIP_LIB="${OUT_ROOT}/vsomeip/lib"
 CYCLONEDDS_LIB="${OUT_ROOT}/cyclonedds/lib"
 ICEORYX_LIB="${OUT_ROOT}/iceoryx/lib"

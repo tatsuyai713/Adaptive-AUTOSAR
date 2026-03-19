@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT_DEFAULT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="${REPO_ROOT_DEFAULT}"
 
-INSTALL_PREFIX="/opt/autosar_ap"
+INSTALL_PREFIX="/opt/autosar-ap"
 BUILD_DIR="build-install-autosar-ap"
 BUILD_TYPE="Release"
 USE_VSOMEIP="ON"

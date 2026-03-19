@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SWITCHABLE_APP_DIR="${REPO_ROOT}/user_apps/src/apps/communication/switchable_pubsub"
 
-AUTOSAR_AP_PREFIX="/opt/autosar_ap"
+AUTOSAR_AP_PREFIX="/opt/autosar-ap"
 CYCLONEDDS_PREFIX="/opt/cyclonedds"
 ICEORYX_PREFIX="/opt/iceoryx"
 BUILD_DIR="${REPO_ROOT}/build-switchable-pubsub-sample"

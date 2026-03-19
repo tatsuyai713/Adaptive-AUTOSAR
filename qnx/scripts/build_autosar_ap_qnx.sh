@@ -22,8 +22,8 @@ TOOLCHAIN_FILE="$(qnx_resolve_toolchain_file)"
 BUILD_TYPE="Release"
 SOURCE_DIR="${REPO_ROOT}"
 
-INSTALL_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
-BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar_ap-${ARCH}"
+INSTALL_PREFIX="${OUT_ROOT}/autosar-ap/${ARCH}"
+BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar-ap-${ARCH}"
 
 THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"
 MW_ROOT="${OUT_ROOT}"
@@ -139,10 +139,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${INSTALL_PREFIX_EXPLICIT}" != "ON" ]]; then
-  INSTALL_PREFIX="${OUT_ROOT}/autosar_ap/${ARCH}"
+  INSTALL_PREFIX="${OUT_ROOT}/autosar-ap/${ARCH}"
 fi
 if [[ "${BUILD_DIR_EXPLICIT}" != "ON" ]]; then
-  BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar_ap-${ARCH}"
+  BUILD_DIR="${AUTOSAR_QNX_WORK_ROOT:-${REPO_ROOT}/out/qnx/work}/build/autosar-ap-${ARCH}"
 fi
 if [[ "${THIRD_PARTY_PREFIX_EXPLICIT}" != "ON" ]]; then
   THIRD_PARTY_PREFIX="${OUT_ROOT}/third_party"

@@ -34,8 +34,8 @@
 ///   EM_RUN_SECONDS=0 ./em_daemon_app
 ///
 ///   # Specify custom binary paths:
-///   EM_SENSOR_BIN=/opt/autosar_ap/bin/autosar_user_em_sensor_app \
-///   EM_ACTUATOR_BIN=/opt/autosar_ap/bin/autosar_user_em_actuator_app \
+///   EM_SENSOR_BIN=/opt/autosar-ap/bin/autosar_user_em_sensor_app \
+///   EM_ACTUATOR_BIN=/opt/autosar-ap/bin/autosar_user_em_actuator_app \
 ///   EM_RUN_SECONDS=30 ./em_daemon_app
 
 #include <chrono>
@@ -96,7 +96,7 @@ namespace
     }
 
     // Auto-detect binary path relative to current binary location.
-    // Looks for <dir>/<name>, then /opt/autosar_ap/bin/<name>.
+    // Looks for <dir>/<name>, then /opt/autosar-ap/bin/<name>.
     std::string FindBinary(const std::string &name, const std::string &envVar)
     {
         // 1) Honour environment override
@@ -107,7 +107,7 @@ namespace
         }
 
         // 2) Try installed location
-        const std::string installed{"/opt/autosar_ap/bin/" + name};
+        const std::string installed{"/opt/autosar-ap/bin/" + name};
         if (::access(installed.c_str(), X_OK) == 0)
         {
             return installed;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-AUTOSAR_AP_PREFIX="/opt/autosar_ap"
+AUTOSAR_AP_PREFIX="/opt/autosar-ap"
 BUILD_DIR="build-user-apps-opt"
 RUN_AFTER_BUILD="OFF"
 USER_APP_SOURCE_DIR=""

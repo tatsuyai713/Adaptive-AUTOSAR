@@ -1,12 +1,12 @@
 # user_apps チュートリアル一覧
 
 このディレクトリは、`user_apps` の各機能を学ぶためのステップバイステップ手順書です。
-すべて AUTOSAR AP ランタイムが `/opt/autosar_ap` にインストール済みであることを前提とします。
+すべて AUTOSAR AP ランタイムが `/opt/autosar-ap` にインストール済みであることを前提とします。
 
 ## 共通ビルドコマンド
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 ビルド後の実行ファイルは `build-user-apps-opt/src/apps/...` 以下に生成されます。

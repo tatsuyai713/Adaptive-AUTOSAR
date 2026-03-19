@@ -1,12 +1,12 @@
 # user_apps Tutorials
 
 This directory contains step-by-step guides for each `user_apps` feature.
-All tutorials assume the runtime is installed at `/opt/autosar_ap`.
+All tutorials assume the runtime is installed at `/opt/autosar-ap`.
 
 ## Common Build Command
 
 ```bash
-./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar_ap
+./scripts/build_user_apps_from_opt.sh --prefix /opt/autosar-ap
 ```
 
 Built executables are placed under `build-user-apps-opt/src/apps/...`.
