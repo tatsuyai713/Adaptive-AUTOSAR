@@ -7,111 +7,83 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 - English: `README.md`
 - Japanese: `README.ja.md`
 
-## 対応範囲とバージョン
-- 本リポジトリでの ARXML スキーマ基準: `http://autosar.org/schema/r4.0` (`autosar_00050.xsd`)
-- 本実装は Adaptive AUTOSAR 風 API/挙動のサブセットを対象とした教育用途実装です。
-- 公式の AUTOSAR 適合認証を主張するものではありません。
+## 概要
 
-## QuickStart (ビルド -> インストール -> ユーザーアプリビルド/実行)
-以下の手順は **2026-02-15** に Docker 環境で実行確認済みです。
+本リポジトリは、Linux 環境で動作する AUTOSAR Adaptive Platform API の実装を提供します。以下の 2 つの用途で利用できます。
 
-### 前提
+1. **Linux シミュレーション環境** — デスクトップ Linux や Docker 上で、実機 ECU なしに AUTOSAR Adaptive アプリケーションを開発・テスト
+2. **ECU デプロイ** — Raspberry Pi（または QNX ターゲット）をプロトタイプ ECU として使用。systemd サービス管理、SocketCAN、時刻同期などを含む
+
+### このリポジトリでできること
+
+- **15 の `ara::*` モジュール**を完全実装（R24-11 ベースライン、SWS API カバレッジ 100%）
+- **3 種の通信トランスポート**: SOME/IP (vSomeIP)、DDS (CycloneDDS)、ゼロコピー IPC (iceoryx) — 実行時に切り替え可能
+- **E2E 保護**: Profile 01〜07 および 11、状態機械とサンプル単位ステータス付き
+- **SecOC**: フレッシュネス管理、HMAC ベース MAC、鍵ローテーション
+- **診断**: UDS サービスフルスタック (0x10〜0x3E)、OBD-II、DoIP ホストテスター
+- **ARXML ツールチェーン**: YAML → ARXML → C++ proxy/skeleton/binding ヘッダ生成
+- **ユーザーアプリテンプレート**: 13 種のテンプレートとステップバイステップチュートリアル
+- **ベンダ資産移植**: Vector/ETAS/EB で開発した C++ 資産をソースレベルで再ビルド可能
+
+### 対応範囲とバージョン
+
+- ARXML スキーマ基準: `http://autosar.org/schema/r4.0` (`autosar_00050.xsd`)
+- 教育用途実装です。公式の AUTOSAR 適合認証を主張するものではありません。
+- 非標準機能は `ara::<domain>::extension` 配下に拡張として提供し、標準 API の置換としては扱いません。
+
+---
+
+## 前提条件
+
 - C++14 コンパイラ
 - CMake >= 3.14
 - Python3 + `PyYAML`
 - OpenSSL 開発パッケージ (`libcrypto`)
-- ミドルウェア (本リポジトリ既定パス):
-  - vSomeIP: `/opt/vsomeip`
-  - iceoryx: `/opt/iceoryx`
-  - Cyclone DDS (+ idlc): `/opt/cyclonedds`
 
-### 0) 依存ライブラリとミドルウェアを導入 (Linux / Raspberry Pi)
-以下の同梱スクリプトを利用します:
+ミドルウェア（同梱スクリプトで自動ビルド）:
+
+| ライブラリ | デフォルトパス | 備考 |
+|---|---|---|
+| iceoryx v2.0.6 | `/opt/iceoryx` | コンテナ環境向け ACL パッチ適用済み |
+| CycloneDDS 0.10.5 | `/opt/cyclonedds` | iceoryx 経由で SHM 自動有効化 |
+| vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CycloneDDS-CXX から CDR 抽出; 実行時 DDS ランタイム不要 |
+
+---
+
+## クイックスタート: Linux シミュレーション環境
+
+Linux マシンまたは Docker コンテナ上で AUTOSAR AP アプリケーションをビルド・インストール・実行する手順です。
+
+### 1. 依存ライブラリとミドルウェアの導入
+
+```bash
+# 1 コマンドで一括導入（システムパッケージ + 全ミドルウェア）
+sudo ./scripts/install_middleware_stack.sh --install-base-deps
+```
+
+または段階的に:
 
 ```bash
 sudo ./scripts/install_dependency.sh
 sudo ./scripts/install_middleware_stack.sh
 ```
 
-1 コマンドでまとめて導入する場合:
+### 2. AUTOSAR AP ランタイムのビルドとインストール
 
 ```bash
-sudo ./scripts/install_middleware_stack.sh --install-base-deps
-```
-
-ミドルウェアスタックは以下の順で導入されます:
-
-| ライブラリ | デフォルトパス | 備考 |
-|---|---|---|
-| iceoryx v2.0.6 | `/opt/iceoryx` | コンテナ環境向け ACL 非対応パッチ適用済み |
-| CycloneDDS 0.10.5 | `/opt/cyclonedds` | iceoryx による SHM を自動有効化; `cyclonedds-lwrcl.xml` を生成 |
-| vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CycloneDDS-CXX から CDR ライブラリ (`liblwrcl_cdr.a`) を抽出してビルド; 実行時に DDS ランタイム不要 |
-
-スクリプト個別実行例:
-
-```bash
-# CycloneDDS を SHM 明示有効化でインストール (iceoryx が未インストールなら自動インストール)
-sudo ./scripts/install_cyclonedds.sh --enable-shm
-
-# vsomeip + CDR のみ (実行時に DDS ランタイム不要)
-sudo ./scripts/install_vsomeip.sh --prefix /opt/vsomeip
-
-# システムパッケージインストールをスキップ (既導入済みの場合)
-sudo ./scripts/install_middleware_stack.sh --skip-system-deps
-```
-
-### QNX 8.0 クロスビルド — ミドルウェアインストール (scripts/)
-
-QNX SDP 8.0 向けには、`scripts/` フォルダに Linux 版と対応するミドルウェア
-インストールスクリプトが含まれています。`qcc`/`q++` を使って QNX 向けにクロスコンパイルします。
-
-**前提条件**: QNX SDP 8.0 がインストール済みで `qnxsdp-env.sh` が sourceable であること。
-
-```bash
-# QNX 環境を source (パスは環境に合わせて調整)
-source ~/qnx800/qnxsdp-env.sh
-
-# aarch64le 向けに全ミドルウェアを一括インストール
-sudo ./scripts/install_middleware_stack_qnx.sh --arch aarch64le --enable-shm
-
-# 個別インストール
-sudo ./scripts/install_iceoryx_qnx.sh install   --arch aarch64le
-sudo ./scripts/install_cyclonedds_qnx.sh install --arch aarch64le --enable-shm
-sudo ./scripts/install_vsomeip_qnx.sh install   --arch aarch64le --boost-prefix /opt/qnx/third_party
-```
-
-QNX ミドルウェアのインストール先 (デフォルト):
-
-| ライブラリ | デフォルトパス |
-|---|---|
-| iceoryx | `/opt/qnx/iceoryx` |
-| CycloneDDS | `/opt/qnx/cyclonedds` |
-| vsomeip + CDR | `/opt/qnx/vsomeip` |
-| Boost (vsomeip 用) | `/opt/qnx/third_party` |
-
-`install_middleware_stack_qnx.sh` は、vsomeip が有効かつ Boost が未導入の場合に
-Boost を自動ビルドします。
-
-QNX 向け AUTOSAR AP ランタイムのフルクロスビルド手順は以下を参照してください:
-- `qnx/README.md`
-- `qnx/env/qnx800.env.example`
-
-### 1) AUTOSAR AP ランタイムをビルドしてインストール
-まずは root 権限不要な `/tmp` 例:
-
-```bash
+# /tmp にクイックインストール（root 権限不要）
 ./scripts/build_and_install_autosar_ap.sh \
   --prefix /tmp/autosar_ap \
   --build-dir build-install-autosar-ap
 ```
 
-本番相当で `/opt` に入れる場合:
+本番相当のレイアウト:
 
 ```bash
 sudo ./scripts/build_and_install_autosar_ap.sh --prefix /opt/autosar_ap
 ```
 
-ミドルウェアが未導入の場合は、ビルドスクリプトから先に導入できます:
+ミドルウェア未導入の場合はビルドスクリプトから一括導入可能:
 
 ```bash
 sudo ./scripts/build_and_install_autosar_ap.sh \
@@ -120,31 +92,7 @@ sudo ./scripts/build_and_install_autosar_ap.sh \
   --install-base-deps
 ```
 
-`build_and_install_autosar_ap.sh` は既定でプラットフォーム実行バイナリ
-(`adaptive_autosar`) もビルドします。ライブラリのみを意図する場合のみ
-`--without-platform-app` を使ってください。
-
-#### AUTOSAR AP リリースプロファイル (既定: `R24-11`)
-
-本リポジトリは `ara::*` 全体で `R24-11` を既定ベースラインとして扱います。
-
-CMake を直接実行する場合、対象 AP リリースを明示指定できます:
-
-```bash
-cmake -S . -B build \
-  -DAUTOSAR_AP_RELEASE_PROFILE=R24-11
-```
-
-選択したプロファイルはインストール済み `AdaptiveAutosarAP::*` の compile
-定義として利用側に伝播し、以下から参照できます。
-- 全モジュール共通: `ara/core/ap_release_info.h` (`ara::core::ApReleaseInfo`)
-- `ara::com` 向け互換: `ara/com/ap_release_info.h` (`ara::com::ApReleaseInfo`)
-
-後方互換エイリアス:
-- `-DARA_COM_AUTOSAR_AP_RELEASE=...` も引き続き利用可能で、
-  `AUTOSAR_AP_RELEASE_PROFILE` にマップされます。
-
-### 2) インストール済みランタイムのみ参照して user_apps をビルド
+### 3. ユーザーアプリケーションのビルド
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
@@ -153,7 +101,7 @@ cmake -S . -B build \
   --build-dir build-user-apps-opt
 ```
 
-### 3) 既定スモークアプリを実行
+### 4. スモークテストの実行
 
 ```bash
 ./scripts/build_user_apps_from_opt.sh \
@@ -163,60 +111,31 @@ cmake -S . -B build \
   --run
 ```
 
-`--run` では以下を実行します:
-- `autosar_user_minimal_runtime`
-- `autosar_user_per_phm_demo`
+`autosar_user_minimal_runtime` と `autosar_user_per_phm_demo` が実行されます。
 
-### 4) 追加テンプレートを手動実行 (任意)
+### 5. 通信トランスポート切り替え Pub/Sub の確認（DDS / iceoryx / SOME/IP）
 
-```bash
-./build-user-apps-opt/src/apps/feature/runtime/autosar_user_tpl_runtime_lifecycle
-./build-user-apps-opt/src/apps/feature/can/autosar_user_tpl_can_socketcan_receiver --can-backend=mock
-```
-
-### 5) DDS/iceoryx/vSomeIP 切り替え Pub/Sub ユーザーアプリのみを独立ビルド
-
-このユーザーアプリはメインランタイムとは独立してビルドでき、ビルド時に次の生成チェーンが自動実行されます。
-
-- アプリソース走査 -> topic mapping YAML + manifest YAML (`autosar-generate-comm-manifest`)
-- manifest YAML -> ARXML (`tools/arxml_generator/generate_arxml.py`)
-- mapping YAML -> proxy/skeleton ヘッダ (`autosar-generate-proxy-skeleton`)
-- ARXML -> binding 定数ヘッダ (`tools/arxml_generator/generate_ara_com_binding.py`)
-- アプリ配置: `user_apps/src/apps/communication/switchable_pubsub`
-
-```bash
-./scripts/build_switchable_pubsub_sample.sh
-```
-
-DDS/iceoryx/vSomeIP の各 profile をまとめてスモーク確認する場合:
+3 種のトランスポートプロファイルをまとめてスモーク確認:
 
 ```bash
 ./scripts/build_switchable_pubsub_sample.sh --run-smoke
 ```
 
-このユーザーアプリ経路の通信切り替えは profile manifest 方式です。
-`ARA_COM_BINDING_MANIFEST` に生成済み profile manifest を指定してください。
-必要に応じて `ARA_COM_EVENT_BINDING` で実行時上書きも可能です
-(`dds|iceoryx|vsomeip|auto`)。
-
-同一バイナリで profile を切り替える手動実行例:
+同一バイナリで手動切り替え:
 
 ```bash
-# CycloneDDS profile
-unset ARA_COM_EVENT_BINDING
+# DDS プロファイル
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_dds.yaml
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 
-# iceoryx profile
-unset ARA_COM_EVENT_BINDING
+# iceoryx プロファイル
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_iceoryx.yaml
 iox-roudi &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_sub &
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 
-# vSomeIP profile
-unset ARA_COM_EVENT_BINDING
+# SOME/IP プロファイル
 export ARA_COM_BINDING_MANIFEST=$PWD/build-switchable-pubsub-sample/generated/switchable_manifest_vsomeip.yaml
 export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
 /opt/autosar_ap/bin/autosar_vsomeip_routing_manager &
@@ -224,20 +143,53 @@ export VSOMEIP_CONFIGURATION=/opt/autosar_ap/configuration/vsomeip-rpi.json
 ./build-switchable-pubsub-sample/autosar_switchable_pubsub_pub
 ```
 
-### Raspberry Pi ECU プロファイル (Linux + systemd)
-Raspberry Pi Linux マシンをプロトタイプ ECU として動作させるための
-ビルド/配備/検証スクリプトを同梱しています。
+---
+
+## ECU デプロイ: Raspberry Pi
+
+Raspberry Pi をプロトタイプ ECU として動作させるための、systemd サービス管理を含むデプロイプロファイルを同梱しています。
+
+### デプロイされるもの
+
+ECU プロファイルは AUTOSAR AP ランタイムを構成する 14 の systemd サービスをインストールします:
+
+| サービス | 役割 |
+|---|---|
+| `autosar-platform-app` | プラットフォーム側常駐プロセス群 |
+| `autosar-exec-manager` | ユーザーアプリ起動 (`bringup.sh`) |
+| `autosar-vsomeip-routing` | SOME/IP ルーティングマネージャ |
+| `autosar-can-manager` | SocketCAN インタフェース管理 |
+| `autosar-time-sync` | 時刻同期サポート |
+| `autosar-ntp-time-provider` | NTP プロバイダ (chrony/ntpd 自動検出) |
+| `autosar-ptp-time-provider` | PTP/gPTP プロバイダ (ptp4l PHC) |
+| `autosar-persistency-guard` | 永続化ストレージ同期ガード |
+| `autosar-iam-policy` | IAM ポリシーローダ |
+| `autosar-user-app-monitor` | ユーザーアプリ監視・再起動リカバリ |
+| `autosar-watchdog` | ウォッチドッグ監視 |
+| `autosar-sm-state` | マシン状態/ネットワークモード管理 |
+
+ユーザーアプリは `/etc/autosar/bringup.sh` 経由で起動されます。
+
+### デプロイ手順
 
 ```bash
+# 1. ランタイム + ユーザーアプリのビルドとミドルウェア導入
 sudo ./scripts/build_and_install_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --runtime-build-dir build-rpi-autosar-ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
   --install-middleware
 
+# 2. SocketCAN インタフェースのセットアップ
 sudo ./scripts/setup_socketcan_interface.sh --ifname can0 --bitrate 500000
-sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-build-dir /opt/autosar_ap/user_apps_build --enable
 
+# 3. systemd サービスのインストールと有効化
+sudo ./scripts/install_rpi_ecu_services.sh \
+  --prefix /opt/autosar_ap \
+  --user-app-build-dir /opt/autosar_ap/user_apps_build \
+  --enable
+
+# 4. デプロイの検証
 ./scripts/verify_rpi_ecu_profile.sh \
   --prefix /opt/autosar_ap \
   --user-app-build-dir /opt/autosar_ap/user_apps_build \
@@ -245,129 +197,65 @@ sudo ./scripts/install_rpi_ecu_services.sh --prefix /opt/autosar_ap --user-app-b
   --require-platform-binary
 ```
 
-詳細ランブック:
-- `deployment/rpi_ecu/README.md`
-- `deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md` (gPTP 詳細設定を含む日本語版総合セットアップマニュアル)
+詳細ガイド:
+- [`deployment/rpi_ecu/README.md`](deployment/rpi_ecu/README.md)
+- [`deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md`](deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md) (gPTP 設定を含む日本語版)
 
-ユーザーアプリ起動の導線:
-- `/etc/autosar/bringup.sh` (ユーザーが自分の起動コマンドを記述)
-- `autosar-vsomeip-routing.service` (SOME/IP ルーティングマネージャを常駐起動)
-- `autosar-time-sync.service` (時刻同期の常駐サポートデーモン)
-- `autosar-persistency-guard.service` (永続化ストレージ同期の常駐ガードデーモン)
-- `autosar-iam-policy.service` (IAM ポリシー常駐ローダデーモン)
-- `autosar-can-manager.service` (SocketCAN インタフェース常駐管理デーモン)
-- `autosar-platform-app.service` (プラットフォーム側の常駐プロセス群を先に起動)
-- `autosar-exec-manager.service` (`bringup.sh` を起動する常駐サービス)
-- `autosar-user-app-monitor.service` (登録済みユーザーアプリ/ハートビート/`ara::phm::HealthChannel` 状態を常時監視し、起動猶予・バックオフ・Deactivated停止制御付きで再起動リカバリを実行)
-- `autosar-watchdog.service` (常駐ウォッチドッグ監視デーモン)
-- `autosar-sm-state.service` (SM マシン状態/ネットワーク通信モード管理の常駐デーモン)
-- `autosar-ntp-time-provider.service` (NTP 時刻同期プロバイダ常駐デーモン — chrony/ntpd 自動検出)
-- `autosar-ptp-time-provider.service` (PTP/gPTP 時刻同期プロバイダ常駐デーモン — ptp4l PHC 統合)
-- 登録台帳ファイル: `/run/autosar/user_apps_registry.csv`
-- 監視ステータスファイル: `/run/autosar/user_app_monitor.status`
-- PHM ヘルスファイル: `/run/autosar/phm/health/*.status`
+---
 
-### Vector/ETAS/EB 向け資産を移植して使う
-本実装は、ベンダ実装で開発した C++ 資産を「ソース互換で再ビルド」して、
-他 UNIT と通信確認する用途に利用できます。
+## QNX 8.0 クロスビルド
 
-移植手順:
-- `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`
+QNX SDP 8.0 ターゲット向けに、全ミドルウェアおよび AUTOSAR AP ランタイムのクロスコンパイルスクリプトを提供しています。
 
-## 実装機能マトリクス (AUTOSAR AP 全体仕様に対する位置付け)
-このマトリクスの前提リリース: `R24-11`。
-
-ステータス定義:
-- `実装あり (一部)`: リポジトリ内に実装あり。ただし AUTOSAR 仕様全体としては部分対応。
-- `未実装`: 現在のリポジトリ対象外。
-- **カバレッジ %** は AUTOSAR AP SWS 仕様の各機能クラスタに対する主要標準 API クラス/メソッドの実装比率の概算です。あくまでも目安としてご参照ください。
-
-本リポジトリの準拠ポリシー:
-- AUTOSAR AP 標準に対応するAPIは、標準形のシグネチャを維持します。
-- プラットフォーム側/ユーザーアプリ側のサンプル実装は、原則として標準名前空間 (`ara::<domain>::*`) を優先し、拡張 alias を既定では使用しません。
-- 非標準機能は拡張として分離し（主に `ara::<domain>::extension`）、標準APIの置換としては扱いません。
-- 拡張 API の入口ヘッダ:
-  - `src/ara/com/extension/non_standard.h`
-  - `src/ara/diag/extension/non_standard.h`
-  - `src/ara/exec/extension/non_standard.h`
-  - `src/ara/phm/extension/non_standard.h`
-
-| AUTOSAR AP 領域 | カバレッジ | 状態 | このリポジトリで提供されるもの | 未対応/備考 |
-| --- | :---: | --- | --- | --- |
-| `ara::core` | 100 % | 完全実装 | `Result`, `Optional` (`nullopt`、`make_optional`)、`Future/Promise`, `ErrorCode/ErrorDomain` (仮想 `ThrowAsException`、`SupportDataType`)、`InstanceSpecifier`, init/deinit (`InitOptions`、`SetAbortHandler`)、初期化状態照会 API, `String`/`StringView`（完全 C++14 ポリフィル: `find`/`rfind`/`substr`/`compare`/`remove_prefix`/`remove_suffix`/`starts_with`/`ends_with`/`at`/`front`/`back`/`copy`/`find_first_of`/`find_last_of`/`find_first_not_of`/`find_last_not_of`/順序演算子）, `Vector`, `Map`/`UnorderedMap`, `Array`, `Span`, `SteadyClock`, `Byte` (SWS_CORE_04400)、`Variant` (C++14 互換型安全ユニオン、`HoldsAlternative`/`Get`/`GetIf`/`Visit`/`Emplace`/`Swap`)、`CoreErrorDomain`（SWS_CORE_10400、ID 0x8000000000000014）、例外階層 (`Exception`/`CoreException`/`InvalidArgumentException`/`InvalidMetaModelShortnameException`/`InvalidMetaModelPathException`)、`Result::AndThen`/`OrElse`/`Map`/`MapError`（`Result<T,E>` および `Result<void,E>` 双方向モナディック チェーン）、`ScaleLinearAndRound`（SWS_CORE_04110）、`AbortHandler`（プロセスアボートハンドラ抽象化） | — |
-| `ara::log` | 100 % | 完全実装 | `Logger`（全重要度レベル + `WithLevel` フィルタリング）、`LogStream`（bool/int8/uint8/int16/uint16/int32/uint32/int64/uint64/float/double/string/char*/ErrorCode/InstanceSpecifier/vector/`Span<const Byte>`/`StringView` 演算子）、`LoggingFramework`、`CreateLogger`/`SetDefaultLogLevel` フリー関数、`InitLogging`/`RegisterAppDescription`（SWS_LOG_00100 アプリケーションレベルログ初期化）、`LogRaw`（生バイトロギング）、`Arg<T>` テンプレートファクトリ（SWS_LOG_00030）、3 種シンク (console/file/network)、実行時 LogLevel 上書き/照会、DLT バックエンド (`LogMode::kDlt`) UDP/dlt-viewer 統合、`LogHex`/`LogBin` フォーマッタ、`AsyncLogSink`（非ブロッキングリングバッファシンク、ロッシードロップポリシー、バックグラウンドフラッシュスレッド、ドロップ/保留数照会）、`FormatterPlugin`（カスタムフォーマッタプラグイン） | — |
-| `ara::com` 共通 API | 100 % | 完全実装 | `Event`/`Method`/`Field` ラッパー、`ServiceProxyBase`/`ServiceSkeletonBase`、Subscribe/Unsubscribe、handler、`SamplePtr`、シリアライズフレームワーク（`Serializer<T>`: trivially-copyable・CDR・`std::string`・`std::vector<T>`・`std::map<K,V>`・raw `vector<uint8_t>` 対応、CycloneDDS CDR include ガード付き）、複数同時 `StartFindService`/handle 指定 `StopFindService`、`FindService`/`StartFindService` の `InstanceSpecifier` オーバーロード、Field 能力フラグ準拠動作、`SkeletonMethod<R(Args...)>`（SWS_CM_00404: `SetHandler`/`UnsetHandler` による型付きハンドラ登録、`DeserializeAt` による多引数逐次デシリアライズ）、`SkeletonField::RegisterGetHandler`（SWS_CM_00112）/ `RegisterSetHandler`（SWS_CM_00113）、`BindingFactory::CreateProxyMethodBinding`/`CreateSkeletonMethodBinding`（DDS・iceoryx・**vsomeip** トランスポート対応）、`ProxyFireAndForgetMethod`/`SkeletonFireAndForgetMethod`（SWS_CM_00196: 型付き fire-and-forget メソッドラッパー、返値パスなし）、`CommunicationGroupServer<T,R>`/`CommunicationGroupClient<T,R>`（ブロードキャスト/ユニキャスト通信全実装）、`SkeletonEventBinding::SetInitialValue`（全トランスポートでフィールド初期値配信）、`ServiceSkeletonBase::ProcessNextMethodCall`（SWS_CM_00199: kPoll モードディスパッチキュー）、`kEventSingleThread` シリアライズ（`GetDispatchMutex()` 経由ディスパッチ排他、`SkeletonMethod`/`SkeletonFireAndForgetMethod` に接続）、全トランスポートで `SubscriptionStateChangeHandler` ライフサイクル通知、`ProxyTrigger`/`SkeletonTrigger`（SWS_CM_00500: トリガベース一方向通知 — 購読/発火/マルチサブスクライバ）、`RawDataStreamServer`/`RawDataStreamClient`（SWS_CM_00600: バックプレッシャ/サスペンド対応バイト列ストリーミング、`StreamSessionId` セッション管理 — `AcceptSession`/`CloseSession`/`IsSessionActive`/`GetActiveSessionCount`）、`InstanceIdentifier`/`InstanceIdentifierContainer`（SWS_CM_00151/SWS_CM_00152: トランスポートレベルインスタンス識別子 — 文字列/数値コンストラクタ、ハッシュ、`InstanceSpecifier` からの Resolve、コンテナ別名）、`ServiceVersion`/`VersionCheckPolicy`（SWS_CM_00150: バージョン互換チェック — kExact/kMajorOnly/kMinorBackward/kNoCheck、`IsCompatibleWith`）、`NetworkBindingBase`/`LocalIpcBinding`（SWS_CM_00610: 抽象バインディングインタフェース、接続状態管理）、`EventQosProfile`/`MethodQosProfile`（SWS_CM_00920: QoS 設定 — 信頼性/履歴/永続性/デッドライン/優先度）、`ProcessNextMethodCall(timeout)` タイムアウトオーバーロード（SWS_CM_00200）、スケルトン側 `GetServiceVersion()`、プロキシ側 `CheckServiceVersion()`、`ara::com::runtime::Initialize`/`Deinitialize`/`IsInitialized`/`GetApplicationName`（SWS_CM_00001/SWS_CM_00002: CM ランタイムライフサイクル）、`EventCacheUpdatePolicy`（SWS_CM_00701: kLastN/kNewestN）、`FilterConfig`（SWS_CM_00702: 値/レートベースイベントフィルタリング — None/Threshold/Range/OneEveryN）、`SizedEventReceiveHandler`（SWS_CM_00318: サンプル数付き受信ハンドラ）、`ProxyEvent::Reinit`（SWS_CM_00340: サービスロス後の再バインド）、`ProxyEvent::Subscribe` QoS オーバーロード（SWS_CM_00920）、`SkeletonEvent::SetSubscriptionStateChangeHandler`（SWS_CM_00350: クライアント毎購読/解除通知）、`ServiceHandleType::GetServiceInterfaceId`（SWS_CM_00312）、`FindService(InstanceIdentifier)` オーバーロード（SWS_CM_00124）、`ComErrc::kAlreadyOffered`/`kMaxServicesExceeded`/`kWrongMethodCallProcessingMode`/`kCouldNotExecute`/`kErroneousFileHandle`/`kSerializationError`（SWS_CM_11350-11354、SWS_CM_00180）、`OfferService` 二重オファーエラー伝搬、`Transformer`/`IdentityTransformer`/`TransformerChain`/`TransformerFactory`/`DefaultTransformerFactory`（SWS_CM_00710-00714: プラグイン式シリアライズ/保護チェーン）、`SomeIpTransformer`（SWS_CM_00710: 8 バイト SOME/IP ヘッダ — ServiceId/MethodId/Length ネットワークバイトオーダー — `Transform`/`InverseTransform` 長さ検証付き）、プロキシ/スケルトン両方の `GetServiceInstanceId()`（SWS_CM_00005: 提供/発見されたサービスインスタンスの `InstanceIdentifier` を返す）、`EventCacheUpdatePolicy` 接続（SWS_CM_00701: `Subscribe` でポリシー格納、`GetCacheUpdatePolicy` アクセサ）、`FilterConfig` デシメーション接続（SWS_CM_00702: `Subscribe` でフィルタ格納、`GetFilterConfig` アクセサ、`kOneEveryN` デシメーションを `GetNewSamples` で適用）、`E2EErrorDomain`/`E2EErrc`/`MakeErrorCode`（SWS_E2E_00401: E2E 保護エラードメイン）、`SampleInfo`/`E2ESampleStatus`（SWS_CM_00321: タイムスタンプ/ソース/E2E ステータス/シーケンス番号付きサンプルメタデータ） | 生成 API スタブ、SWS 全コーナーケース |
-| `ara::com` SOME/IP | 100 % | 完全実装 | SOME/IP SD client/server、pub/sub、RPC client/server (vSomeIP backend)、共通ヘッダ層で `RequestNoReturn` と SOME/IP-TP (`TpRequest`/`TpResponse`/`TpError`) の message type をサポート、TP ヘッダ シリアライズ/デシリアライズ（offset + more-segments フラグ）、`SegmentPayload` セグメンタ + `TpReassembler` リアセンブリ（設定可能タイムアウト `cDefaultTpTimeout`、`IsTimedOut()` ガード、`SegmentCount()` 照会、`Reset()` クリーンアップ）、`BindingFactory` vsomeip メソッドバインディング対応（`CreateProxyMethodBinding`/`CreateSkeletonMethodBinding` で `kVsomeip`）、`SubscriptionStateChangeHandler` 呼び出し（pending→subscribed→unsubscribed 遷移、`register_subscription_status_handler` による非同期 ACK）、`SocketRpcClient`/`SocketRpcServer` の `instanceId` 設定可能化、フィールド初期値配信（`SetInitialValue` + `notify(force=true)`）、`ProcessNextMethodCall` kPoll モードディスパッチキュー、`Ipv6Address`（128 ビットアドレス、`::` 省略記法解析、`Inject`/`Extract`/`ToString`、等値演算子）、`Ipv6EndpointOption`（SD IPv6 ユニキャスト/マルチキャスト/SD エンドポイントオプション、`Deserialize`、マルチキャストプレフィックス 0xFF 検証）、`SdNetworkConfig`（SD マルチキャストアドレス/ポート/TTL/maxEntriesPerMessage/リブート検出設定可能、`ValidateSdNetworkConfig()`）、`ConfigurationOption`（DNS-SD 設定オプション OptionType 0x01、key=value 文字列シリアライズ/デシリアライズ PRS_SOMEIPSD_00550 準拠）、Magic Cookie 対応（`GenerateClientMagicCookie`/`GenerateServerMagicCookie`、`IsMagicCookie`/`FindMagicCookie` TCP ストリーム再同期 PRS_SOMEIP_00075 準拠）、`TpReassemblyManager`（{MessageId, ClientId} キーによるマルチストリーム並行 TP リアセンブリ、スレッドセーフ `FeedSegment`/`CleanupTimedOut`/`ActiveStreamCount`）、`SessionHandler`（セッション ID ハンドリングポリシー kActive/kInactive PRS_SOMEIP_00030-00035 準拠、アトミック next-session ラップアラウンド 0xFFFF→1、リブートフラグ）、Fire-and-Forget RPC 対応（`RpcServer::validate()` で `RequestNoReturn` 受理） | — |
-| `ara::com` DDS | 100 % | 完全実装 | Cyclone DDS wrapper (`ara::com::dds`) による pub/sub、`DdsQosProfile`（kReliable/kBestEffort/kTransientLocal）による QoS プロファイル選択、`DdsProxyEventBinding`/`DdsSkeletonEventBinding`（IDL なし生 DDS C API トピック記述子、WaitSet ポーリングスレッド）、`DdsProxyMethodBinding`/`DdsSkeletonMethodBinding`（メソッド毎に request/reply 2 トピック、アトミック session-ID 相関、プロキシ側ポーリングスレッド・スケルトン側サービススレッド）、`SubscriptionStateChangeHandler` 呼び出し（kSubscriptionPending→kSubscribed→kNotSubscribed 遷移）、`SetInitialValue`（Offer 時 DDS history 経由で初期値配信）、DDS データ中心モデル向け即時サービスディスカバリ、`DdsQosConfig`（`DdsQosProfile` 構造体 + `DdsReliability`/`DdsHistoryKind`/`DdsLivelinessKind` 列挙型、設定可能 `Deadline`/`DomainId`、`DefaultReliableQos()`/`BestEffortQos()` ファクトリ関数）、`EventBindingConfig`/`MethodBindingConfig` にバインディング毎 `DdsDomainId`、`DdsParticipantFactory`（スレッドセーフシングルトン共有 DDS パーティシパント、ドメイン毎参照カウント、`AcquireParticipant`/`ReleaseParticipant`）、`DdsStatusCondition`（14 種ステータス — `kInconsistentTopic` から `kSubscriptionMatched` — 複合フラグ演算子、`DdsStatusListener` 9 コールバックスロット集約、`DdsSampleRejectedStatus`/`DdsLivelinessChangedStatus` 等構造体）、`DdsContentFilter`（SQL/Custom フィルタ式パラメータ検証、`DdsOwnershipKind` kShared/kExclusive）、`DdsExtendedQos`（Ownership、OwnershipStrength、`DdsPartitionConfig`、TransportPriority、TimeBasedFilter、LatencyBudget、ResourceLimits MaxSamples/MaxInstances/MaxSamplesPerInstance） | — |
-| `ara::com` ZeroCopy | 100 % | 完全実装 | iceoryx wrapper (`ara::com::zerocopy`) による pub/sub、`IceoryxProxyEventBinding`/`IceoryxSkeletonEventBinding`（WaitForData ポーリングスレッド、Loan/Publish ゼロコピーパス）、`IceoryxProxyMethodBinding`/`IceoryxSkeletonMethodBinding`（メソッド毎に request/reply 2 チャンネル、`[4B session_id][4B is_error][bytes]` ペイロードフレーム、プロキシ・スケルトン双方バックグラウンドスレッド、`cDefaultMethodTimeout`/`PendingCall::Deadline` による設定可能メソッド呼び出しタイムアウト、ポーリングループ内のタイムアウト済み保留呼び出しクリーンアップ）、`SubscriptionStateChangeHandler` 呼び出し（kSubscriptionPending→kSubscribed→kNotSubscribed 遷移）、`SetInitialValue`（Offer 時に共有メモリ経由で初期値配信）、iceoryx 共有メモリモデル向け即時サービスディスカバリ、`QueueOverflowPolicy`（`kDropOldest`/`kRejectNew` イベントサンプルキュー背圧制御、バインディング毎ドロップサンプルカウンタ）、`ZeroCopyTransportConfig`（設定可能 `SubscriberConfig` キュー容量/履歴リクエスト/ランタイム名、`PublisherConfig` 履歴容量/オファー時自動購読、`MaxChunkPayloadSize`、`PollTimeout`）、`ZeroCopyServiceDiscovery`（CAPRO スタイルサービスディスカバリ `OfferService`/`StopOfferService`/`ServiceFound`/`ServiceLost`、`ServiceAvailabilityHandler` コールバック、スレッドセーフ提供/発見サービスレジストリ）、`PortIntrospection`（パブリッシャ/サブスクライバポート情報抽象インターフェース、`MemoryPoolInfo` `FreeChunks()`/`UsageRatio()`、`SharedMemoryInfo` `FreeBytes()`、`IntrospectionSnapshot` 集約、`PortConnectionState` 5 状態列挙） | — |
-| `ara::com` E2E | 100 % | 完全実装 | E2E Profile11 (`TryProtect`/`Check`/`TryForward`) + event decorator、E2E Profile 01 (CRC-8 SAE-J1850、DataID 設定可)、E2E Profile 02 (CRC-8H2F、長メッセージ向け)、E2E Profile 03 (CRC-16/CCITT、0x1021 MSB 多項式、4 バイトヘッダ、4 bit カウンタ 0–15、SWS_E2E_00104)、E2E Profile 04 (CRC-32/AUTOSAR、0xF4ACFB13 反射、6 バイトヘッダ、最強保護)、E2E Profile 05 (CRC-16/ARC、0x8005 反射多項式、最大 4096 バイト、LE 2 バイト CRC ヘッダ)、E2E Profile 06 (CRC-32 標準、0xEDB88320 反射多項式、6 バイトヘッダ、8 bit カウンタ 0–255、SWS_E2E_00105)、**E2E Profile 07** (CRC-64/ECMA-182、0xC96C5795D7870F42 反射多項式、16 バイトヘッダ: CRC64(8)+Counter(2)+DataID(4)+Reserved(2)、16 bit カウンタ 0x0000–0xFFFE)、`E2ESkeletonMethodBindingDecorator`/`E2EProxyMethodBindingDecorator`（メソッドレベル E2E 保護 — リクエスト/レスポンスの CRC 検証 + ヘッダ除去）、`E2EStateMachine`（SWS_E2E_00345 ウィンドウベース状態機械、kValid/kNoData/kInit/kInvalid/kRepeat、設定可能なウィンドウサイズと OK/エラー閾値、`SMState` 列挙型 `kStateMachineDisabled`/`kStateMachineEnabled` SWS_CM_00010、`GetSMState`/`Enable`/`Disable` 実行時制御 — 無効状態で `Check()` をスキップ）、`E2EErrorDomain`/`E2EErrc`（SWS_E2E_00401: kRepeated/kWrongSequence/kError/kNotAvailable/kNoNewData/kStateMachineError エラードメイン）、`E2ESampleStatus` サンプル単位 E2E チェック結果（SWS_CM_01001）、`E2EProxyEventBindingDecorator::GetLastSampleE2EStatuses`（SWS_CM_00802: サンプル単位 E2E ステータス伝搬 — 破損サンプルはサイレントドロップではなくステータス付きで転送） | SWS E2E 全プロファイル対応完了 |
-| `ara::exec` | 100 % | 完全実装 | `ExecutionClient`/`ExecutionServer`、`StateServer`、`StateClient`（ファンクショングループ状態 Set/遷移/エラー照会、SOME/IP RPC 経由、`GetProcessState`、`SetStateWithTimeout`）、`DeterministicClient`（`WaitForActivation`/`WaitForNextActivation` SWS_EM_02001、`kWait` アクティベーション戻り値、`SetCpuAffinity` SWS_EM_02040、`SetCycleTime` SWS_EM_02045）、`FunctionGroup`/`FunctionGroupState`、`SignalHandler`、`WorkerThread`、拡張 `ProcessWatchdog`（起動猶予/連続期限切れ/コールバッククールダウン/期限切れ回数）、実行状態変更コールバック、`ExecutionManager`（EM 中央オーケストレータ: プロセスマニフェストレジストリ、`RegisterProcess`/`UnregisterProcess`、`ActivateFunctionGroup`/`TerminateFunctionGroup`、fork/exec プロセスライフサイクル、バックグラウンド監視スレッド、`ExecutionServer` からの状態同期、`ProcessStateChangeHandler` コールバック）、`StartupConfig`/`ProcessToMachineStateMapping`/`SchedulingPolicy`（SWS_EM_02050-02052）、`GetProcessName`/`GetFunctionGroup` アクセサ、`ManifestLoader`（ARXML マニフェスト自動ロード）、`ClusterMonitor`（クラスタレベル監視デーモン）、`ApplicationClient`（SWS_EM_02100: アプリケーションライフサイクル・リカバリアクション照会/応答、ヘルス報告、`ApplicationRecoveryAction` 列挙型）、QNX POSIX 移植性（`posix_spawn()` プロセス起動、`ThreadCtl` CPU アフィニティ、`devctl`/`/proc/<pid>/as` プロセス状態取得） | — |
-| `ara::diag` | 100 % | 完全実装 | `Monitor`（デバウンス・FDC 照会）、`Event`（`GetEventId` アクセサ付き）、`Conversation`、`DTCInformation`、`Condition`、`OperationCycle`、`GenericUDSService`、`SecurityAccess`、`GenericRoutine`、`DataTransfer`、`DiagnosticSessionManager`（S3 タイマー、UDS セッション管理）、`OBD-II Service`（Mode 01/09、12 PID）、`DataIdentifierService`（UDS 0x22/0x2E、マルチ DID 読み取り、DID 単位コールバック）、`CommunicationControl`（UDS 0x28、通信タイプ別 Tx/Rx 制御）、`ControlDtcSetting`（UDS 0x85、DTC 更新 ON/OFF）、`ClearDiagnosticInformation`（UDS 0x14、グループ DTC クリア、0xFFFFFF=全 DTC クリア）、`EcuResetRequest`（UDS 0x11、ソフト/ハード/キーオフ リセット）、`InputOutputControl`（UDS 0x2F、ReturnToEcu/ResetToDefault/FreezeCurrentState/ShortTermAdjustment、状態読み戻し）、`EventMemory`（SWS_Diag_00500 スナップショットレコード、拡張データレコード、エージングカウンタ、ディスプレースメントポリシー、オーバーフロー検出）、`DiagnosticManager`（診断マネージャフルオーケストレーション） | — |
-| `ara::phm` | 100 % | 完全実装 | `SupervisedEntity`（`Enable`/`Disable` ライフサイクル制御、`GetSupervisionStatus` SWS_PHM_01142、`GetLocalSupervisionStatus`、`Create` ファクトリ）、`HealthChannel`（`Offer`/`StopOffer` ライフサイクル、`SetHealthStatusCallback`、`GetHealthChannelExternalStatus`）、`RecoveryAction`（`Execute` SWS_PHM_01100、`Offer`/`StopOffer`）、`FunctionGroupStateRecoveryAction`、`PlatformResetRecoveryAction`、`CheckpointCommunicator`、supervision helper、`AliveSupervision`（周期チェックポイント監視、min/max マージン、失敗/合格閾値、kOk/kFailed/kExpired 状態）、`DeadlineSupervision`（min/max デッドライン窓、失敗/合格閾値、kDeactivated/kOk/kFailed/kExpired 状態）、`LogicalSupervision`（チェックポイント順序グラフ、隣接検証遷移、失敗閾値、allowReset）、`GlobalSupervisionStatus`/`LocalSupervisionStatus`/`HealthChannelExternalStatus`/`RecoveryActionType` 列挙型（SWS_PHM_00110-00370）、`PhmOrchestrator`（PHM オーケストレーションデーモン統合） | — |
-| `ara::per` | 100 % | 完全実装 | `KeyValueStorage`（`GetCurrentStorageSize`、`GetStorageQuota`）、`FileStorage`（`OpenFileWriteOnly`、`RecoverFile`/`RecoverAllFiles`、`GetCurrentFileStorageSize`、`GetFileInfo` SWS_PER_00420、`GetCurrentFileStorageQuota`、`EstimatedFreeSpace` SWS_PER_00450）、`ReadAccessor`（`Seek`/`GetCurrentPosition`）、`ReadWriteAccessor`（`Seek`/`GetCurrentPosition`、`Peek`）、`SharedHandle`/`UniqueHandle` ラッパー、`RecoverKeyValueStorage`/`ResetKeyValueStorage`、`RecoverFileStorage`/`ResetFileStorage`、`ResetPersistency`（グローバルファクトリリセット）、`UpdatePersistency`（UCM スキーママイグレーションフック、SWS_PER_00456、スキーマメタデータ更新とバックアップスナップショット生成）、バッチ操作（`SetValues`/`GetValues`/`SetStringValues`/`GetStringValues`/`RemoveKeys`）、キー単位およびグローバル変更オブザーバコールバック、`FileInfo` 構造体、`GetCurrentPersistencyVersion`（SWS_PER_00452）、`RegisterDataTypeFaultHandler`、`RedundantStorage`（冗長ストレージ管理）、`GetRegisteredKvsIds`（SWS_PER_00337）、`GetRegisteredFileStorageIds`（SWS_PER_00338） | — |
-| `ara::sm` | 100 % | 完全実装 | `TriggerIn`/`TriggerOut`/`TriggerInOut`、`Notifier`、`SmErrorDomain`、`MachineStateClient`（ライフサイクル状態管理、`kDiagnostic` SWS_SM_00800/`kUpdate` SWS_SM_00801 状態対応、`RequestShutdown`/`RequestRestart`、`RequestGracefulShutdown` SWS_SM_00851）、`NetworkHandle`（通信モード制御、`GetNetworkState`）、`StateTransitionHandler`（ファンクショングループ遷移コールバック）、`DiagnosticStateHandler`（SM/Diag セッションブリッジ: セッション入出コールバック、S3 タイムアウト連動、プログラミングセッション分離）、`FunctionGroupStateMachine`（状態グラフ・ガード条件・`Tick()` によるタイムアウト自動遷移・遷移履歴リングバッファ）、`PowerModeManager`（SWS_SM_00101 電源モード管理・コールバック付き）、`MachineStateResult` 列挙型（SWS_SM_00100）、`RecoveryHandler`（RecoveryAction 列挙型、リカバリコールバック）、`UpdateRequestHandler`（更新ライフサイクル: PrepareUpdate/VerifyUpdate/RollbackUpdate、状態追跡）、SM 状態常駐デーモン、`NetworkInterfaceController`（インタフェース単位 OS ネットワーク制御） | — |
-| ARXML ツール | — | 実装あり (一部) | YAML -> ARXML、ARXML -> ara::com binding 生成 | リポジトリ対象スコープ中心で全 ARXML 網羅ではない |
-| `ara::crypto` | 100 % | 完全実装 | エラードメイン、`ComputeDigest`（SHA-1/256/384/512）、`ComputeHmac`、`AesEncrypt`/`AesDecrypt`（AES-CBC、PKCS#7）、`AesGcmEncrypt`/`AesGcmDecrypt`（AES-GCM 認証付き暗号化、128/256 bit）、**`AesCtrEncrypt`/`AesCtrDecrypt`**（AES-128/256-CTR ストリーム暗号、パディングなし）、**`ChaCha20Encrypt`/`ChaCha20Decrypt`**（ChaCha20 IETF RFC 8439、32 バイト鍵、96 bit ノンス）、`DeriveKeyPbkdf2`（RFC 6070）、`DeriveKeyHkdf`（RFC 5869）、`GenerateSymmetricKey`、`GenerateRandomBytes`、`KeySlot`/`KeyStorageProvider`（スロットベース鍵管理）、`GenerateRsaKeyPair`/`RsaSign`/`RsaVerify`/`RsaEncrypt`/`RsaDecrypt`（RSA 2048/4096）、`GenerateEcKeyPair`/`EcdsaSign`/`EcdsaVerify`（ECDSA P-256/P-384）、`ParseX509Pem`/`ParseX509Der`/`VerifyX509Chain`、`CheckCertificateRevocation`（SWS_CRYPT_25100 CRL ベース失効確認）、`HashFunctionCtx`（SWS_CRYPT_21100 ストリーミング EVP_MD_CTX）、`MessageAuthenticationCodeCtx`（SWS_CRYPT_22100 ストリーミング HMAC、`FinishTruncated` SWS_CRYPT_22250）、`EcdhDeriveSecret`/`ExportPublicKeyPem`/`ImportPublicKeyPem`（SWS_CRYPT_24100 ECDH 鍵合意 + 鍵インポート/エクスポート）、`SymmetricBlockCipherCtx`（SWS_CRYPT_23700 ストリーミング AES-CBC EVP_CIPHER_CTX 経由）、`SignerPrivateCtx`（SWS_CRYPT_23800 ストリーミング RSA/ECDSA 署名 EVP_DigestSign 経由）、`VerifierPublicCtx`（SWS_CRYPT_23900 ストリーミング RSA/ECDSA 検証 EVP_DigestVerify 経由）、`HsmProvider`（HSM 統合抽象化）、`CryptoContext`（SWS_CRYPT_20000 抽象基底）、`CryptoServiceProvider`/`LoadCryptoProvider`（SWS_CRYPT_20100 オブジェクト指向暗号プロバイダ） | — |
-| `ara::nm` | 100 % | 完全実装 | `NetworkManager`（多チャネル NM 状態機械: BusSleep/PrepBusSleep/ReadySleep/NormalOperation/RepeatMessage、`HandleRemoteSleepIndication` SWS_NM_00002、`HandleRepeatMessageRequest` SWS_NM_00005、`IsClusterSleepReady` SWS_NM_00009）、`NetworkRequest`/`NetworkRelease`、`NmMessageIndication`、`Tick` 方式状態遷移、チャネル状態照会、状態変更コールバック、部分ネットワークフラグ、`NmCoordinator`（多チャネルバススリープ/ウェイク調整、AllChannels/Majority ポリシー、スリープ準備コールバック）、`NmTransportAdapter`（抽象 NM PDU トランスポートインタフェース）、`NmPdu`（NM PDU シリアライズ/デシリアライズ、コントロールビットベクタ、部分ネットワーキングフィルタマスク対応）、`CanTpNmAdapter`（SocketCAN + QNX CAN リソースマネージャ 双方対応）/`FlexRayNmAdapter`（トランスポートアダプタドライバ） | — |
-| `ara::com::secoc` | 100 % | 完全実装 | `FreshnessManager`（PDU 単位モノトニックカウンタ、リプレイ攻撃防御、VerifyAndUpdate、`SaveToFile`/`LoadFromFile` 永続化、`SetOverflowWarningCallback` SWS_SecOC_00204、`IsNearOverflow`）、`SecOcPdu`（HMAC ベース MAC、切り捨てフレッシュネス/MAC 送信、Protect/Verify）、`SecOcKeyManager`（PDU-鍵スロットバインディング、`ara::crypto::KeyStorageProvider` 連携、遅延ロード・キャッシュ、`RefreshKey`）、`SecOcErrorDomain`、`SecOcPduCollective`（SWS_SecOC_00203 マルチ PDU 一括保護/検証）、`VerificationStatusIndication`/`VerificationResult`（SWS_SecOC_00200-201）、`SecOcOverrideStatus`（SWS_SecOC_00202 バイパスモード）、`FreshnessSyncManager`（ECU 間フレッシュネスカウンタ同期） | — |
-| `ara::iam` | 100 % | 完全実装 | メモリ内 IAM ポリシー判定（subject/resource/action、ワイルドカード）、エラードメイン、`Grant`/`GrantManager`（時限付きパーミッショントークン、発行/失効/照会/パージ、ファイル永続化）、`PolicyVersionManager`（ポリシースナップショット/ロールバック、バージョン履歴）、`RoleManager`（RBAC ロール階層・継承、サブジェクト-ロール割り当て、`IsAllowedViaRole` AccessControl 連携、`SaveToFile`/`LoadFromFile` 永続化）、**`AbacPolicyEngine`**（属性ベースアクセス制御: subject/resource/action ワイルドカード + 属性条件 kEquals/kNotEquals/kContains/kExists/kNotExists、ファーストマッチ意味論、監査コールバック、ファイル永続化、`EvaluateWithTime` SWS_IAM_00310 TBAC スケジュール対応）、**`PolicySigner`**（ECDSA P-256/SHA-256 によるポリシー署名・検証、`ara::crypto` 連携）、`PasswordStore`（SWS_IAM_00100 ソルト付きハッシュ認証情報管理）、`RequestContext`（SWS_IAM_00101 認証コンテキスト）、`IdentityManager`（SWS_IAM_00102 PID-ID マッピング、`AuthenticateProcess`）、`AuditTrail`（タイムスタンプ付き監査レコード記録・照会・クリア）、`CapabilityManager`（ケイパビリティベースアクセス制御: サブジェクト単位のグラント/リボーク/照会）、`BiometricInterface`（生体認証センサー HAL） | — |
-| `ara::ucm` | 100 % | 完全実装 | UCM エラードメイン、更新セッション管理 (`Prepare`/`Stage`/`Verify`/`Activate`/`Rollback`/`Cancel`、`ConfirmRollback` SWS_UCM_00041、`ValidateChunkCrc` SWS_UCM_00151)、Transfer API (`TransferStart`/`TransferData`/`TransferExit`)、SHA-256 検証、状態/進捗コールバック、クラスタ別バージョン管理とダウングレード拒否、`CampaignManager`（複数パッケージ更新オーケストレーション、パッケージ別状態管理、自動状態再計算、キャンペーンロールバック、`SignCampaignManifest`/`VerifyCampaignManifest` SWS_UCM_00045）、`UpdateHistory`（更新履歴永続ログ、クラスタ別履歴照会、ファイル永続化）、`DependencyChecker`（クラスタ依存関係グラフ、バージョン範囲検証、`CheckDependencies`/`CheckAllDependencies`、ファイル永続化）、`SwClusterInfoType`/`SwClusterStateType`（SWS_UCM_00022-00023）、`SwPackageInfoType`/`SwPackageActionType`（SWS_UCM_00024-00025）、`PackageManagerStatusType`（SWS_UCM_00026）、`TransferIdType`（SWS_UCM_00027）、`SecureBootManager`（セキュアブート/TPM）、`InstallerDaemon`（バックグラウンドインストーラ） | — |
-| 時刻同期 (`ara::tsync`) | 100 % | 完全実装 | `TimeSyncClient`（参照時刻更新、同期時刻変換、オフセット/状態照会、状態変更通知コールバック、線形回帰スライディングウィンドウによるドリフト補正、`SyncQualityLevel` kGood/kDegraded/kLost、同期喪失タイムアウト検出、`GetTimeBaseStatus`、`SetTimeLeapCallback`、`GetLeapSecondInfo`、`GetRateDeviation` SWS_TS_00330）、`SynchronizedTimeBaseProvider` 抽象インタフェース、`PtpTimeBaseProvider`（ptp4l/gPTP PHC 統合、`/dev/ptpN`）、`NtpTimeBaseProvider`（chrony/ntpd 自動検出統合）、`TimeSyncServer`（バックグラウンドプロバイダポーリング、マルチコンシューマ配信、可用性コールバック、プロバイダ喪失リセット、`SetCorrectionCallback`）、エラードメイン、`UserTimeBaseProvider`（SWS_TimeSync_00101 ユーザー供給タイムソース）、`TimeBaseStatusType`（SWS_TimeSync_00100 同期ステータスフラグ）、`OffsetTimeBase`（SWS_TimeSync_00102）、`LeapSecondInfo` 構造体（SWS_TimeSync_00103）、PTP/NTP プロバイダ常駐デーモン、`RateCorrector`（PID 式クロックレート補正） | — |
-| Raspberry Pi ECU 配備プロファイル | — | 実装あり (一部) | ビルド/インストール統合スクリプト、SocketCAN セットアップ、systemd テンプレート、統合検証スクリプト、常駐デーモン (`vsomeip-routing`/`time-sync`/`persistency-guard`/`iam-policy`/`can-manager`/`user-app-monitor`/`watchdog`/`sm-state`/`ntp-time-provider`/`ptp-time-provider`) | Linux 上のプロトタイプ ECU 運用を対象。量産向け安全/セキュリティ強化は別途システム統合が必要 |
-
-### カバレッジ備考
-
-全 15 コア `ara::*` モジュールは **100 %** SWS カバレッジに到達しました。ハードウェア依存機能（HSM、生体認証センサー、CAN-TP/FlexRay バス、TPM セキュアブート等）は、物理 ECU ハードウェアなしで API 全体を網羅・テスト可能なソフトウェア抽象化／モック・シミュレーションバックエンドとして提供されています。
-
-## user_apps テンプレート (インストール先: `/opt|/tmp/autosar_ap/user_apps`)
-- Basic:
-  - `autosar_user_minimal_runtime`
-  - `autosar_user_exec_signal_template`
-  - `autosar_user_per_phm_demo`
-- Communication:
-  - `autosar_user_com_someip_provider_template`
-  - `autosar_user_com_someip_consumer_template`
-  - `autosar_user_com_zerocopy_pub_template`
-  - `autosar_user_com_zerocopy_sub_template`
-  - `autosar_user_com_dds_pub_template`
-  - `autosar_user_com_dds_sub_template`
-- Feature:
-  - `autosar_user_tpl_runtime_lifecycle`
-  - `autosar_user_tpl_can_socketcan_receiver`
-  - `autosar_user_tpl_ecu_full_stack`
-  - `autosar_user_tpl_ecu_someip_source`
-
-参照:
-- `user_apps/README.md`
-- `user_apps/tutorials/README.ja.md`
-- `deployment/rpi_ecu/README.md`
-- `user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md` (Vector/ETAS/EB 向け資産の移植手順)
-- `tools/host_tools/doip_diag_tester/README.ja.md` (Ubuntu 側 DoIP/DIAG host テスター手順)
-
-## Host 側診断ツール (ECU 実機内アプリではない)
-- バイナリ: `autosar_host_doip_diag_tester`
-- ソース: `tools/host_tools/doip_diag_tester/doip_diag_tester_app.cpp`
-- ドキュメント:
-  - `tools/host_tools/doip_diag_tester/README.md`
-  - `tools/host_tools/doip_diag_tester/README.ja.md`
-- ビルド:
 ```bash
-cmake -S tools/host_tools/doip_diag_tester -B build-host-doip-tester
-cmake --build build-host-doip-tester -j"$(nproc)"
+source ~/qnx800/qnxsdp-env.sh
+sudo ./scripts/install_middleware_stack_qnx.sh --arch aarch64le --enable-shm
 ```
 
+詳細は [`qnx/README.md`](qnx/README.md) を参照してください。
+
+---
+
+## ユーザーアプリテンプレート
+
+テンプレートは `<prefix>/user_apps` にインストールされ、基本・通信・フルスタックの各ユースケースをカバーします。
+
+| カテゴリ | テンプレート | 説明 |
+|---|---|---|
+| Basic | `autosar_user_minimal_runtime` | 最小限のランタイム init/deinit |
+| Basic | `autosar_user_exec_signal_template` | シグナルハンドリング |
+| Basic | `autosar_user_per_phm_demo` | 永続化 + ヘルスモニタリング |
+| Communication | `autosar_user_com_someip_provider_template` | SOME/IP パブリッシャ |
+| Communication | `autosar_user_com_someip_consumer_template` | SOME/IP サブスクライバ |
+| Communication | `autosar_user_com_zerocopy_pub_template` | iceoryx ゼロコピーパブリッシャ |
+| Communication | `autosar_user_com_zerocopy_sub_template` | iceoryx ゼロコピーサブスクライバ |
+| Communication | `autosar_user_com_dds_pub_template` | DDS パブリッシャ |
+| Communication | `autosar_user_com_dds_sub_template` | DDS サブスクライバ |
+| Feature | `autosar_user_tpl_runtime_lifecycle` | ランタイムライフサイクル管理 |
+| Feature | `autosar_user_tpl_can_socketcan_receiver` | SocketCAN メッセージデコード |
+| Feature | `autosar_user_tpl_ecu_full_stack` | フル ECU スタック統合 |
+| Feature | `autosar_user_tpl_ecu_someip_source` | SOME/IP ソース ECU |
+
+チュートリアル: [`user_apps/tutorials/`](user_apps/tutorials/)
+
+### ベンダ資産の移植
+
+Vector/ETAS/EB で開発した C++ 資産をソース互換で再ビルドできます。手順は [`user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`](user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md) を参照してください。
+
+---
+
 ## ARXML / コード生成
-### YAML -> ARXML
+
+### YAML → ARXML
 
 ```bash
 python3 tools/arxml_generator/generate_arxml.py \
   --input tools/arxml_generator/examples/pubsub_vsomeip.yaml \
   --output /tmp/pubsub.generated.arxml \
-  --overwrite \
-  --print-summary
+  --overwrite --print-summary
 ```
 
-### ARXML -> ara::com binding ヘッダ
+### ARXML → ara::com binding ヘッダ
 
 ```bash
 python3 tools/arxml_generator/generate_ara_com_binding.py \
@@ -378,51 +266,83 @@ python3 tools/arxml_generator/generate_ara_com_binding.py \
   --provided-event-group-short-name VehicleStatusEventGroup
 ```
 
-詳細:
-- `tools/arxml_generator/README.md`
-- `tools/arxml_generator/YAML_MANUAL.ja.md`
+ガイド: [`tools/arxml_generator/README.md`](tools/arxml_generator/README.md) | [`tools/arxml_generator/YAML_MANUAL.ja.md`](tools/arxml_generator/YAML_MANUAL.ja.md)
 
-## GitHub Actions の検証内容
-ワークフロー: `.github/workflows/cmake.yml`
+---
 
-現在の CI では次を検証します:
-1. 依存ミドルウェアのビルド/インストール (vSomeIP, iceoryx, Cyclone DDS)
-2. 全バックエンド有効で configure/build (`build_tests=ON`, `AUTOSAR_AP_BUILD_SAMPLES=OFF`)
-3. 単体テスト (`ctest`) 実行
-4. ARXML 生成および ARXML ベースの binding 生成チェック
-5. 分離インストールフロー (`build_and_install_autosar_ap.sh`)
-6. インストール済みパッケージに対する外部 user_apps ビルド/実行 (`build_user_apps_from_opt.sh --run`)
-7. Doxygen API ドキュメント生成 (`./scripts/generate_doxygen_docs.sh`) と artifact (`doxygen-html`) 保存
-8. `main`/`master` への push 時に生成ドキュメントを GitHub Pages へ公開
+## ホスト側診断ツール
+
+ホスト PC 上で動作する DoIP/UDS 診断テスターです（ECU 実機内アプリではありません）。
+
+```bash
+cmake -S tools/host_tools/doip_diag_tester -B build-host-doip-tester
+cmake --build build-host-doip-tester -j"$(nproc)"
+```
+
+ドキュメント: [`tools/host_tools/doip_diag_tester/README.ja.md`](tools/host_tools/doip_diag_tester/README.ja.md)
+
+---
+
+## 実装機能マトリクス
+
+リリースベースライン: `R24-11`。全 15 コア `ara::*` モジュールは **SWS API カバレッジ 100%** に到達しています。
+
+ハードウェア依存機能（HSM、生体認証センサー、CAN-TP/FlexRay、TPM セキュアブート等）は、モック/シミュレーションバックエンドによるソフトウェア抽象化として提供しています。
+
+| モジュール | カバレッジ | 主な機能 |
+| --- | :---: | --- |
+| `ara::core` | 100% | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, `String/StringView` (C++14 ポリフィル), `Variant`, `Span`, `Byte`, モナディックチェーン (`AndThen/OrElse/Map/MapError`), 例外階層, `AbortHandler` |
+| `ara::log` | 100% | `Logger` (重要度フィルタリング), `LogStream` 演算子, 3 種シンク (console/file/network), DLT バックエンド, `AsyncLogSink` (リングバッファ), `FormatterPlugin` (JSON/カスタム) |
+| `ara::com` 共通 | 100% | Proxy/Skeleton Event/Method/Field ラッパー, `FindService`/`StartFindService`, シリアライズフレームワーク (CDR 等), fire-and-forget メソッド, `CommunicationGroup`, `RawDataStream`, `InstanceIdentifier`, `ServiceVersion`, QoS, `EventCacheUpdatePolicy`, `FilterConfig`, `Transformer` チェーン, `SampleInfo`/`E2ESampleStatus` |
+| `ara::com` SOME/IP | 100% | SD client/server, pub/sub, RPC, SOME/IP-TP セグメンテーション/リアセンブリ, Magic Cookie, `SessionHandler`, IPv6 エンドポイント, `SdNetworkConfig` |
+| `ara::com` DDS | 100% | CycloneDDS pub/sub, メソッドバインディング (request/reply), QoS 設定, `DdsParticipantFactory`, コンテンツフィルタ, 拡張 QoS (ownership/partition/resource-limits) |
+| `ara::com` ZeroCopy | 100% | iceoryx pub/sub, メソッドバインディング, ゼロコピー Loan/Publish, `QueueOverflowPolicy`, `ZeroCopyServiceDiscovery`, `PortIntrospection` |
+| `ara::com` E2E | 100% | Profile 01〜07 および 11, event/method デコレータ, `E2EStateMachine` (ウィンドウ方式, 有効/無効制御), サンプル単位ステータス伝搬 |
+| `ara::com` SecOC | 100% | `FreshnessManager` (モノトニックカウンタ, 永続化), `SecOcPdu` (HMAC MAC), `SecOcKeyManager`, 一括保護/検証, `FreshnessSyncManager` (ECU 間同期) |
+| `ara::exec` | 100% | `ExecutionClient/Server`, `StateClient/Server`, `DeterministicClient`, `FunctionGroup`, `ProcessWatchdog`, `ExecutionManager` (fork/exec ライフサイクル), `ManifestLoader` (ARXML), `ApplicationClient`, QNX 移植性 |
+| `ara::diag` | 100% | `Monitor` (デバウンス), UDS サービス (0x10/0x11/0x14/0x22/0x27/0x28/0x2E/0x2F/0x31/0x34〜0x37/0x3E/0x85), OBD-II (Mode 01/09), `EventMemory`, `DiagnosticManager` (P2/P2* タイミング) |
+| `ara::phm` | 100% | `SupervisedEntity`, `HealthChannel`, `RecoveryAction`, `AliveSupervision`, `DeadlineSupervision`, `LogicalSupervision`, `PhmOrchestrator` |
+| `ara::per` | 100% | `KeyValueStorage`, `FileStorage`, `ReadAccessor`/`ReadWriteAccessor`, recover/reset, バッチ操作, 変更オブザーバ, `RedundantStorage`, `UpdatePersistency` (UCM マイグレーション) |
+| `ara::sm` | 100% | `MachineStateClient` (shutdown/restart), `NetworkHandle`, `FunctionGroupStateMachine` (ガード/タイムアウト/履歴), `PowerModeManager`, `DiagnosticStateHandler`, `UpdateRequestHandler` |
+| `ara::crypto` | 100% | SHA-1/256/384/512, HMAC, AES-CBC/GCM/CTR, ChaCha20, PBKDF2/HKDF, RSA 2048/4096, ECDSA P-256/P-384, ECDH, X.509 チェーン検証, CRL 失効確認, ストリーミングコンテキスト, `KeySlot`/`KeyStorageProvider`, `CryptoServiceProvider` |
+| `ara::nm` | 100% | マルチチャネル NM 状態機械 (5 状態), `NmCoordinator`, `NmPdu` シリアライズ, `CanTpNmAdapter`/`FlexRayNmAdapter` |
+| `ara::iam` | 100% | RBAC (`RoleManager`), ABAC (`AbacPolicyEngine`), `Grant`/`GrantManager`, `PolicySigner` (ECDSA), `PasswordStore`, `IdentityManager`, `AuditTrail`, `CapabilityManager` |
+| `ara::ucm` | 100% | 更新セッションライフサイクル, Transfer API, SHA-256 検証, `CampaignManager` (マルチパッケージ), `UpdateHistory`, `DependencyChecker`, `SecureBootManager` |
+| `ara::tsync` | 100% | `TimeSyncClient` (ドリフト補正, 品質レベル), `PtpTimeBaseProvider` (ptp4l/gPTP), `NtpTimeBaseProvider` (chrony/ntpd), `TimeSyncServer`, `RateCorrector` |
+| ARXML ツール | — | YAML → ARXML、ARXML → ara::com binding ヘッダ生成 |
+| RPi ECU プロファイル | — | systemd デプロイ、14 常駐デーモン、SocketCAN、時刻同期、ヘルスモニタリング |
+
+### AUTOSAR AP リリースプロファイル
+
+既定: `R24-11`。CMake で設定可能:
+
+```bash
+cmake -S . -B build -DAUTOSAR_AP_RELEASE_PROFILE=R24-11
+```
+
+`ara::core::ApReleaseInfo` で実行時に参照可能。
+
+---
 
 ## ドキュメント
 
-ドキュメント一覧: [`docs/README.ja.md`](docs/README.ja.md) | [`docs/README.md`](docs/README.md) (English)
-
-### テーマ別
+ドキュメント一覧: [`docs/README.ja.md`](docs/README.ja.md) | [`docs/README.md`](docs/README.md)
 
 | テーマ | ドキュメント |
 | --- | --- |
-| プロジェクト概要（このファイル） | `README.md` / `README.ja.md` |
-| **配備** | |
-| Raspberry Pi ECU 配備 | `deployment/rpi_ecu/README.md` |
-| Raspberry Pi gPTP 設定（日本語） | `deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md` |
-| QNX 8.0 クロスコンパイル | `qnx/README.md` |
-| QNX ミドルウェアインストールスクリプト | `scripts/install_middleware_stack_qnx.sh` |
-| **ユーザーアプリ・チュートリアル** | |
-| ユーザーアプリのビルドシステム | `user_apps/README.md` |
-| チュートリアル一覧 | `user_apps/tutorials/README.ja.md` |
-| **ツール** | |
-| ARXML ジェネレータガイド | `tools/arxml_generator/README.md` |
-| ARXML YAML 仕様書（日本語） | `tools/arxml_generator/YAML_MANUAL.ja.md` |
-| ホスト DoIP/UDS テスタ | `tools/host_tools/doip_diag_tester/README.ja.md` |
-| **API リファレンス** | |
-| オンライン（GitHub Pages） | <https://tatsuyai713.github.io/Adaptive-AUTOSAR/> |
-| ローカル生成 | `./scripts/generate_doxygen_docs.sh` |
-| **その他** | |
-| Project Wiki | <https://github.com/langroodi/Adaptive-AUTOSAR/wiki> |
-| コントリビューションガイド | `CONTRIBUTING.md` |
+| Raspberry Pi ECU 配備 | [`deployment/rpi_ecu/README.md`](deployment/rpi_ecu/README.md) |
+| Raspberry Pi gPTP 設定 (日本語) | [`deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md`](deployment/rpi_ecu/RASPI_SETUP_MANUAL.ja.md) |
+| QNX 8.0 クロスコンパイル | [`qnx/README.md`](qnx/README.md) |
+| ユーザーアプリのビルドシステム | [`user_apps/README.md`](user_apps/README.md) |
+| チュートリアル (ステップバイステップ) | [`user_apps/tutorials/README.ja.md`](user_apps/tutorials/README.ja.md) |
+| ARXML ジェネレータガイド | [`tools/arxml_generator/README.md`](tools/arxml_generator/README.md) |
+| ホスト DoIP/UDS テスタ | [`tools/host_tools/doip_diag_tester/README.ja.md`](tools/host_tools/doip_diag_tester/README.ja.md) |
+| API リファレンス (オンライン) | <https://tatsuyai713.github.io/Adaptive-AUTOSAR/> |
+| API リファレンス (ローカル生成) | `./scripts/generate_doxygen_docs.sh` |
+| コントリビューションガイド | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
-### プロジェクト構成
+## CI/CD
 
-フォルダ構成の詳細は [`docs/README.ja.md`](docs/README.ja.md#プロジェクト構成) を参照してください。
+ワークフロー: [`.github/workflows/cmake.yml`](.github/workflows/cmake.yml)
+
+CI パイプラインの検証内容: ミドルウェアビルド/インストール → テスト付きフルビルド → `ctest` → ARXML 生成 → 分離インストール → 外部ユーザーアプリビルド/実行 → Doxygen 生成 → GitHub Pages 公開。
