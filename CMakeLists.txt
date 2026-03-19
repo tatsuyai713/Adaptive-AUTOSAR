@@ -2119,6 +2119,23 @@ if(build_tests)
     PROPERTIES
     ${ara_unit_test_properties}
   )
+
+  # Integration test: ManifestLoader + ExecutionManager end-to-end
+  add_executable(
+    test_em_manifest
+    "${CMAKE_SOURCE_DIR}/test/integration/test_em_manifest.cpp"
+  )
+  target_include_directories(
+    test_em_manifest
+    PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+  )
+  target_link_libraries(
+    test_em_manifest
+    ara_exec
+    ara_core
+    ara_com
+  )
  endif()
 
 ########################################################################

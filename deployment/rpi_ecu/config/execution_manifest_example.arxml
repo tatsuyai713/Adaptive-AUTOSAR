@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example ARXML Execution Manifest for Adaptive AUTOSAR Execution Manager.
+
+  This manifest defines user applications that the Execution Manager (EM) will
+  launch, monitor, and manage.  Each <PROCESS-DESIGN> entry maps to a
+  ProcessDescriptor that EM uses for fork/exec (Linux) or posix_spawn (QNX).
+
+  Usage:
+    1. Copy this file and customize it for your deployment.
+    2. Pass the manifest path to the EM via environment variable:
+         export AUTOSAR_EM_MANIFEST=/opt/autosar_ap/etc/execution_manifest.arxml
+    3. Or place it where the EM daemon looks by default:
+         /opt/autosar_ap/etc/execution_manifest.arxml
+
+  See: src/ara/exec/manifest_loader.h for the parser implementation.
+-->
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>AdaptiveAutosar</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>ExecutionManifest</SHORT-NAME>
+          <ELEMENTS>
+
+            <!--
+              ================================================================
+              Example 1: Simple vehicle ECU application
+              ================================================================
+              - Belongs to "MachineFG" function group
+              - Runs in the "Running" state
+              - Low startup priority (10 = starts early)
+              - Default grace periods
+            -->
+            <PROCESS-DESIGN>
+              <SHORT-NAME>RaspiEcuApp</SHORT-NAME>
+              <EXECUTABLE-REF>/opt/autosar_ap/user_apps_build/src/apps/basic/autosar_user_raspi_ecu</EXECUTABLE-REF>
+              <FUNCTION-GROUP-REF>MachineFG</FUNCTION-GROUP-REF>
+              <STATE-REF>Running</STATE-REF>
+              <STARTUP-PRIORITY>10</STARTUP-PRIORITY>
+              <STARTUP-GRACE-MS>5000</STARTUP-GRACE-MS>
+              <TERMINATION-TIMEOUT-MS>5000</TERMINATION-TIMEOUT-MS>
+            </PROCESS-DESIGN>
+
+            <!--
+              ================================================================
+              Example 2: Sensor fusion application with resource limits
+              ================================================================
+              - CPU quota: 25% (prevents runaway CPU usage)
+              - Memory limit: 64 MB
+              - Higher priority (20 = starts after core apps)
+              - Depends on RaspiEcuApp being registered first
+            -->
+            <PROCESS-DESIGN>
+              <SHORT-NAME>SensorFusionApp</SHORT-NAME>
+              <EXECUTABLE-REF>/opt/autosar_ap/user_apps_build/src/apps/feature/ecu/sensor_fusion_app</EXECUTABLE-REF>
+              <FUNCTION-GROUP-REF>MachineFG</FUNCTION-GROUP-REF>
+              <STATE-REF>Running</STATE-REF>
+              <STARTUP-PRIORITY>20</STARTUP-PRIORITY>
+              <STARTUP-GRACE-MS>3000</STARTUP-GRACE-MS>
+              <TERMINATION-TIMEOUT-MS>5000</TERMINATION-TIMEOUT-MS>
+              <CPU-QUOTA-PERCENT>25</CPU-QUOTA-PERCENT>
+              <MEMORY-LIMIT-BYTES>67108864</MEMORY-LIMIT-BYTES>
+              <DEPENDS-ON>RaspiEcuApp</DEPENDS-ON>
+            </PROCESS-DESIGN>
+
+            <!--
+              ================================================================
+              Example 3: Diagnostic mode application
+              ================================================================
+              - Only runs when MachineFG is in "Diagnostic" state
+              - Does NOT run in normal "Running" state
+              - Useful for factory/workshop diagnostic tools
+            -->
+            <PROCESS-DESIGN>
+              <SHORT-NAME>DiagToolApp</SHORT-NAME>
+              <EXECUTABLE-REF>/opt/autosar_ap/user_apps_build/src/apps/feature/diag_tool_app</EXECUTABLE-REF>
+              <FUNCTION-GROUP-REF>MachineFG</FUNCTION-GROUP-REF>
+              <STATE-REF>Diagnostic</STATE-REF>
+              <STARTUP-PRIORITY>30</STARTUP-PRIORITY>
+              <STARTUP-GRACE-MS>3000</STARTUP-GRACE-MS>
+              <TERMINATION-TIMEOUT-MS>3000</TERMINATION-TIMEOUT-MS>
+            </PROCESS-DESIGN>
+
+            <!--
+              ================================================================
+              Example 4: Update agent in a separate function group
+              ================================================================
+              - Belongs to "UpdateFG" function group
+              - Activated independently from MachineFG
+              - EM calls ActivateFunctionGroup("UpdateFG", "Active") to start
+            -->
+            <PROCESS-DESIGN>
+              <SHORT-NAME>OtaUpdateAgent</SHORT-NAME>
+              <EXECUTABLE-REF>/opt/autosar_ap/user_apps_build/src/apps/feature/ota_agent</EXECUTABLE-REF>
+              <FUNCTION-GROUP-REF>UpdateFG</FUNCTION-GROUP-REF>
+              <STATE-REF>Active</STATE-REF>
+              <STARTUP-PRIORITY>10</STARTUP-PRIORITY>
+              <STARTUP-GRACE-MS>5000</STARTUP-GRACE-MS>
+              <TERMINATION-TIMEOUT-MS>10000</TERMINATION-TIMEOUT-MS>
+              <CPU-QUOTA-PERCENT>50</CPU-QUOTA-PERCENT>
+              <MEMORY-LIMIT-BYTES>134217728</MEMORY-LIMIT-BYTES>
+            </PROCESS-DESIGN>
+
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

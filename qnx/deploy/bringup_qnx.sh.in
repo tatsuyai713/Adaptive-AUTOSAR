@@ -1,0 +1,211 @@
+#!/bin/sh
+# =============================================================================
+# bringup_qnx.sh — QNX user application bringup script
+#
+# Launched by either:
+#   - SLM (autosar-user-bringup component)
+#   - rc.autosar.sh (after platform daemons are ready)
+#   - Manual invocation
+#
+# This is the QNX equivalent of /etc/autosar/bringup.sh on Linux.
+# Add your user application launch commands below.
+#
+# Functions provided:
+#   launch_app <name> <binary> [args...]
+#   launch_app_with_heartbeat <name> <hb_file> <timeout_ms> <binary> [args...]
+#   launch_app_managed <name> <instance> <hb_file> <timeout_ms> \
+#                      <restart_limit> <restart_window_ms> <binary> [args...]
+# =============================================================================
+
+AUTOSAR_ROOT="${AUTOSAR_ROOT:-__AUTOSAR_ROOT__}"
+
+AUTOSAR_RUN_DIR="${AUTOSAR_RUN_DIR:-${AUTOSAR_ROOT}/run/autosar}"
+AUTOSAR_USER_APP_REGISTRY_FILE="${AUTOSAR_USER_APP_REGISTRY_FILE:-${AUTOSAR_RUN_DIR}/user_apps_registry.csv}"
+AUTOSAR_USER_APP_STATUS_DIR="${AUTOSAR_USER_APP_STATUS_DIR:-${AUTOSAR_RUN_DIR}/user_apps}"
+AUTOSAR_PHM_HEALTH_DIR="${AUTOSAR_PHM_HEALTH_DIR:-${AUTOSAR_RUN_DIR}/phm/health}"
+AUTOSAR_USER_APP_INSTANCE_PREFIX="${AUTOSAR_USER_APP_INSTANCE_PREFIX:-AdaptiveAutosar/UserApps}"
+AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT="${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT:-5}"
+AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS="${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS:-60000}"
+AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS="${AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS:-0}"
+
+PID_DIR="${AUTOSAR_ROOT}/run/pids/user_apps"
+
+export LD_LIBRARY_PATH="${AUTOSAR_ROOT}/lib:${LD_LIBRARY_PATH:-}"
+export VSOMEIP_CONFIGURATION="${VSOMEIP_CONFIGURATION:-${AUTOSAR_ROOT}/etc/vsomeip_client.json}"
+export AUTOSAR_PHM_HEALTH_DIR
+
+mkdir -p "${AUTOSAR_RUN_DIR}"
+mkdir -p "${AUTOSAR_USER_APP_STATUS_DIR}"
+mkdir -p "${AUTOSAR_PHM_HEALTH_DIR}"
+mkdir -p "${PID_DIR}"
+
+# Initialize registry (header line)
+echo "# name,pid,heartbeat_file,heartbeat_timeout_ms,instance_specifier,restart_limit,restart_window_ms,restart_command" > "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+
+APP_COUNT=0
+
+log() {
+    echo "[AUTOSAR-BRINGUP] $*"
+}
+
+sanitize_name() {
+    echo "$1" | sed 's|/|_|g; s| |_|g; s|:|_|g'
+}
+
+default_instance_specifier() {
+    local short_name
+    short_name="$(sanitize_name "$1")"
+    echo "${AUTOSAR_USER_APP_INSTANCE_PREFIX}/${short_name}"
+}
+
+register_app() {
+    local app_name="$1"
+    local app_pid="$2"
+    local heartbeat_file="$3"
+    local heartbeat_timeout_ms="$4"
+    local instance_specifier="$5"
+    local restart_limit="$6"
+    local restart_window_ms="$7"
+    local restart_command="$8"
+
+    echo "${app_name},${app_pid},${heartbeat_file},${heartbeat_timeout_ms},${instance_specifier},${restart_limit},${restart_window_ms},${restart_command}" >> "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+}
+
+launch_app_managed() {
+    local app_name="$1"
+    local instance_specifier="$2"
+    local heartbeat_file="$3"
+    local heartbeat_timeout_ms="$4"
+    local restart_limit="$5"
+    local restart_window_ms="$6"
+    shift 6
+
+    local binary="$1"
+    if [ ! -x "${binary}" ]; then
+        log "SKIP: ${app_name} — binary not found: ${binary}"
+        return
+    fi
+
+    "$@" &
+    local app_pid="$!"
+
+    echo "${app_pid}" > "${PID_DIR}/${app_name}.pid"
+
+    if [ -n "${heartbeat_file}" ]; then
+        mkdir -p "$(dirname "${heartbeat_file}")"
+        date +%s > "${heartbeat_file}" 2>/dev/null || true
+    fi
+
+    register_app \
+        "${app_name}" \
+        "${app_pid}" \
+        "${heartbeat_file}" \
+        "${heartbeat_timeout_ms}" \
+        "${instance_specifier}" \
+        "${restart_limit}" \
+        "${restart_window_ms}" \
+        "$*"
+
+    APP_COUNT=$((APP_COUNT + 1))
+    log "Launched ${app_name} (PID=${app_pid}, instance=${instance_specifier})"
+}
+
+launch_app() {
+    local app_name="$1"
+    shift
+
+    local instance_specifier
+    instance_specifier="$(default_instance_specifier "${app_name}")"
+
+    launch_app_managed \
+        "${app_name}" \
+        "${instance_specifier}" \
+        "" \
+        "${AUTOSAR_USER_APP_DEFAULT_HEARTBEAT_TIMEOUT_MS}" \
+        "${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT}" \
+        "${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS}" \
+        "$@"
+}
+
+launch_app_with_heartbeat() {
+    local app_name="$1"
+    local heartbeat_file="$2"
+    local heartbeat_timeout_ms="$3"
+    shift 3
+
+    local instance_specifier
+    instance_specifier="$(default_instance_specifier "${app_name}")"
+
+    launch_app_managed \
+        "${app_name}" \
+        "${instance_specifier}" \
+        "${heartbeat_file}" \
+        "${heartbeat_timeout_ms}" \
+        "${AUTOSAR_USER_APP_DEFAULT_RESTART_LIMIT}" \
+        "${AUTOSAR_USER_APP_DEFAULT_RESTART_WINDOW_MS}" \
+        "$@"
+}
+
+cleanup() {
+    log "Stopping user applications..."
+    if [ -d "${PID_DIR}" ]; then
+        for pidfile in "${PID_DIR}"/*.pid; do
+            [ -f "${pidfile}" ] || continue
+            pid="$(cat "${pidfile}")"
+            if kill -0 "${pid}" 2>/dev/null; then
+                kill "${pid}" 2>/dev/null || true
+            fi
+            rm -f "${pidfile}"
+        done
+    fi
+    : > "${AUTOSAR_USER_APP_REGISTRY_FILE}"
+}
+
+trap cleanup EXIT INT TERM
+
+# =========================================================================
+# USER APPLICATION LAUNCH SECTION
+# Add your application startup commands below.
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# Example 1: Launch a simple user app
+#
+# launch_app "my_vehicle_app" \
+#     "${AUTOSAR_ROOT}/bin/my_vehicle_app" --period-ms=100
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Example 2: Launch with heartbeat monitoring
+#
+# launch_app_with_heartbeat "sensor_fusion" \
+#     "${AUTOSAR_USER_APP_STATUS_DIR}/sensor_fusion.heartbeat" \
+#     5000 \
+#     "${AUTOSAR_ROOT}/bin/sensor_fusion_app"
+# -------------------------------------------------------------------------
+
+# -------------------------------------------------------------------------
+# Example 3: Full managed mode with explicit instance and restart policy
+#
+# launch_app_managed \
+#     "vehicle_monitor" \
+#     "AdaptiveAutosar/UserApps/VehicleMonitor" \
+#     "${AUTOSAR_USER_APP_STATUS_DIR}/vehicle_monitor.heartbeat" \
+#     3000 \
+#     5 \
+#     60000 \
+#     "${AUTOSAR_ROOT}/bin/autosar_user_raspi_ecu"
+# -------------------------------------------------------------------------
+
+# =========================================================================
+
+if [ "${APP_COUNT}" -eq 0 ]; then
+    log "No user applications configured."
+    log "Edit ${AUTOSAR_ROOT}/bringup_qnx.sh to add your app startup commands."
+fi
+
+# Keep bringup process alive — user app monitor handles health supervision
+# and per-app restart recovery.
+while true; do
+    sleep 3600
+done

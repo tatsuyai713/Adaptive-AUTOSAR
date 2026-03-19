@@ -303,6 +303,32 @@ STARTUP
 chmod +x "${STAGING}/startup.sh" "${STAGING}/env.sh"
 
 # ---------------------------------------------------------------------------
+# 6b. Copy QNX auto-start and user app bringup scripts
+# ---------------------------------------------------------------------------
+QNX_DEPLOY_ASSETS="${REPO_ROOT}/qnx/deploy"
+
+if [[ -f "${QNX_DEPLOY_ASSETS}/rc.autosar.sh" ]]; then
+  qnx_info "Installing QNX rc.autosar.sh (boot-time auto-start)"
+  sed -e "s|AUTOSAR_ROOT=\"\${AUTOSAR_ROOT:-/autosar}\"|AUTOSAR_ROOT=\"\${AUTOSAR_ROOT:-${DEPLOY_DIR_ON_TARGET}}\"|" \
+      "${QNX_DEPLOY_ASSETS}/rc.autosar.sh" > "${STAGING}/rc.autosar.sh"
+  chmod +x "${STAGING}/rc.autosar.sh"
+fi
+
+if [[ -f "${QNX_DEPLOY_ASSETS}/bringup_qnx.sh.in" ]]; then
+  qnx_info "Installing QNX user app bringup script"
+  sed -e "s|__AUTOSAR_ROOT__|${DEPLOY_DIR_ON_TARGET}|g" \
+      "${QNX_DEPLOY_ASSETS}/bringup_qnx.sh.in" > "${STAGING}/bringup_qnx.sh"
+  chmod +x "${STAGING}/bringup_qnx.sh"
+fi
+
+if [[ -f "${QNX_DEPLOY_ASSETS}/slm-config-autosar.xml" ]]; then
+  qnx_info "Installing QNX SLM configuration"
+  mkdir -p "${STAGING}/etc/slm"
+  sed -e "s|/autosar/|${DEPLOY_DIR_ON_TARGET}/|g" \
+      "${QNX_DEPLOY_ASSETS}/slm-config-autosar.xml" > "${STAGING}/etc/slm/autosar.xml"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Copy any existing deploy support files
 # ---------------------------------------------------------------------------
 if [[ -d "${QNX_DEPLOY_DIR}" ]]; then

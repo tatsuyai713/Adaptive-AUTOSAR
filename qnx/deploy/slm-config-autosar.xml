@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  QNX Service Launch Manager (SLM) configuration for AUTOSAR Adaptive Platform.
+
+  Install to /etc/slm/config/ on QNX target:
+    cp slm-config-autosar.xml /etc/slm/config/autosar.xml
+    slay -f slm && slm &
+
+  SLM launches services in dependency order and restarts them on failure.
+  See: https://www.qnx.com/developers/docs/8.0/com.qnx.doc.slm/
+-->
+<SLM:system xmlns:SLM="http://www.qnx.com/SLM">
+
+  <!--
+    ==========================================================================
+    Environment defaults shared by all AUTOSAR AP daemons.
+    AUTOSAR_ROOT must match the deploy path (default: /autosar).
+    ==========================================================================
+  -->
+
+  <!-- ======================================================================
+       Tier 0: Foundation — vsomeip routing manager
+       All other AUTOSAR AP daemons depend on this.
+       ====================================================================== -->
+  <SLM:component name="autosar-vsomeip-routing">
+    <SLM:command
+        launch="/autosar/bin/autosar_vsomeip_routing_manager"
+        priority="10"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="VSOMEIP_CONFIGURATION" value="/autosar/etc/vsomeip_routing.json"/>
+      <SLM:env var="VSOMEIP_APPLICATION_NAME" value="autosar_vsomeip_routing_manager"/>
+    </SLM:command>
+    <SLM:waitfor wait="delay" duration="1000"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <!-- ======================================================================
+       Tier 1: Core platform services (no inter-dependencies)
+       ====================================================================== -->
+  <SLM:component name="autosar-dlt-daemon">
+    <SLM:command
+        launch="/autosar/bin/autosar_dlt_daemon"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_DLT_STATUS_FILE" value="/autosar/run/autosar/dlt_daemon.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-time-sync">
+    <SLM:command
+        launch="/autosar/bin/autosar_time_sync_daemon"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_TIMESYNC_STATUS_FILE" value="/autosar/run/autosar/time_sync.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-persistency-guard">
+    <SLM:command
+        launch="/autosar/bin/autosar_persistency_guard"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_AP_PERSISTENCY_ROOT" value="/autosar/var/persistency"/>
+      <SLM:env var="AUTOSAR_PERSISTENCY_STATUS_FILE" value="/autosar/run/autosar/persistency_guard.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-iam-policy">
+    <SLM:command
+        launch="/autosar/bin/autosar_iam_policy_loader"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_IAM_POLICY_FILE" value="/autosar/etc/iam_policy.csv"/>
+      <SLM:env var="AUTOSAR_IAM_STATUS_FILE" value="/autosar/run/autosar/iam_policy_loader.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-network-manager">
+    <SLM:command
+        launch="/autosar/bin/autosar_network_manager"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_NM_STATUS_FILE" value="/autosar/run/autosar/network_manager.status"/>
+      <SLM:env var="AUTOSAR_NM_TRIGGER_DIR" value="/autosar/run/autosar/nm_triggers"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-can-manager">
+    <SLM:command
+        launch="/autosar/bin/autosar_can_interface_manager"
+        priority="11"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_CAN_MANAGER_STATUS_FILE" value="/autosar/run/autosar/can_manager.status"/>
+      <SLM:env var="AUTOSAR_CAN_TRIGGER_DIR" value="/autosar/run/autosar/can_triggers"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="3"/>
+  </SLM:component>
+
+  <!-- ======================================================================
+       Tier 2: Platform application and monitoring
+       ====================================================================== -->
+  <SLM:component name="autosar-sm-state">
+    <SLM:command
+        launch="/autosar/bin/autosar_sm_state_daemon"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_SM_STATUS_FILE" value="/autosar/run/autosar/sm_state.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-watchdog">
+    <SLM:command
+        launch="/autosar/bin/autosar_watchdog_supervisor"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_WATCHDOG_STATUS_FILE" value="/autosar/run/autosar/watchdog.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-phm-daemon">
+    <SLM:command
+        launch="/autosar/bin/autosar_phm_daemon"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_PHM_STATUS_FILE" value="/autosar/run/autosar/phm.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-diag-server">
+    <SLM:command
+        launch="/autosar/bin/autosar_diag_server"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_DIAG_STATUS_FILE" value="/autosar/run/autosar/diag_server.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-crypto-provider">
+    <SLM:command
+        launch="/autosar/bin/autosar_crypto_provider"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-ucm">
+    <SLM:command
+        launch="/autosar/bin/autosar_ucm_daemon"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_UCM_STATUS_FILE" value="/autosar/run/autosar/ucm_daemon.status"/>
+      <SLM:env var="AUTOSAR_UCM_STAGING_DIR" value="/autosar/var/ucm/staging"/>
+      <SLM:env var="AUTOSAR_UCM_PROCESSED_DIR" value="/autosar/var/ucm/processed"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-ntp-time-provider">
+    <SLM:command
+        launch="/autosar/bin/autosar_ntp_time_provider"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_NTP_STATUS_FILE" value="/autosar/run/autosar/ntp_time_provider.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-time-sync"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-ptp-time-provider">
+    <SLM:command
+        launch="/autosar/bin/autosar_ptp_time_provider"
+        priority="12"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_PTP_STATUS_FILE" value="/autosar/run/autosar/ptp_time_provider.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-time-sync"/>
+    <SLM:restart action="always" delay="2000" max="3"/>
+  </SLM:component>
+
+  <!-- ======================================================================
+       Tier 3: Main platform application + Execution Manager
+       ====================================================================== -->
+  <SLM:component name="autosar-platform-app">
+    <SLM:command
+        launch="/autosar/bin/adaptive_autosar"
+        priority="15"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="VSOMEIP_CONFIGURATION" value="/autosar/etc/vsomeip_client.json"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-vsomeip-routing"/>
+    <SLM:dependency component="autosar-time-sync"/>
+    <SLM:dependency component="autosar-persistency-guard"/>
+    <SLM:dependency component="autosar-iam-policy"/>
+    <SLM:restart action="always" delay="3000" max="3"/>
+  </SLM:component>
+
+  <SLM:component name="autosar-user-app-monitor">
+    <SLM:command
+        launch="/autosar/bin/autosar_user_app_monitor"
+        priority="16"
+        type="simple">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="AUTOSAR_USER_APP_REGISTRY_FILE" value="/autosar/run/autosar/user_apps_registry.csv"/>
+      <SLM:env var="AUTOSAR_USER_APP_STATUS_DIR" value="/autosar/run/autosar/user_apps"/>
+      <SLM:env var="AUTOSAR_USER_APP_MONITOR_STATUS_FILE" value="/autosar/run/autosar/user_app_monitor.status"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-platform-app"/>
+    <SLM:restart action="always" delay="2000" max="5"/>
+  </SLM:component>
+
+  <!-- ======================================================================
+       Tier 4: User application bringup (launched after platform is ready)
+       ====================================================================== -->
+  <SLM:component name="autosar-user-bringup">
+    <SLM:command
+        launch="/autosar/bringup_qnx.sh"
+        priority="20"
+        type="oneshot">
+      <SLM:env var="LD_LIBRARY_PATH" value="/autosar/lib"/>
+      <SLM:env var="VSOMEIP_CONFIGURATION" value="/autosar/etc/vsomeip_client.json"/>
+      <SLM:env var="AUTOSAR_ROOT" value="/autosar"/>
+    </SLM:command>
+    <SLM:dependency component="autosar-platform-app"/>
+    <SLM:dependency component="autosar-user-app-monitor"/>
+  </SLM:component>
+
+</SLM:system>
