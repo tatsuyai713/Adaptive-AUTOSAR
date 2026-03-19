@@ -14,6 +14,7 @@
 #include "./service_handle_type.h"
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
+#include "./com_error_domain.h"
 
 namespace ara
 {
@@ -109,6 +110,10 @@ namespace ara
                 const ServiceVersion &offeredVersion,
                 VersionCheckPolicy policy =
                     VersionCheckPolicy::kMinorBackward) noexcept;
+
+            /// @brief Get the InstanceIdentifier of the connected service (SWS_CM_00005).
+            /// @returns InstanceIdentifier derived from the bound service handle.
+            InstanceIdentifier GetServiceInstanceId() const noexcept;
         };
     }
 }

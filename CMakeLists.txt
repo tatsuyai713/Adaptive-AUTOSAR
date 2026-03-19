@@ -1921,12 +1921,14 @@ if(build_tests)
     ${test_ara_com_dir}/sample_info_test.cpp
     ${test_ara_com_dir}/types_extended_test.cpp
     ${test_ara_com_dir}/event_extended_test.cpp
+    ${test_ara_com_dir}/service_skeleton_base_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_zerocopy_test.cpp
     ${test_ara_com_zerocopy_dir}/iceoryx_binding_test.cpp
     ${test_ara_com_zerocopy_dir}/zerocopy_extended_test.cpp
     ${test_ara_com_dds_dir}/dds_binding_test.cpp
     ${test_ara_com_dds_dir}/dds_extended_test.cpp
     ${test_ara_com_e2e_dir}/e2e_event_test.cpp
+    ${test_ara_com_e2e_dir}/e2e_state_machine_test.cpp
     ${test_ara_exec_dir}/signal_handler_test.cpp
     ${test_ara_exec_dir}/process_watchdog_test.cpp
     ${test_ara_per_dir}/per_error_domain_test.cpp

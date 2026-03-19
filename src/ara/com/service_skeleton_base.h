@@ -15,6 +15,7 @@
 #include <vector>
 #include "./types.h"
 #include "./service_version.h"
+#include "./instance_identifier.h"
 #include "../core/instance_specifier.h"
 #include "../core/result.h"
 
@@ -149,6 +150,10 @@ namespace ara
             /// @brief Get the service interface version.
             /// @returns ServiceVersion with major and minor version numbers.
             ServiceVersion GetServiceVersion() const noexcept;
+
+            /// @brief Get the InstanceIdentifier of this skeleton (SWS_CM_00005).
+            /// @returns InstanceIdentifier derived from service/instance IDs.
+            InstanceIdentifier GetServiceInstanceId() const noexcept;
         };
     }
 }

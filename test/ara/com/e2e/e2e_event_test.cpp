@@ -174,10 +174,10 @@ namespace ara
                     });
 
                 ASSERT_TRUE(result.HasValue());
-                // The underlying mock returns 1 (it processed 1 raw sample),
-                // but the E2E check silently drops the corrupted sample so
-                // the callback is never invoked.
-                EXPECT_EQ(callbackCount, 0U);
+                // Per SWS_CM_00802, corrupted samples are now forwarded to the
+                // application (with E2E status available via GetLastSampleE2EStatuses).
+                // The callback is invoked once for the corrupted sample.
+                EXPECT_EQ(callbackCount, 1U);
             }
 
             class E2ERoundTripTest : public ::testing::Test

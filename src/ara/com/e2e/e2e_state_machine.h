@@ -23,6 +23,15 @@ namespace ara
                 kRepeat = 4     ///< Repeated data detected.
             };
 
+            /// @brief E2E supervision state per SWS_CM_00010.
+            ///        Represents whether the E2E state machine supervision
+            ///        is enabled or disabled for a given event/field.
+            enum class SMState : std::uint8_t
+            {
+                kStateMachineDisabled = 0U,  ///< E2E supervision is not active.
+                kStateMachineEnabled = 1U    ///< E2E supervision is active.
+            };
+
             /// @brief Configuration for the E2E state machine (SWS_E2E_00302).
             struct E2E_SMConfig
             {
@@ -50,6 +59,15 @@ namespace ara
                 /// @brief Get the current state machine status.
                 E2E_SMCheckStatusType GetState() const noexcept;
 
+                /// @brief Get the supervision enable/disable state (SWS_CM_00010).
+                SMState GetSMState() const noexcept;
+
+                /// @brief Enable the E2E state machine supervision (SWS_CM_00010).
+                void Enable() noexcept;
+
+                /// @brief Disable the E2E state machine supervision (SWS_CM_00010).
+                void Disable() noexcept;
+
                 /// @brief Reset the state machine to Init.
                 void Reset() noexcept;
 
@@ -62,6 +80,7 @@ namespace ara
             private:
                 E2E_SMConfig mConfig;
                 E2E_SMCheckStatusType mState;
+                SMState mSMState;
                 std::uint32_t mOkCount;
                 std::uint32_t mErrorCount;
                 std::uint32_t mWindowCount;

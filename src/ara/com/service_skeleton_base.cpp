@@ -296,5 +296,10 @@ namespace ara
         {
             return ServiceVersion{mMajorVersion, mMinorVersion};
         }
+
+        InstanceIdentifier ServiceSkeletonBase::GetServiceInstanceId() const noexcept
+        {
+            return InstanceIdentifier{mServiceId, mInstanceId};
+        }
     }
 }

@@ -202,6 +202,116 @@ namespace ara
                     std::make_shared<IdentityTransformer>());
             }
         };
+
+        /// @brief SOME/IP serialization transformer per SWS_CM_00710.
+        ///        Prepends a minimal SOME/IP-style header on Transform and
+        ///        strips it on InverseTransform. The header is 8 bytes:
+        ///        [ServiceId:2][MethodId:2][Length:4] in network byte order.
+        class SomeIpTransformer : public Transformer
+        {
+        private:
+            std::uint16_t mServiceId;
+            std::uint16_t mMethodId;
+
+            static constexpr std::size_t kHeaderSize{8U};
+
+            static void PutUint16BE(
+                std::vector<std::uint8_t> &buf,
+                std::size_t offset,
+                std::uint16_t value) noexcept
+            {
+                buf[offset] = static_cast<std::uint8_t>(value >> 8);
+                buf[offset + 1] = static_cast<std::uint8_t>(value & 0xFF);
+            }
+
+            static std::uint16_t GetUint16BE(
+                const std::vector<std::uint8_t> &buf,
+                std::size_t offset) noexcept
+            {
+                return static_cast<std::uint16_t>(
+                    (static_cast<std::uint16_t>(buf[offset]) << 8) |
+                    buf[offset + 1]);
+            }
+
+            static void PutUint32BE(
+                std::vector<std::uint8_t> &buf,
+                std::size_t offset,
+                std::uint32_t value) noexcept
+            {
+                buf[offset] = static_cast<std::uint8_t>(value >> 24);
+                buf[offset + 1] = static_cast<std::uint8_t>((value >> 16) & 0xFF);
+                buf[offset + 2] = static_cast<std::uint8_t>((value >> 8) & 0xFF);
+                buf[offset + 3] = static_cast<std::uint8_t>(value & 0xFF);
+            }
+
+            static std::uint32_t GetUint32BE(
+                const std::vector<std::uint8_t> &buf,
+                std::size_t offset) noexcept
+            {
+                return (static_cast<std::uint32_t>(buf[offset]) << 24) |
+                       (static_cast<std::uint32_t>(buf[offset + 1]) << 16) |
+                       (static_cast<std::uint32_t>(buf[offset + 2]) << 8) |
+                       static_cast<std::uint32_t>(buf[offset + 3]);
+            }
+
+        public:
+            /// @brief Construct a SOME/IP transformer.
+            /// @param serviceId Service identifier for the header.
+            /// @param methodId Method/event identifier for the header.
+            SomeIpTransformer(
+                std::uint16_t serviceId,
+                std::uint16_t methodId) noexcept
+                : mServiceId{serviceId},
+                  mMethodId{methodId}
+            {
+            }
+
+            core::Result<std::vector<std::uint8_t>> Transform(
+                const std::vector<std::uint8_t> &input) override
+            {
+                std::vector<std::uint8_t> output(kHeaderSize + input.size());
+                PutUint16BE(output, 0, mServiceId);
+                PutUint16BE(output, 2, mMethodId);
+                PutUint32BE(output, 4, static_cast<std::uint32_t>(input.size()));
+                std::copy(input.begin(), input.end(),
+                          output.begin() + static_cast<std::ptrdiff_t>(kHeaderSize));
+                return core::Result<std::vector<std::uint8_t>>::FromValue(
+                    std::move(output));
+            }
+
+            core::Result<std::vector<std::uint8_t>> InverseTransform(
+                const std::vector<std::uint8_t> &input) override
+            {
+                if (input.size() < kHeaderSize)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(ComErrc::kSerializationError));
+                }
+
+                const std::uint32_t payloadLen = GetUint32BE(input, 4);
+                if (input.size() < kHeaderSize + payloadLen)
+                {
+                    return core::Result<std::vector<std::uint8_t>>::FromError(
+                        MakeErrorCode(ComErrc::kSerializationError));
+                }
+
+                std::vector<std::uint8_t> output(
+                    input.begin() + static_cast<std::ptrdiff_t>(kHeaderSize),
+                    input.begin() + static_cast<std::ptrdiff_t>(kHeaderSize + payloadLen));
+                return core::Result<std::vector<std::uint8_t>>::FromValue(
+                    std::move(output));
+            }
+
+            TransformerType GetType() const noexcept override
+            {
+                return TransformerType::kSerialization;
+            }
+
+            /// @brief Get the configured service ID.
+            std::uint16_t GetServiceId() const noexcept { return mServiceId; }
+            /// @brief Get the configured method/event ID.
+            std::uint16_t GetMethodId() const noexcept { return mMethodId; }
+        };
     }
 }
 

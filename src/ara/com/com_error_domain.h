@@ -36,7 +36,8 @@ namespace ara
             kMaxServicesExceeded = 16,     ///< Maximum number of services reached (SWS_CM_11351).
             kWrongMethodCallProcessingMode = 17, ///< Incompatible MethodCallProcessingMode (SWS_CM_11352).
             kCouldNotExecute = 18,         ///< Method handler execution failed (SWS_CM_11353).
-            kErroneousFileHandle = 19      ///< File-backed binding file error (SWS_CM_11354).
+            kErroneousFileHandle = 19,     ///< File-backed binding file error (SWS_CM_11354).
+            kSerializationError = 20       ///< Serialization/deserialization failure (SWS_CM_00180).
         };
 
         /// @brief `ErrorDomain` implementation for `ara::com`.

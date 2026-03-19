@@ -40,5 +40,36 @@ namespace ara
             ComErrorDomain _domain;
             EXPECT_STREQ("Unknown communication error.", _domain.Message(99));
         }
+
+        TEST(ComErrorDomainTest, SerializationErrorMessage)
+        {
+            ComErrorDomain _domain;
+            auto _code = static_cast<core::ErrorDomain::CodeType>(
+                ComErrc::kSerializationError);
+            EXPECT_STREQ("Serialization error.", _domain.Message(_code));
+        }
+
+        TEST(ComErrorDomainTest, SerializationErrorEnumValue)
+        {
+            EXPECT_EQ(
+                static_cast<core::ErrorDomain::CodeType>(
+                    ComErrc::kSerializationError),
+                20);
+        }
+
+        TEST(ComErrorDomainTest, ErroneousFileHandleMessage)
+        {
+            ComErrorDomain _domain;
+            auto _code = static_cast<core::ErrorDomain::CodeType>(
+                ComErrc::kErroneousFileHandle);
+            EXPECT_STREQ("Erroneous file handle.", _domain.Message(_code));
+        }
+
+        TEST(ComErrorDomainTest, MakeErrorCodeSerializationError)
+        {
+            auto ec = MakeErrorCode(ComErrc::kSerializationError);
+            EXPECT_EQ(ec.Value(), 20);
+            EXPECT_STREQ(ec.Domain().Name(), "Com");
+        }
     }
 }

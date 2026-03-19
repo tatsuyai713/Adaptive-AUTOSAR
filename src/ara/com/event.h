@@ -28,6 +28,10 @@ namespace ara
         {
         private:
             std::unique_ptr<internal::ProxyEventBinding> mBinding;
+            EventCacheUpdatePolicy mCachePolicy{
+                EventCacheUpdatePolicy::kLastN};
+            FilterConfig mFilter{};
+            std::uint32_t mDecimationCounter{0U};
 
         public:
             /// @brief Construct from a binding implementation
@@ -62,8 +66,7 @@ namespace ara
             void Subscribe(std::size_t maxSampleCount,
                            EventCacheUpdatePolicy policy)
             {
-                // Educational: policy stored but behavior is binding-dependent.
-                (void)policy;
+                mCachePolicy = policy;
                 Subscribe(maxSampleCount);
             }
 
@@ -73,8 +76,8 @@ namespace ara
             void Subscribe(std::size_t maxSampleCount,
                            const FilterConfig &filter)
             {
-                // Educational: filter stored but binding-dependent.
-                (void)filter;
+                mFilter = filter;
+                mDecimationCounter = 0U;
                 Subscribe(maxSampleCount);
             }
 
@@ -84,7 +87,6 @@ namespace ara
             void Subscribe(std::size_t maxSampleCount,
                            const EventQosProfile &qos)
             {
-                // Educational: QoS stored but binding-dependent.
                 (void)qos;
                 Subscribe(maxSampleCount);
             }
@@ -131,7 +133,7 @@ namespace ara
                 bool hasDeserializationError{false};
 
                 auto receiveResult = mBinding->GetNewSamples(
-                    [&f, &hasDeserializationError](
+                    [this, &f, &hasDeserializationError](
                         const std::uint8_t *data,
                         std::size_t size)
                     {
@@ -139,6 +141,16 @@ namespace ara
                             Serializer<T>::Deserialize(data, size);
                         if (deserResult.HasValue())
                         {
+                            if (mFilter.Type == FilterType::kOneEveryN)
+                            {
+                                ++mDecimationCounter;
+                                if (mDecimationCounter < mFilter.DecimationFactor)
+                                {
+                                    return;
+                                }
+                                mDecimationCounter = 0U;
+                            }
+
                             auto sample = std::make_unique<const T>(
                                 std::move(deserResult).Value());
                             f(SamplePtr<T>{std::move(sample)});
@@ -158,7 +170,7 @@ namespace ara
                 if (hasDeserializationError)
                 {
                     return core::Result<std::size_t>::FromError(
-                        MakeErrorCode(ComErrc::kFieldValueIsNotValid));
+                        MakeErrorCode(ComErrc::kSerializationError));
                 }
 
                 return receiveResult;
@@ -239,6 +251,20 @@ namespace ara
                 std::unique_ptr<internal::ProxyEventBinding> binding) noexcept
             {
                 mBinding = std::move(binding);
+            }
+
+            /// @brief Get the configured cache update policy.
+            /// @returns Current EventCacheUpdatePolicy.
+            EventCacheUpdatePolicy GetCacheUpdatePolicy() const noexcept
+            {
+                return mCachePolicy;
+            }
+
+            /// @brief Get the configured filter.
+            /// @returns Current FilterConfig.
+            const FilterConfig &GetFilterConfig() const noexcept
+            {
+                return mFilter;
             }
         };
 

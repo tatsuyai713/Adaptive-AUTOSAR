@@ -63,6 +63,8 @@ namespace ara
                 return "Method handler could not execute.";
             case ComErrc::kErroneousFileHandle:
                 return "Erroneous file handle.";
+            case ComErrc::kSerializationError:
+                return "Serialization error.";
             default:
                 return "Unknown communication error.";
             }

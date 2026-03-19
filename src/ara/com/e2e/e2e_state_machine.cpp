@@ -12,6 +12,7 @@ namespace ara
             E2EStateMachine::E2EStateMachine(const E2E_SMConfig &config) noexcept
                 : mConfig{config},
                   mState{E2E_SMCheckStatusType::kNoData},
+                  mSMState{SMState::kStateMachineEnabled},
                   mOkCount{0U},
                   mErrorCount{0U},
                   mWindowCount{0U}
@@ -20,6 +21,11 @@ namespace ara
 
             void E2EStateMachine::Check(CheckStatusType checkStatus)
             {
+                if (mSMState == SMState::kStateMachineDisabled)
+                {
+                    return;
+                }
+
                 ++mWindowCount;
 
                 bool isOk = (checkStatus == CheckStatusType::kOk);
@@ -103,6 +109,21 @@ namespace ara
                 mOkCount = 0U;
                 mErrorCount = 0U;
                 mWindowCount = 0U;
+            }
+
+            SMState E2EStateMachine::GetSMState() const noexcept
+            {
+                return mSMState;
+            }
+
+            void E2EStateMachine::Enable() noexcept
+            {
+                mSMState = SMState::kStateMachineEnabled;
+            }
+
+            void E2EStateMachine::Disable() noexcept
+            {
+                mSMState = SMState::kStateMachineDisabled;
             }
 
             std::uint32_t E2EStateMachine::GetOkCount() const noexcept

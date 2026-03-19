@@ -505,5 +505,12 @@ namespace ara
         {
             return requiredVersion.IsCompatibleWith(offeredVersion, policy);
         }
+
+        InstanceIdentifier ServiceProxyBase::GetServiceInstanceId() const noexcept
+        {
+            return InstanceIdentifier{
+                mHandle.GetServiceId(),
+                mHandle.GetInstanceId()};
+        }
     }
 }

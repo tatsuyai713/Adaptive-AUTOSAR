@@ -11,6 +11,7 @@
 #include "./profile.h"
 #include "../internal/event_binding.h"
 #include "../com_error_domain.h"
+#include "../sample_info.h"
 #include "../../core/result.h"
 
 namespace ara
@@ -113,6 +114,24 @@ namespace ara
                 std::unique_ptr<internal::ProxyEventBinding> mInner;
                 Profile *mProfile;
                 std::size_t mE2EHeaderSize;
+                std::vector<E2ESampleStatus> mLastSampleStatuses;
+
+                /// @brief Map E2E CheckStatusType to per-sample E2ESampleStatus.
+                static E2ESampleStatus MapStatus(
+                    CheckStatusType status) noexcept
+                {
+                    switch (status)
+                    {
+                    case CheckStatusType::kOk:
+                        return E2ESampleStatus::kOk;
+                    case CheckStatusType::kRepeated:
+                        return E2ESampleStatus::kRepeated;
+                    case CheckStatusType::kWrongSequence:
+                        return E2ESampleStatus::kWrongSequence;
+                    default:
+                        return E2ESampleStatus::kError;
+                    }
+                }
 
             public:
                 /// @brief Construct the E2E decorator
@@ -152,26 +171,35 @@ namespace ara
                 {
                     Profile *profile = mProfile;
                     std::size_t headerSize = mE2EHeaderSize;
+                    auto &statuses = mLastSampleStatuses;
+                    statuses.clear();
 
                     return mInner->GetNewSamples(
-                        [profile, headerSize, &handler](
+                        [profile, headerSize, &handler, &statuses](
                             const std::uint8_t *data, std::size_t size)
                         {
                             std::vector<std::uint8_t> protectedData(
                                 data, data + size);
                             CheckStatusType status =
                                 profile->Check(protectedData);
+                            statuses.push_back(MapStatus(status));
 
-                            if (status == CheckStatusType::kOk &&
-                                size > headerSize)
+                            if (size > headerSize)
                             {
                                 handler(
                                     data + headerSize,
                                     size - headerSize);
                             }
-                            // Samples with CRC errors are silently dropped
                         },
                         maxNumberOfSamples);
+                }
+
+                /// @brief Get E2E statuses of samples from the last GetNewSamples call.
+                /// @returns Vector of E2ESampleStatus, one per sample received.
+                const std::vector<E2ESampleStatus> &
+                GetLastSampleE2EStatuses() const noexcept
+                {
+                    return mLastSampleStatuses;
                 }
 
                 void SetReceiveHandler(

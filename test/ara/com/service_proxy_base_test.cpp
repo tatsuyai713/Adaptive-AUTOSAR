@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/com/service_proxy_base.h"
+#include "../../../src/ara/com/instance_identifier.h"
 
 namespace ara
 {
@@ -48,6 +49,22 @@ namespace ara
 
             auto stopResult = ServiceProxyBase::StopFindService(startResult.Value());
             EXPECT_TRUE(stopResult.HasValue());
+        }
+
+        TEST(ServiceProxyBaseTest, CheckServiceVersionExact)
+        {
+            ServiceVersion proxy{1, 5};
+            ServiceVersion skel{1, 5};
+            EXPECT_TRUE(ServiceProxyBase::CheckServiceVersion(
+                proxy, skel, VersionCheckPolicy::kExact));
+        }
+
+        TEST(ServiceProxyBaseTest, CheckServiceVersionMinorBackward)
+        {
+            ServiceVersion proxy{1, 5};
+            ServiceVersion skel{1, 8};
+            EXPECT_TRUE(ServiceProxyBase::CheckServiceVersion(
+                proxy, skel, VersionCheckPolicy::kMinorBackward));
         }
     }
 }
