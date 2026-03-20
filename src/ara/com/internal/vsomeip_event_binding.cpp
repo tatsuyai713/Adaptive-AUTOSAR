@@ -251,31 +251,32 @@ namespace ara
                         MakeErrorCode(ComErrc::kSetHandlerNotSet));
                 }
 
-                std::vector<std::vector<std::uint8_t>> samples;
+                std::size_t delivered = 0U;
+                while (delivered < maxNumberOfSamples)
                 {
-                    std::lock_guard<std::mutex> lock(mMutex);
-                    if (mState != SubscriptionState::kSubscribed)
+                    std::vector<std::uint8_t> sample;
                     {
-                        return core::Result<std::size_t>::FromError(
-                            MakeErrorCode(ComErrc::kServiceNotAvailable));
-                    }
-
-                    const std::size_t count =
-                        std::min(maxNumberOfSamples, mSampleQueue.size());
-                    samples.reserve(count);
-                    for (std::size_t i = 0U; i < count; ++i)
-                    {
-                        samples.push_back(std::move(mSampleQueue.front()));
+                        std::lock_guard<std::mutex> lock(mMutex);
+                        if (mState != SubscriptionState::kSubscribed)
+                        {
+                            if (delivered == 0U)
+                            {
+                                return core::Result<std::size_t>::FromError(
+                                    MakeErrorCode(ComErrc::kServiceNotAvailable));
+                            }
+                            break;
+                        }
+                        if (mSampleQueue.empty())
+                        {
+                            break;
+                        }
+                        sample = std::move(mSampleQueue.front());
                         mSampleQueue.pop_front();
                     }
-                }
-
-                for (const auto &sample : samples)
-                {
                     handler(sample.data(), sample.size());
+                    ++delivered;
                 }
-
-                return core::Result<std::size_t>::FromValue(samples.size());
+                return core::Result<std::size_t>::FromValue(delivered);
             }
 
             void VsomeipProxyEventBinding::SetReceiveHandler(
@@ -386,9 +387,9 @@ namespace ara
 
                 auto app = someip::VsomeipApplication::GetServerApplication();
                 auto vsPayload = vsomeip::runtime::get()->create_payload();
-                std::vector<vsomeip::byte_t> payloadBytes{
-                    payload.begin(), payload.end()};
-                vsPayload->set_data(payloadBytes);
+                vsPayload->set_data(
+                    reinterpret_cast<const vsomeip::byte_t *>(payload.data()),
+                    static_cast<vsomeip::length_t>(payload.size()));
 
                 app->notify(
                     static_cast<vsomeip::service_t>(mConfig.ServiceId),
@@ -423,12 +424,27 @@ namespace ara
                         MakeErrorCode(ComErrc::kFieldValueIsNotValid));
                 }
 
-                std::vector<std::uint8_t> payload(
-                    static_cast<std::uint8_t *>(data),
-                    static_cast<std::uint8_t *>(data) + size);
+                auto vsPayload = vsomeip::runtime::get()->create_payload();
+                vsPayload->set_data(
+                    static_cast<const vsomeip::byte_t *>(data),
+                    static_cast<vsomeip::length_t>(size));
                 std::free(data);
 
-                return Send(payload);
+                if (!mOffered)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(ComErrc::kServiceNotOffered));
+                }
+
+                auto app = someip::VsomeipApplication::GetServerApplication();
+                app->notify(
+                    static_cast<vsomeip::service_t>(mConfig.ServiceId),
+                    static_cast<vsomeip::instance_t>(mConfig.InstanceId),
+                    static_cast<vsomeip::event_t>(mConfig.EventId),
+                    vsPayload,
+                    true);
+
+                return core::Result<void>::FromValue();
             }
 
             void VsomeipSkeletonEventBinding::SetInitialValue(
@@ -449,9 +465,9 @@ namespace ara
             {
                 auto app = someip::VsomeipApplication::GetServerApplication();
                 auto vsPayload = vsomeip::runtime::get()->create_payload();
-                std::vector<vsomeip::byte_t> payloadBytes{
-                    mInitialValue.begin(), mInitialValue.end()};
-                vsPayload->set_data(payloadBytes);
+                vsPayload->set_data(
+                    reinterpret_cast<const vsomeip::byte_t *>(mInitialValue.data()),
+                    static_cast<vsomeip::length_t>(mInitialValue.size()));
 
                 // force=true ensures the notification is cached and delivered
                 // to any subscriber immediately upon subscription.

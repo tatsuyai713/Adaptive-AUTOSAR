@@ -65,32 +65,37 @@ namespace ara
             {
                 const uint8_t cCounterMask{0xf0};
 
-                if (unprotectedData.size() > 0)
-                {
-                    protectedData = unprotectedData;
-
-                    if (mProtectingCounter < cCounterMax)
-                    {
-                        ++mProtectingCounter;
-                    }
-                    else
-                    {
-                        mProtectingCounter = 0;
-                    }
-
-                    const auto cCounter{
-                        static_cast<uint8_t>(mProtectingCounter | cCounterMask)};
-                    protectedData.insert(protectedData.begin(), cCounter);
-
-                    const uint8_t cCrc{calculateCrc(protectedData)};
-                    protectedData.insert(protectedData.begin(), cCrc);
-
-                    return true;
-                }
-                else
+                if (unprotectedData.empty())
                 {
                     return false;
                 }
+
+                if (mProtectingCounter < cCounterMax)
+                {
+                    ++mProtectingCounter;
+                }
+                else
+                {
+                    mProtectingCounter = 0;
+                }
+
+                const auto cCounter{
+                    static_cast<uint8_t>(mProtectingCounter | cCounterMask)};
+
+                // Build [counter | payload] for CRC, avoiding O(n) insert-at-front
+                protectedData.clear();
+                protectedData.reserve(2U + unprotectedData.size());
+                protectedData.push_back(cCounter);
+                protectedData.insert(protectedData.end(),
+                                     unprotectedData.begin(),
+                                     unprotectedData.end());
+
+                const uint8_t cCrc{calculateCrc(protectedData)};
+
+                // Prepend CRC (single O(n) shift instead of two)
+                protectedData.insert(protectedData.begin(), cCrc);
+
+                return true;
             }
 
             bool Profile11::TryForward(
@@ -104,14 +109,21 @@ namespace ara
                     return false;
                 }
 
-                protectedData = unprotectedData;
-
                 // Replicate the last checked status (counter) for gateway-style forwarding.
                 const auto cCounter{
                     static_cast<uint8_t>((mCheckingCounter & 0x0f) | cCounterMask)};
-                protectedData.insert(protectedData.begin(), cCounter);
+
+                // Build [counter | payload] for CRC, avoiding O(n) insert-at-front
+                protectedData.clear();
+                protectedData.reserve(2U + unprotectedData.size());
+                protectedData.push_back(cCounter);
+                protectedData.insert(protectedData.end(),
+                                     unprotectedData.begin(),
+                                     unprotectedData.end());
 
                 const uint8_t cCrc{calculateCrc(protectedData)};
+
+                // Prepend CRC (single O(n) shift instead of two)
                 protectedData.insert(protectedData.begin(), cCrc);
 
                 // Keep protect/forward sequence aligned when both are used.

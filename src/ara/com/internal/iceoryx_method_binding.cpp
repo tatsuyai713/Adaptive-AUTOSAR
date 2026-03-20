@@ -29,10 +29,12 @@ namespace ara
                 /// @brief Encode a 32-bit value as 4 little-endian bytes.
                 void encodeU32LE(std::uint32_t value, std::vector<std::uint8_t> &buf)
                 {
-                    buf.push_back(static_cast<std::uint8_t>(value & 0xFFU));
-                    buf.push_back(static_cast<std::uint8_t>((value >> 8U) & 0xFFU));
-                    buf.push_back(static_cast<std::uint8_t>((value >> 16U) & 0xFFU));
-                    buf.push_back(static_cast<std::uint8_t>((value >> 24U) & 0xFFU));
+                    const auto pos = buf.size();
+                    buf.resize(pos + 4U);
+                    buf[pos]     = static_cast<std::uint8_t>(value & 0xFFU);
+                    buf[pos + 1] = static_cast<std::uint8_t>((value >> 8U) & 0xFFU);
+                    buf[pos + 2] = static_cast<std::uint8_t>((value >> 16U) & 0xFFU);
+                    buf[pos + 3] = static_cast<std::uint8_t>((value >> 24U) & 0xFFU);
                 }
 
                 /// @brief Decode a 32-bit value from 4 little-endian bytes.

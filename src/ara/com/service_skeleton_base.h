@@ -11,6 +11,7 @@
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include "./types.h"
@@ -36,7 +37,7 @@ namespace ara
             std::uint32_t mMinorVersion;
             MethodCallProcessingMode mProcessingMode;
             bool mOffered{false};
-            std::vector<std::uint16_t> mRegisteredEventGroups;
+            std::unordered_set<std::uint16_t> mRegisteredEventGroups;
             mutable std::mutex mSubscriptionMutex;
 
             /// @brief Queue of deferred method calls for kPoll mode.

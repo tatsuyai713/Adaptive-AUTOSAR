@@ -2,7 +2,6 @@
 /// @brief Implementation for service skeleton base.
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
-#include <algorithm>
 #include <utility>
 
 #include "./service_skeleton_base.h"
@@ -85,11 +84,10 @@ namespace ara
 #ifdef ARA_COM_USE_VSOMEIP
                 auto app = someip::VsomeipApplication::GetServerApplication();
 
-                std::vector<std::uint16_t> eventGroups;
+                std::unordered_set<std::uint16_t> eventGroups;
                 {
                     std::lock_guard<std::mutex> lock(mSubscriptionMutex);
-                    eventGroups = mRegisteredEventGroups;
-                    mRegisteredEventGroups.clear();
+                    eventGroups.swap(mRegisteredEventGroups);
                 }
 
                 for (const auto eventGroupId : eventGroups)
@@ -133,11 +131,7 @@ namespace ara
 
             {
                 std::lock_guard<std::mutex> lock(mSubscriptionMutex);
-                const auto registeredIt = std::find(
-                    mRegisteredEventGroups.begin(),
-                    mRegisteredEventGroups.end(),
-                    eventGroupId);
-                if (registeredIt != mRegisteredEventGroups.end())
+                if (mRegisteredEventGroups.count(eventGroupId) > 0)
                 {
                     return core::Result<void>::FromError(
                         MakeErrorCode(ComErrc::kFieldValueIsNotValid));
@@ -166,7 +160,7 @@ namespace ara
 
             {
                 std::lock_guard<std::mutex> lock(mSubscriptionMutex);
-                mRegisteredEventGroups.push_back(eventGroupId);
+                mRegisteredEventGroups.insert(eventGroupId);
             }
 
             return core::Result<void>::FromValue();
@@ -178,13 +172,9 @@ namespace ara
             bool wasRegistered{false};
             {
                 std::lock_guard<std::mutex> lock(mSubscriptionMutex);
-                auto registeredIt = std::find(
-                    mRegisteredEventGroups.begin(),
-                    mRegisteredEventGroups.end(),
-                    eventGroupId);
-                if (registeredIt != mRegisteredEventGroups.end())
+                auto erased = mRegisteredEventGroups.erase(eventGroupId);
+                if (erased > 0)
                 {
-                    mRegisteredEventGroups.erase(registeredIt);
                     wasRegistered = true;
                 }
             }

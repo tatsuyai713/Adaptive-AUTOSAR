@@ -56,6 +56,7 @@ namespace ara
             std::deque<std::vector<std::uint8_t>> mReceiveBuffer;
             mutable std::mutex mMutex;
             std::size_t mTotalBytesReceived{0U};
+            std::size_t mBufferedSize{0U};
 
         public:
             /// @brief Constructs a raw data stream server.
@@ -76,6 +77,7 @@ namespace ara
                 std::lock_guard<std::mutex> lock(mMutex);
                 mState = StreamState::kOpen;
                 mTotalBytesReceived = 0U;
+                mBufferedSize = 0U;
                 mReceiveBuffer.clear();
                 NotifyStateChange();
                 return core::Result<void>::FromValue();
@@ -87,6 +89,7 @@ namespace ara
                 std::lock_guard<std::mutex> lock(mMutex);
                 mState = StreamState::kClosed;
                 mReceiveBuffer.clear();
+                mBufferedSize = 0U;
                 NotifyStateChange();
             }
 
@@ -127,13 +130,7 @@ namespace ara
                         MakeErrorCode(ComErrc::kServiceNotAvailable));
                 }
 
-                std::size_t currentSize = 0U;
-                for (const auto &chunk : mReceiveBuffer)
-                {
-                    currentSize += chunk.size();
-                }
-
-                if (currentSize + size > mMaxBufferSize)
+                if (mBufferedSize + size > mMaxBufferSize)
                 {
                     mState = StreamState::kSuspended;
                     NotifyStateChange();
@@ -142,6 +139,7 @@ namespace ara
                 }
 
                 mReceiveBuffer.emplace_back(data, data + size);
+                mBufferedSize += size;
                 mTotalBytesReceived += size;
 
                 if (mDataHandler)
@@ -169,11 +167,13 @@ namespace ara
 
                     if (front.size() <= remaining)
                     {
+                        mBufferedSize -= front.size();
                         result.insert(result.end(), front.begin(), front.end());
                         mReceiveBuffer.pop_front();
                     }
                     else
                     {
+                        mBufferedSize -= remaining;
                         result.insert(result.end(),
                                       front.begin(),
                                       front.begin() +
@@ -205,12 +205,7 @@ namespace ara
             std::size_t GetBufferedSize() const noexcept
             {
                 std::lock_guard<std::mutex> lock(mMutex);
-                std::size_t total = 0U;
-                for (const auto &chunk : mReceiveBuffer)
-                {
-                    total += chunk.size();
-                }
-                return total;
+                return mBufferedSize;
             }
 
             /// @brief Accept a new client session (SWS_CM_00610).
