@@ -1,4 +1,4 @@
-# 14: Raspberry Pi 最小構成 ECU — ライブラリビルドからユーザーアプリ管理まで
+# 51: Raspberry Pi 最小構成 ECU — ライブラリビルドからユーザーアプリ管理まで
 
 ## 概要
 
@@ -31,6 +31,9 @@
 │                                                                        │
 │  [Tier 2: プラットフォームアプリ]                                        │
 │    adaptive_autosar ── EM/SM/PHM/Diag/Vehicle 統合バイナリ              │
+│    Diag Server ─────── UDS/DoIP 診断エンドポイント                      │
+│    PHM Daemon ──────── プラットフォームヘルスオーケストレータ             │
+│    Crypto Provider ─── HSM 鍵管理・暗号処理                            │
 │                                                                        │
 │  [Tier 3: 実行管理・監視]                                               │
 │    Exec Manager ──── bringup.sh を実行しユーザーアプリを起動             │
@@ -119,7 +122,7 @@ make -j$(nproc)
 | `libara_nm.a` | Network Management | NM PDU、コーディネーター |
 | `libarxml.a` | ARXML Parser | マニフェスト解析 (pugixml ベース) |
 
-**プラットフォームバイナリ (14 個)**
+**プラットフォームバイナリ (17 個)**
 
 | バイナリ | 説明 |
 |---|---|
@@ -137,6 +140,9 @@ make -j$(nproc)
 | `autosar_network_manager` | ネットワークマネージャー |
 | `autosar_ucm_daemon` | UCM デーモン |
 | `autosar_dlt_daemon` | DLT ログデーモン |
+| `autosar_diag_server` | UDS/DoIP 診断サーバー |
+| `autosar_phm_daemon` | プラットフォームヘルスオーケストレータ |
+| `autosar_crypto_provider` | HSM 暗号プロバイダ |
 
 > **ビルド時の注意:** OpenSSL 3.0 環境では HKDF API が EVP_KDF ベースに変更されています。
 > このプロジェクトは OpenSSL 1.x / 3.0 の両方に対応しています。

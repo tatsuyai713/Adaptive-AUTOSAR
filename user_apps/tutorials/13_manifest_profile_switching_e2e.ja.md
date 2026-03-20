@@ -1,4 +1,4 @@
-# 11: Manifest プロファイル切替 E2E
+# 13: Manifest プロファイル切替 E2E
 
 ## 対象
 

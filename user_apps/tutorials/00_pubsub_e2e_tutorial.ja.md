@@ -742,11 +742,11 @@ provider_port: 30511
 
 | チュートリアル | 内容 |
 | ------------- | ---- |
-| `05_zerocopy_pubsub.ja.md` | iceoryx を使った共有メモリゼロコピー通信 |
-| `06_dds_pubsub.ja.md` | Cyclone DDS を使った分散通信 |
-| `07_socketcan_decode.ja.md` | CAN バスデータの受信とデコード |
-| `08_ecu_full_stack.ja.md` | ECU フルスタック統合 |
-| `09_rpi_ecu_deployment.ja.md` | Raspberry Pi への配備 |
+| `11_zerocopy_pubsub.ja.md` | iceoryx を使った共有メモリゼロコピー通信 |
+| `12_dds_pubsub.ja.md` | Cyclone DDS を使った分散通信 |
+| `20_socketcan_decode.ja.md` | CAN バスデータの受信とデコード |
+| `21_ecu_full_stack.ja.md` | ECU フルスタック統合 |
+| `50_rpi_ecu_deployment.ja.md` | Raspberry Pi への配備 |
 
 ---
 

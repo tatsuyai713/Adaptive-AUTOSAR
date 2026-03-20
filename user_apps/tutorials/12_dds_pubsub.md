@@ -1,4 +1,4 @@
-# 06: DDS Pub/Sub
+# 12: DDS Pub/Sub
 
 ## Target
 

@@ -17,44 +17,65 @@ For new app design, use manifest-profile switching as the primary approach:
 
 - Keep one app binary and switch backend with `ARA_COM_BINDING_MANIFEST`.
 - Use `user_apps/src/apps/communication/switchable_pubsub/README.md` as the canonical workflow.
-- Use tutorials `04`/`05`/`06` in this directory as backend-specific reference templates.
+- Use tutorials `10`/`11`/`12` in this directory as backend-specific reference templates.
 
 ## Table of Contents
 
-0. **Complete Pub/Sub Tutorial** ← **Start here**
-   [`00_pubsub_e2e_tutorial.md`](00_pubsub_e2e_tutorial.md)
-   Full walkthrough: YAML → ARXML → C++ codegen → build → run
-1. Manifest-profile backend switching (**recommended**)
-   [`11_manifest_profile_switching_e2e.md`](11_manifest_profile_switching_e2e.md)
+### Fundamentals (00–04)
 
-2. Runtime initialization and shutdown
-   [`01_runtime_lifecycle.ja.md`](01_runtime_lifecycle.ja.md)
-3. Execution control signal handling
-   [`02_exec_signal.ja.md`](02_exec_signal.ja.md)
-4. Persistency and PHM
-   [`03_per_phm.ja.md`](03_per_phm.ja.md)
-5. SOME/IP Pub/Sub (transport-focused, standard `ara::com` API template)
-   [`04_someip_pubsub.ja.md`](04_someip_pubsub.ja.md)
-6. ZeroCopy Pub/Sub (transport-focused template)
-   [`05_zerocopy_pubsub.ja.md`](05_zerocopy_pubsub.ja.md)
-7. DDS Pub/Sub (transport-focused template)
-   [`06_dds_pubsub.ja.md`](06_dds_pubsub.ja.md)
-8. SocketCAN receive and decode
-   [`07_socketcan_decode.ja.md`](07_socketcan_decode.ja.md)
-9. ECU full-stack integration
-   [`08_ecu_full_stack.ja.md`](08_ecu_full_stack.ja.md)
-10. Raspberry Pi ECU deployment
-   [`09_rpi_ecu_deployment.ja.md`](09_rpi_ecu_deployment.ja.md)
-11. Porting Vector/ETAS/EB assets
-    [`10_vendor_autosar_asset_porting.ja.md`](10_vendor_autosar_asset_porting.ja.md)
-12. `ara::exec` runtime reporting and monitoring
-   [`12_exec_runtime_monitoring.md`](12_exec_runtime_monitoring.md)
-13. ExecutionManager orchestration for user-app management
-   [`13_execution_manager_orchestration.ja.md`](13_execution_manager_orchestration.ja.md)
-14. RPi Minimal ECU — Library Build to User App Management
-   [`14_rpi_minimal_ecu_user_app_management.ja.md`](14_rpi_minimal_ecu_user_app_management.ja.md)
-15. DoIP/DIAG tester (Ubuntu host) — moved to host_tools
-    [`../../tools/host_tools/doip_diag_tester/README.ja.md`](../../tools/host_tools/doip_diag_tester/README.ja.md)
+| # | Title | File |
+|---|-------|------|
+| 00 | **Complete Pub/Sub Tutorial** ← **Start here** | [`00_pubsub_e2e_tutorial.md`](00_pubsub_e2e_tutorial.md) |
+| 01 | Runtime initialization and shutdown | [`01_runtime_lifecycle.md`](01_runtime_lifecycle.md) |
+| 02 | Execution control signal handling | [`02_exec_signal.md`](02_exec_signal.md) |
+| 03 | Persistency and PHM | [`03_per_phm.md`](03_per_phm.md) |
+| 04 | `ara::exec` runtime reporting and monitoring | [`04_exec_runtime_monitoring.md`](04_exec_runtime_monitoring.md) |
+
+### Communication (10–13)
+
+| # | Title | File |
+|---|-------|------|
+| 10 | SOME/IP Pub/Sub (transport-focused template) | [`10_someip_pubsub.md`](10_someip_pubsub.md) |
+| 11 | ZeroCopy Pub/Sub (transport-focused template) | [`11_zerocopy_pubsub.md`](11_zerocopy_pubsub.md) |
+| 12 | DDS Pub/Sub (transport-focused template) | [`12_dds_pubsub.md`](12_dds_pubsub.md) |
+| 13 | Manifest-profile backend switching (**recommended**) | [`13_manifest_profile_switching_e2e.md`](13_manifest_profile_switching_e2e.md) |
+
+### Vehicle Integration (20–22)
+
+| # | Title | File |
+|---|-------|------|
+| 20 | SocketCAN receive and decode | [`20_socketcan_decode.md`](20_socketcan_decode.md) |
+| 21 | ECU full-stack integration | [`21_ecu_full_stack.md`](21_ecu_full_stack.md) |
+| 22 | Production ECU application | [`22_production_ecu_app.md`](22_production_ecu_app.md) |
+
+### Platform Services (30–33)
+
+| # | Title | File |
+|---|-------|------|
+| 30 | Platform service architecture (17 daemons, 20 services) | [`30_platform_service_architecture.md`](30_platform_service_architecture.md) |
+| 31 | Diagnostic server (UDS/DoIP) | [`31_diag_server.md`](31_diag_server.md) |
+| 32 | Platform Health Management daemon | [`32_phm_daemon.md`](32_phm_daemon.md) |
+| 33 | Crypto provider (HSM, key rotation) | [`33_crypto_provider.md`](33_crypto_provider.md) |
+
+### Execution Management (40)
+
+| # | Title | File |
+|---|-------|------|
+| 40 | ExecutionManager orchestration for user-app management | [`40_execution_manager_orchestration.md`](40_execution_manager_orchestration.md) |
+
+### Deployment (50–52)
+
+| # | Title | File |
+|---|-------|------|
+| 50 | Raspberry Pi ECU deployment (full 20-service profile) | [`50_rpi_ecu_deployment.md`](50_rpi_ecu_deployment.md) |
+| 51 | RPi minimal ECU — library build to user app management | [`51_rpi_minimal_ecu_user_app_management.md`](51_rpi_minimal_ecu_user_app_management.md) |
+| 52 | Porting Vector/ETAS/EB assets | [`52_vendor_autosar_asset_porting.md`](52_vendor_autosar_asset_porting.md) |
+
+### Host Tools
+
+| Tool | Description |
+|------|-------------|
+| DoIP/DIAG tester (Ubuntu host) | [`../../tools/host_tools/doip_diag_tester/README.md`](../../tools/host_tools/doip_diag_tester/README.md) |
 
 ## Related Tools
 

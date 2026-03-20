@@ -767,11 +767,11 @@ provider_port: 30511
 
 | Tutorial | Topic |
 | -------- | ----- |
-| `05_zerocopy_pubsub.ja.md` | Shared-memory zero-copy with iceoryx |
-| `06_dds_pubsub.ja.md` | Distributed communication with Cyclone DDS |
-| `07_socketcan_decode.ja.md` | CAN bus reception and decoding |
-| `08_ecu_full_stack.ja.md` | Full ECU stack integration |
-| `09_rpi_ecu_deployment.ja.md` | Deploying to Raspberry Pi |
+| `11_zerocopy_pubsub.ja.md` | Shared-memory zero-copy with iceoryx |
+| `12_dds_pubsub.ja.md` | Distributed communication with Cyclone DDS |
+| `20_socketcan_decode.ja.md` | CAN bus reception and decoding |
+| `21_ecu_full_stack.ja.md` | Full ECU stack integration |
+| `50_rpi_ecu_deployment.ja.md` | Deploying to Raspberry Pi |
 
 ---
 

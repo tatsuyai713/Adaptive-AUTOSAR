@@ -1,4 +1,4 @@
-# 13: ExecutionManager でユーザーアプリを管理・実行する
+# 40: ExecutionManager でユーザーアプリを管理・実行する
 
 ## 概要
 
@@ -564,5 +564,5 @@ em.Stop();
 - [user_apps/src/apps/feature/em/em_daemon_app.cpp](../src/apps/feature/em/em_daemon_app.cpp) — デーモンの全実装
 - [user_apps/src/apps/feature/em/em_sensor_app.cpp](../src/apps/feature/em/em_sensor_app.cpp) — センサーアプリの全実装
 - [user_apps/src/apps/feature/em/em_actuator_app.cpp](../src/apps/feature/em/em_actuator_app.cpp) — アクチュエーターアプリの全実装
-- [12_exec_runtime_monitoring.ja.md](12_exec_runtime_monitoring.ja.md) — SignalHandler と Alive 監視の詳細
-- [09_rpi_ecu_deployment.ja.md](09_rpi_ecu_deployment.ja.md) — Raspberry Pi 配備の詳細
+- [04_exec_runtime_monitoring.ja.md](04_exec_runtime_monitoring.ja.md) — SignalHandler と Alive 監視の詳細
+- [50_rpi_ecu_deployment.ja.md](50_rpi_ecu_deployment.ja.md) — Raspberry Pi 配備の詳細
