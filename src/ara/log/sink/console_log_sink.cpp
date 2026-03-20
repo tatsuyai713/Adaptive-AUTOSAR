@@ -23,7 +23,7 @@ namespace ara
                 _timestamp << cWhitespace << _appstamp << cWhitespace << logStream;
                 std::string _logString = _timestamp.ToString();
 
-                std::cout << _logString << std::endl;
+                std::cout << _logString << '\n';
             }
         }
     }

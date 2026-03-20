@@ -7,10 +7,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -25,10 +27,13 @@
 namespace
 {
     std::atomic_bool gRunning{true};
+    std::mutex gWaitMutex;
+    std::condition_variable gWaitCV;
 
     void RequestStop(int) noexcept
     {
         gRunning = false;
+        gWaitCV.notify_all();
     }
 
     std::string GetEnvOrDefault(const char *key, std::string fallback)
@@ -311,13 +316,11 @@ int main()
         WriteStatus(statusFile, hsm, selfTestsPassed,
                     selfTestsFailed, keyRotations);
 
-        const std::uint32_t sleepStepMs{100U};
-        std::uint32_t sleptMs{0U};
-        while (gRunning.load() && sleptMs < periodMs)
         {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(sleepStepMs));
-            sleptMs += sleepStepMs;
+            std::unique_lock<std::mutex> lock(gWaitMutex);
+            gWaitCV.wait_for(lock,
+                std::chrono::milliseconds(periodMs),
+                [] { return !gRunning.load(); });
         }
     }
 

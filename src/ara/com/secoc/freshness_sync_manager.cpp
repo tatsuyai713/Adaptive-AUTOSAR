@@ -216,6 +216,8 @@ namespace ara
                 std::vector<uint8_t> result;
 
                 uint32_t count = static_cast<uint32_t>(mEntries.size());
+                static constexpr size_t cEntryBytes = 19u;
+                result.reserve(4u + static_cast<size_t>(count) * cEntryBytes);
                 result.resize(4);
                 std::memcpy(result.data(), &count, 4);
 

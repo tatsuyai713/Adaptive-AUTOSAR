@@ -2,10 +2,12 @@
 /// @brief Entry point for the platform-side Adaptive AUTOSAR process stack.
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdio>
 #include <csignal>
 #include <future>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <unistd.h>
 #include "./application/helper/argument_configuration.h"
@@ -15,6 +17,8 @@ namespace
 {
     std::atomic_bool gRunning{false};
     std::atomic_bool gStopRequested{false};
+    std::mutex gWaitMutex;
+    std::condition_variable gWaitCV;
     AsyncBsdSocketLib::Poller gPoller;
     std::unique_ptr<application::platform::ExecutionManagement> gExecutionManagement;
 
@@ -22,6 +26,7 @@ namespace
     {
         gStopRequested = true;
         gRunning = false;
+        gWaitCV.notify_all();
     }
 
     void PerformPolling()
@@ -58,9 +63,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        while (!gStopRequested.load())
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            std::unique_lock<std::mutex> lock(gWaitMutex);
+            gWaitCV.wait(lock, [] { return gStopRequested.load(); });
         }
     }
 

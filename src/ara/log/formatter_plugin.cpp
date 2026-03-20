@@ -4,7 +4,6 @@
 
 #include "./formatter_plugin.h"
 #include <ctime>
-#include <sstream>
 
 namespace ara
 {
@@ -28,11 +27,21 @@ namespace ara
 
         std::string DefaultFormatter::Format(const LogEntry &entry) const
         {
-            std::ostringstream oss;
-            oss << "[" << LevelToString(entry.Level) << "] "
-                << entry.AppId << "/" << entry.CtxId
-                << ": " << entry.Message;
-            return oss.str();
+            std::string result;
+            const char *level = LevelToString(entry.Level);
+            result.reserve(
+                1U + std::char_traits<char>::length(level) + 2U +
+                entry.AppId.size() + 1U + entry.CtxId.size() +
+                2U + entry.Message.size());
+            result += '[';
+            result += level;
+            result += "] ";
+            result += entry.AppId;
+            result += '/';
+            result += entry.CtxId;
+            result += ": ";
+            result += entry.Message;
+            return result;
         }
 
         const char *DefaultFormatter::Name() const noexcept
@@ -63,13 +72,19 @@ namespace ara
 
         std::string JsonFormatter::Format(const LogEntry &entry) const
         {
-            std::ostringstream oss;
-            oss << "{\"level\":\"" << LevelToString(entry.Level) << "\""
-                << ",\"app\":\"" << EscapeJson(entry.AppId) << "\""
-                << ",\"ctx\":\"" << EscapeJson(entry.CtxId) << "\""
-                << ",\"msg\":\"" << EscapeJson(entry.Message) << "\""
-                << "}";
-            return oss.str();
+            std::string result;
+            result.reserve(64U + entry.AppId.size() +
+                           entry.CtxId.size() + entry.Message.size());
+            result += "{\"level\":\"";
+            result += LevelToString(entry.Level);
+            result += "\",\"app\":\"";
+            result += EscapeJson(entry.AppId);
+            result += "\",\"ctx\":\"";
+            result += EscapeJson(entry.CtxId);
+            result += "\",\"msg\":\"";
+            result += EscapeJson(entry.Message);
+            result += "\"}";
+            return result;
         }
 
         const char *JsonFormatter::Name() const noexcept

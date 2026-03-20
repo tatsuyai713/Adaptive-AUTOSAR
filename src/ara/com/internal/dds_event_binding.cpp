@@ -71,10 +71,13 @@ namespace ara
             {
                 std::string idToHex(std::uint16_t id)
                 {
-                    std::ostringstream oss;
-                    oss << std::hex << std::setfill('0') << std::setw(4)
-                        << static_cast<unsigned>(id);
-                    return oss.str();
+                    static constexpr char hex[] = "0123456789abcdef";
+                    std::string result(4, '0');
+                    result[0] = hex[(id >> 12) & 0xF];
+                    result[1] = hex[(id >> 8) & 0xF];
+                    result[2] = hex[(id >> 4) & 0xF];
+                    result[3] = hex[id & 0xF];
+                    return result;
                 }
 
                 /// @brief Release DDS entities in reverse creation order.
@@ -294,31 +297,33 @@ namespace ara
                         MakeErrorCode(ComErrc::kSetHandlerNotSet));
                 }
 
-                std::vector<std::vector<std::uint8_t>> samples;
+                std::size_t delivered = 0U;
+                while (delivered < maxNumberOfSamples)
                 {
-                    std::lock_guard<std::mutex> lock(mMutex);
-                    if (mState != SubscriptionState::kSubscribed)
+                    std::vector<std::uint8_t> sample;
                     {
-                        return core::Result<std::size_t>::FromError(
-                            MakeErrorCode(ComErrc::kServiceNotAvailable));
-                    }
-
-                    const std::size_t count =
-                        std::min(maxNumberOfSamples, mSampleQueue.size());
-                    samples.reserve(count);
-                    for (std::size_t i = 0U; i < count; ++i)
-                    {
-                        samples.push_back(std::move(mSampleQueue.front()));
+                        std::lock_guard<std::mutex> lock(mMutex);
+                        if (mState != SubscriptionState::kSubscribed)
+                        {
+                            if (delivered == 0U)
+                            {
+                                return core::Result<std::size_t>::FromError(
+                                    MakeErrorCode(ComErrc::kServiceNotAvailable));
+                            }
+                            break;
+                        }
+                        if (mSampleQueue.empty())
+                        {
+                            break;
+                        }
+                        sample = std::move(mSampleQueue.front());
                         mSampleQueue.pop_front();
                     }
-                }
-
-                for (const auto &sample : samples)
-                {
                     handler(sample.data(), sample.size());
+                    ++delivered;
                 }
 
-                return core::Result<std::size_t>::FromValue(samples.size());
+                return core::Result<std::size_t>::FromValue(delivered);
             }
 
             void DdsProxyEventBinding::SetReceiveHandler(
@@ -380,7 +385,6 @@ namespace ara
                     // Drain all available samples
                     static constexpr std::size_t cMaxTake = 16U;
                     AraComDdsRawEvent msgs[cMaxTake];
-                    std::memset(msgs, 0, sizeof(msgs));
                     void *ptrBuf[cMaxTake];
                     dds_sample_info_t si[cMaxTake];
                     for (std::size_t i = 0U; i < cMaxTake; ++i)
@@ -539,9 +543,13 @@ namespace ara
                 }
 
                 AraComDdsRawEvent msg;
-                std::memset(&msg, 0, sizeof(msg));
                 msg.size = static_cast<std::uint32_t>(payload.size());
                 std::memcpy(msg.data, payload.data(), payload.size());
+                if (payload.size() < ARA_COM_DDS_MAX_PAYLOAD_SIZE)
+                {
+                    std::memset(msg.data + payload.size(), 0,
+                                ARA_COM_DDS_MAX_PAYLOAD_SIZE - payload.size());
+                }
 
                 const dds_return_t rc = dds_write(mWriter, &msg);
                 if (rc != DDS_RETCODE_OK)

@@ -3,10 +3,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -19,10 +21,13 @@
 namespace
 {
     std::atomic_bool gRunning{true};
+    std::mutex gWaitMutex;
+    std::condition_variable gWaitCV;
 
     void RequestStop(int) noexcept
     {
         gRunning = false;
+        gWaitCV.notify_all();
     }
 
     std::string GetEnvOrDefault(const char *key, std::string fallback)
@@ -119,12 +124,11 @@ int main()
             std::chrono::steady_clock::now());
         WriteStatusFile(statusFile, client);
 
-        const std::uint32_t sleepStepMs{100U};
-        std::uint32_t sleptMs{0U};
-        while (gRunning.load() && sleptMs < periodMs)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(sleepStepMs));
-            sleptMs += sleepStepMs;
+            std::unique_lock<std::mutex> lock(gWaitMutex);
+            gWaitCV.wait_for(lock,
+                std::chrono::milliseconds(periodMs),
+                [] { return !gRunning.load(); });
         }
     }
 

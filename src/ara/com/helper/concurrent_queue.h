@@ -5,6 +5,8 @@
 #ifndef CONCURRENT_QUEUE_H
 #define CONCURRENT_QUEUE_H
 
+#include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <atomic>
@@ -22,6 +24,7 @@ namespace ara
             {
             private:
                 std::mutex mMutex;
+                std::condition_variable mCV;
                 std::queue<T> mQueue;
                 std::atomic_size_t mSize;
 
@@ -51,6 +54,7 @@ namespace ara
                         mQueue.emplace(std::move(element));
                         ++mSize;
                         _lock.unlock();
+                        mCV.notify_one();
                         return true;
                     }
                     else
@@ -71,6 +75,7 @@ namespace ara
                         mQueue.emplace(element);
                         ++mSize;
                         _lock.unlock();
+                        mCV.notify_one();
                         return true;
                     }
                     else
@@ -87,6 +92,11 @@ namespace ara
                     std::unique_lock<std::mutex> _lock(mMutex, std::defer_lock);
                     if (_lock.try_lock())
                     {
+                        if (mQueue.empty())
+                        {
+                            _lock.unlock();
+                            return false;
+                        }
                         element = std::move(mQueue.front());
                         mQueue.pop();
                         --mSize;
@@ -97,6 +107,27 @@ namespace ara
                     {
                         return false;
                     }
+                }
+
+                /// @brief Block until an element is available or timeout expires
+                /// @param[out] element Element that is moved out from the queue
+                /// @param[in] timeout Maximum duration to wait
+                /// @returns True if an element was dequeued, false on timeout
+                template <typename Rep, typename Period>
+                bool WaitDequeue(
+                    T &element,
+                    const std::chrono::duration<Rep, Period> &timeout)
+                {
+                    std::unique_lock<std::mutex> lock(mMutex);
+                    if (!mCV.wait_for(lock, timeout,
+                            [this] { return !mQueue.empty(); }))
+                    {
+                        return false;
+                    }
+                    element = std::move(mQueue.front());
+                    mQueue.pop();
+                    --mSize;
+                    return true;
                 }
             };
         }

@@ -18,6 +18,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -386,10 +387,14 @@ int main()
             lastStatusWriteMs = nowMs;
         }
 
-        // Small sleep to avoid busy-wait when no data arrives.
-        if (!activity)
+        // Wait for data on the listen socket instead of busy-waiting.
+        if (!activity && listenFd >= 0)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10U));
+            struct pollfd pfd;
+            pfd.fd = listenFd;
+            pfd.events = POLLIN;
+            pfd.revents = 0;
+            ::poll(&pfd, 1, 50);
         }
     }
 

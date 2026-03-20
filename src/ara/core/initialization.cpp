@@ -78,7 +78,7 @@ namespace ara
 
             if (text != nullptr)
             {
-                std::cerr << "ara::core::Abort: " << text << std::endl;
+                std::cerr << "ara::core::Abort: " << text << '\n';
             }
             std::abort();
         }

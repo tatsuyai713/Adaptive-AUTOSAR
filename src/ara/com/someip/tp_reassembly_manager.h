@@ -15,8 +15,8 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <map>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 #include "./someip_tp.h"
 
@@ -48,6 +48,19 @@ namespace ara
                 }
             };
 
+            /// @brief Hash functor for TpStreamKey in unordered containers.
+            struct TpStreamKeyHash
+            {
+                std::size_t operator()(const TpStreamKey &key) const noexcept
+                {
+                    // Combine MessageId (32-bit) and ClientId (16-bit) into a
+                    // single hash.  Shift avoids trivial collisions.
+                    return std::hash<std::uint64_t>{}(
+                        (static_cast<std::uint64_t>(key.MessageId) << 16U) |
+                        static_cast<std::uint64_t>(key.ClientId));
+                }
+            };
+
             /// @brief Callback invoked when a TP stream is fully reassembled.
             using TpReassemblyCallback = std::function<void(
                 const TpStreamKey &key,
@@ -58,7 +71,7 @@ namespace ara
             class TpReassemblyManager
             {
             private:
-                std::map<TpStreamKey, TpReassembler> mStreams;
+                std::unordered_map<TpStreamKey, TpReassembler, TpStreamKeyHash> mStreams;
                 std::chrono::seconds mTimeout;
                 mutable std::mutex mMutex;
 

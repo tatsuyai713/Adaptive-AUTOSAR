@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cerrno>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cctype>
 #include <cstdint>
@@ -13,6 +14,7 @@
 #include <deque>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <set>
 #include <string>
@@ -97,11 +99,14 @@ namespace
     };
 
     std::atomic_bool gRunning{true};
+    std::mutex gWaitMutex;
+    std::condition_variable gWaitCV;
     std::map<std::string, RestartRuntimeState> gRestartState;
 
     void RequestStop(int) noexcept
     {
         gRunning = false;
+        gWaitCV.notify_all();
     }
 
     std::string GetEnvOrDefault(const char *key, std::string fallback)
@@ -1220,12 +1225,11 @@ int main()
         PruneRuntimeState(registrations);
         WriteStatus(statusFile, summary, appStatuses);
 
-        const std::uint32_t sleepStepMs{100U};
-        std::uint32_t sleptMs{0U};
-        while (gRunning.load() && sleptMs < periodMs)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(sleepStepMs));
-            sleptMs += sleepStepMs;
+            std::unique_lock<std::mutex> lock(gWaitMutex);
+            gWaitCV.wait_for(lock,
+                std::chrono::milliseconds(periodMs),
+                [] { return !gRunning.load(); });
         }
     }
 

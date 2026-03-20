@@ -7,8 +7,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <iomanip>
-#include <sstream>
 #include "./dds_method_binding.h"
 
 #if defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
@@ -120,10 +118,13 @@ namespace ara
             {
                 std::string idToHex(std::uint16_t id)
                 {
-                    std::ostringstream oss;
-                    oss << std::hex << std::setfill('0') << std::setw(4)
-                        << static_cast<unsigned>(id);
-                    return oss.str();
+                    static constexpr char hex[] = "0123456789abcdef";
+                    std::string result(4, '0');
+                    result[0] = hex[(id >> 12) & 0xF];
+                    result[1] = hex[(id >> 8) & 0xF];
+                    result[2] = hex[(id >> 4) & 0xF];
+                    result[3] = hex[id & 0xF];
+                    return result;
                 }
 
                 void deleteSafe(dds_entity_t &entity) noexcept
@@ -325,10 +326,14 @@ namespace ara
                 }
 
                 AraComDdsRawRequest req;
-                std::memset(&req, 0, sizeof(req));
                 req.session_id = sessionId;
                 req.size = static_cast<std::uint32_t>(requestPayload.size());
                 std::memcpy(req.data, requestPayload.data(), requestPayload.size());
+                if (requestPayload.size() < ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE)
+                {
+                    std::memset(req.data + requestPayload.size(), 0,
+                                ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE - requestPayload.size());
+                }
 
                 const dds_return_t rc = dds_write(mWriter, &req);
                 if (rc != DDS_RETCODE_OK)
@@ -372,7 +377,6 @@ namespace ara
 
                     static constexpr std::size_t cMaxTake = 16U;
                     AraComDdsRawReply msgs[cMaxTake];
-                    std::memset(msgs, 0, sizeof(msgs));
                     void *ptrBuf[cMaxTake];
                     dds_sample_info_t si[cMaxTake];
                     for (std::size_t i = 0U; i < cMaxTake; ++i)
@@ -624,7 +628,6 @@ namespace ara
 
                     static constexpr std::size_t cMaxTake = 16U;
                     AraComDdsRawRequest msgs[cMaxTake];
-                    std::memset(msgs, 0, sizeof(msgs));
                     void *ptrBuf[cMaxTake];
                     dds_sample_info_t si[cMaxTake];
                     for (std::size_t i = 0U; i < cMaxTake; ++i)
@@ -657,7 +660,6 @@ namespace ara
                         }
 
                         AraComDdsRawReply reply;
-                        std::memset(&reply, 0, sizeof(reply));
                         reply.session_id = msg.session_id;
 
                         if (handler)
@@ -673,15 +675,24 @@ namespace ara
                                                  ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE)));
                                 std::memcpy(reply.data,
                                             respPayload.data(), reply.size);
+                                if (reply.size < ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE)
+                                {
+                                    std::memset(reply.data + reply.size, 0,
+                                                ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE - reply.size);
+                                }
                             }
                             else
                             {
                                 reply.is_error = 1U;
+                                reply.size = 0U;
+                                std::memset(reply.data, 0, ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE);
                             }
                         }
                         else
                         {
                             reply.is_error = 1U;
+                            reply.size = 0U;
+                            std::memset(reply.data, 0, ARA_COM_DDS_MAX_METHOD_PAYLOAD_SIZE);
                         }
 
                         if (mWriter > 0)

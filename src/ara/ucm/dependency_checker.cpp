@@ -16,27 +16,46 @@ namespace ara
         // Private helpers
         // -----------------------------------------------------------------------
 
+        namespace
+        {
+            /// @brief Parse the next dot-delimited integer from a version
+            ///        string, advancing pos past the dot. Returns 0 when
+            ///        pos is past the end.
+            int nextVersionPart(const std::string &s, std::size_t &pos)
+            {
+                if (pos >= s.size())
+                {
+                    return 0;
+                }
+                int value = 0;
+                while (pos < s.size() && s[pos] != '.')
+                {
+                    const char ch = s[pos];
+                    if (ch >= '0' && ch <= '9')
+                    {
+                        value = value * 10 + (ch - '0');
+                    }
+                    ++pos;
+                }
+                if (pos < s.size())
+                {
+                    ++pos; // skip '.'
+                }
+                return value;
+            }
+        } // namespace
+
         int DependencyChecker::CompareVersions(
             const std::string &a,
             const std::string &b)
         {
-            std::istringstream sa(a);
-            std::istringstream sb(b);
-            std::string partA;
-            std::string partB;
+            std::size_t posA = 0U;
+            std::size_t posB = 0U;
 
-            while (true)
+            while (posA < a.size() || posB < b.size())
             {
-                const bool hasA = static_cast<bool>(std::getline(sa, partA, '.'));
-                const bool hasB = static_cast<bool>(std::getline(sb, partB, '.'));
-
-                if (!hasA && !hasB)
-                {
-                    return 0; // equal
-                }
-
-                const int numA = hasA ? std::atoi(partA.c_str()) : 0;
-                const int numB = hasB ? std::atoi(partB.c_str()) : 0;
+                const int numA = nextVersionPart(a, posA);
+                const int numB = nextVersionPart(b, posB);
 
                 if (numA < numB)
                 {
@@ -47,6 +66,7 @@ namespace ara
                     return 1;
                 }
             }
+            return 0;
         }
 
         // -----------------------------------------------------------------------
@@ -112,15 +132,21 @@ namespace ara
             const std::string &sourceCluster,
             const std::unordered_map<std::string, std::string> &clusterVersions) const
         {
-            std::lock_guard<std::mutex> lock{mMutex};
-
-            for (const auto &c : mConstraints)
+            // Copy relevant constraints under lock, then check without lock.
+            std::vector<DependencyConstraint> relevant;
             {
-                if (c.SourceCluster != sourceCluster)
+                std::lock_guard<std::mutex> lock{mMutex};
+                for (const auto &c : mConstraints)
                 {
-                    continue;
+                    if (c.SourceCluster == sourceCluster)
+                    {
+                        relevant.push_back(c);
+                    }
                 }
+            }
 
+            for (const auto &c : relevant)
+            {
                 auto it = clusterVersions.find(c.RequiredCluster);
                 if (it == clusterVersions.end())
                 {
@@ -130,7 +156,6 @@ namespace ara
 
                 const auto &presentVersion = it->second;
 
-                // Check minimum version
                 if (!c.MinVersion.empty())
                 {
                     if (CompareVersions(presentVersion, c.MinVersion) < 0)
@@ -140,7 +165,6 @@ namespace ara
                     }
                 }
 
-                // Check maximum version
                 if (!c.MaxVersion.empty())
                 {
                     if (CompareVersions(presentVersion, c.MaxVersion) > 0)
@@ -158,10 +182,15 @@ namespace ara
         DependencyChecker::CheckAllDependencies(
             const std::unordered_map<std::string, std::string> &clusterVersions) const
         {
-            std::lock_guard<std::mutex> lock{mMutex};
+            // Copy constraints under lock, then check without lock.
+            std::vector<DependencyConstraint> constraints;
+            {
+                std::lock_guard<std::mutex> lock{mMutex};
+                constraints = mConstraints;
+            }
             std::vector<DependencyCheckResult> results;
 
-            for (const auto &c : mConstraints)
+            for (const auto &c : constraints)
             {
                 DependencyCheckResult r;
                 r.Constraint = c;

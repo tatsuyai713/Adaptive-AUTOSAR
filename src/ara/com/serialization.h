@@ -326,14 +326,26 @@ namespace ara
                 std::vector<std::uint8_t> buffer;
                 const std::uint32_t count =
                     static_cast<std::uint32_t>(value.size());
-                buffer.resize(sizeof(count));
-                std::memcpy(buffer.data(), &count, sizeof(count));
 
-                for (const auto &elem : value)
+                if (std::is_trivially_copyable<T>::value && count > 0U)
                 {
-                    auto elemBytes = Serializer<T>::Serialize(elem);
-                    buffer.insert(buffer.end(),
-                                  elemBytes.begin(), elemBytes.end());
+                    const std::size_t dataSize = count * sizeof(T);
+                    buffer.resize(sizeof(count) + dataSize);
+                    std::memcpy(buffer.data(), &count, sizeof(count));
+                    std::memcpy(buffer.data() + sizeof(count),
+                                value.data(), dataSize);
+                }
+                else
+                {
+                    buffer.resize(sizeof(count));
+                    std::memcpy(buffer.data(), &count, sizeof(count));
+
+                    for (const auto &elem : value)
+                    {
+                        auto elemBytes = Serializer<T>::Serialize(elem);
+                        buffer.insert(buffer.end(),
+                                      elemBytes.begin(), elemBytes.end());
+                    }
                 }
                 return buffer;
             }
@@ -403,6 +415,10 @@ namespace ara
                 std::vector<std::uint8_t> buffer;
                 const std::uint32_t count =
                     static_cast<std::uint32_t>(value.size());
+
+                // Estimate and pre-allocate to reduce reallocations.
+                buffer.reserve(sizeof(count) +
+                               count * (sizeof(K) + sizeof(V)));
                 buffer.resize(sizeof(count));
                 std::memcpy(buffer.data(), &count, sizeof(count));
 

@@ -3,8 +3,6 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
 #include "./iceoryx_method_binding.h"
 
 #if ARA_COM_USE_ICEORYX
@@ -19,10 +17,13 @@ namespace ara
             {
                 std::string idToHex(std::uint16_t id)
                 {
-                    std::ostringstream oss;
-                    oss << std::hex << std::setfill('0') << std::setw(4)
-                        << static_cast<unsigned>(id);
-                    return oss.str();
+                    static constexpr char hex[] = "0123456789abcdef";
+                    std::string result(4, '0');
+                    result[0] = hex[(id >> 12) & 0xF];
+                    result[1] = hex[(id >> 8) & 0xF];
+                    result[2] = hex[(id >> 4) & 0xF];
+                    result[3] = hex[id & 0xF];
+                    return result;
                 }
 
                 /// @brief Encode a 32-bit value as 4 little-endian bytes.

@@ -3,11 +3,13 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdlib>
 #include <future>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vsomeip/vsomeip.hpp>
@@ -15,10 +17,13 @@
 namespace
 {
     std::atomic_bool gRunning{true};
+    std::mutex gWaitMutex;
+    std::condition_variable gWaitCV;
 
     void RequestStop(int) noexcept
     {
         gRunning = false;
+        gWaitCV.notify_all();
     }
 
     std::string GetEnvOrDefault(const char *key, std::string fallback)
@@ -53,7 +58,7 @@ int main()
     if (!application)
     {
         std::cerr << "[ERROR] Failed to create vsomeip application: "
-                  << cAppName << std::endl;
+                  << cAppName << '\n';
         return 1;
     }
 
@@ -62,14 +67,14 @@ int main()
         {
             if (state == vsomeip::state_type_e::ST_REGISTERED)
             {
-                std::cout << "[INFO] vSomeIP routing manager registered." << std::endl;
+                std::cout << "[INFO] vSomeIP routing manager registered." << '\n';
             }
         });
 
     if (!application->init())
     {
         std::cerr << "[ERROR] Failed to initialize vsomeip application: "
-                  << cAppName << std::endl;
+                  << cAppName << '\n';
         return 1;
     }
 
@@ -81,9 +86,9 @@ int main()
                 application->start();
             })};
 
-    while (gRunning.load())
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::unique_lock<std::mutex> lock(gWaitMutex);
+        gWaitCV.wait(lock, [] { return !gRunning.load(); });
     }
 
     application->stop();
