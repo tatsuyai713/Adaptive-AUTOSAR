@@ -48,6 +48,16 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 | CycloneDDS 0.10.5 | `/opt/cyclonedds` | iceoryx 経由で SHM 自動有効化 |
 | vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CycloneDDS-CXX から CDR 抽出; 実行時 DDS ランタイム不要 |
 
+### ROS 2 互換メッセージ・API の利用（オプション）
+
+AUTOSAR AP フレームワーク上で ROS 2 互換のメッセージや API を使用するには、事前に [lwrcl](https://github.com/tatsuyai713/lwrcl) を `adaptive-autosar` オプション付きでインストールしておく必要があります。lwrcl は軽量な ROS 2 クライアントライブラリであり、Adaptive AUTOSAR の通信スタックと統合して動作します。
+
+```bash
+# lwrcl を adaptive-autosar オプション付きでインストール
+# インストール手順の詳細は lwrcl リポジトリを参照してください:
+# https://github.com/tatsuyai713/lwrcl
+```
+
 ---
 
 ## クイックスタート: Linux シミュレーション環境

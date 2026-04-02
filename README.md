@@ -48,6 +48,16 @@ Middleware (built automatically by bundled scripts):
 | CycloneDDS 0.10.5 | `/opt/cyclonedds` | SHM auto-enabled via iceoryx |
 | vsomeip 3.4.10 + CDR | `/opt/vsomeip` | CDR lib extracted from CycloneDDS-CXX; no DDS runtime needed |
 
+### ROS 2 Compatible Messages and APIs (Optional)
+
+To use ROS 2 compatible messages and APIs within the AUTOSAR AP framework, you need to install [lwrcl](https://github.com/tatsuyai713/lwrcl) with the `adaptive-autosar` option beforehand. lwrcl provides a lightweight ROS 2 Client Library that integrates with the Adaptive AUTOSAR communication stack.
+
+```bash
+# Install lwrcl with the adaptive-autosar option
+# Refer to the lwrcl repository for detailed installation instructions:
+# https://github.com/tatsuyai713/lwrcl
+```
+
 ---
 
 ## Quick Start: Linux Simulation Environment
