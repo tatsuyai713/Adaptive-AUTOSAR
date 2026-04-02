@@ -5,8 +5,11 @@
 #ifndef DIAGNOSTIC_MANAGER_H
 #define DIAGNOSTIC_MANAGER_H
 
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
 #include <obdemulator/serial_communication.h>
 #include <obdemulator/obd_emulator.h>
+#include "../doip/obd_to_doip_converter.h"
+#endif
 #include "../../ara/exec/helper/modelled_process.h"
 #include "../../ara/com/helper/network_layer.h"
 #include "../../ara/com/someip/sd/sd_network_layer.h"
@@ -14,7 +17,6 @@
 #include "../../ara/diag/event.h"
 #include "../../ara/diag/monitor.h"
 #include "../helper/network_configuration.h"
-#include "../doip/obd_to_doip_converter.h"
 
 namespace application
 {
@@ -25,10 +27,12 @@ namespace application
         {
         private:
             static const std::string cAppId;
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
             static const std::string cSerialPort;
             static const speed_t cBaudrate;
             static const bool cSupportExtended;
             static const ObdEmulator::CanBusSpeed cSpeed;
+#endif
 
             ara::com::helper::NetworkLayer<ara::com::someip::sd::SomeIpSdMessage> *mNetworkLayer;
             ara::com::someip::sd::SomeIpSdClient *mSdClient;
@@ -36,10 +40,12 @@ namespace application
             ara::diag::Event *mEvent;
             const ara::core::InstanceSpecifier *mMonitorSpecifier;
             ara::diag::Monitor *mMonitor;
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
             ObdEmulator::SerialCommunication mSerialCommunication;
             ObdEmulator::CanDriver mCanDriver;
             doip::ObdToDoipConverter *mObdToDoipConverter;
             ObdEmulator::ObdEmulator *mObdEmulator;
+#endif
 
             void configureNetworkLayer(const arxml::ArxmlReader &reader);
 

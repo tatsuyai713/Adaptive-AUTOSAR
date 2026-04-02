@@ -1240,6 +1240,7 @@ if(AUTOSAR_AP_BUILD_PLATFORM_APP)
 
   # OBD-II emulator only available on Linux (uses signalfd/termios2)
   if(NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+    target_compile_definitions(adaptive_autosar PRIVATE AUTOSAR_HAS_OBD_EMULATOR)
     target_link_libraries(adaptive_autosar obd_ii_emulator)
   endif()
 

@@ -140,16 +140,23 @@ namespace ara
                 DIR *dir = ::opendir(stagingPath.c_str());
                 if (dir)
                 {
+                    auto isRegularFile = [&](const char *name) -> bool {
+                        const std::string full = stagingPath + "/" + name;
+                        struct stat st{};
+                        if (::stat(full.c_str(), &st) != 0) return false;
+                        return S_ISREG(st.st_mode);
+                    };
+
                     uint32_t total = 0;
                     struct dirent *ent;
                     while ((ent = ::readdir(dir)) != nullptr)
-                        if (ent->d_type == DT_REG) ++total;
+                        if (isRegularFile(ent->d_name)) ++total;
                     ::rewinddir(dir);
 
                     uint32_t done = 0;
                     while ((ent = ::readdir(dir)) != nullptr)
                     {
-                        if (ent->d_type != DT_REG)
+                        if (!isRegularFile(ent->d_name))
                             continue;
                         const std::string src = stagingPath + "/" + ent->d_name;
                         const std::string dst = targetPath   + "/" + ent->d_name;

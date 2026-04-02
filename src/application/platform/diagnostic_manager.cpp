@@ -12,20 +12,24 @@ namespace application
     namespace platform
     {
         const std::string DiagnosticManager::cAppId{"DiagnosticManager"};
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
         const std::string DiagnosticManager::cSerialPort{"/dev/ttyUSB0"};
         const speed_t DiagnosticManager::cBaudrate{115200};
         const bool DiagnosticManager::cSupportExtended{false};
         const ObdEmulator::CanBusSpeed DiagnosticManager::cSpeed{ObdEmulator::CanBusSpeed::Speed250kbps};
+#endif
 
         DiagnosticManager::DiagnosticManager(AsyncBsdSocketLib::Poller *poller) : ara::exec::helper::ModelledProcess(cAppId, poller),
                                                                                   mNetworkLayer{nullptr},
                                                                                   mSdClient{nullptr},
                                                                                   mEvent{nullptr},
-                                                                                  mMonitor{nullptr},
-                                                                                  mSerialCommunication(cSerialPort, cBaudrate),
+                                                                                  mMonitor{nullptr}
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
+                                                                                  , mSerialCommunication(cSerialPort, cBaudrate),
                                                                                   mCanDriver(cSpeed, cSupportExtended),
                                                                                   mObdToDoipConverter{nullptr},
                                                                                   mObdEmulator{nullptr}
+#endif
         {
         }
 
@@ -143,6 +147,7 @@ namespace application
                     _logStream << "Telematic Control Module (Extended Vehicle AA) is discovered.";
                     Log(cLogLevel, _logStream);
 
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
                     // Avoid recreating runtime bridges when healed notification repeats.
                     if (mObdEmulator != nullptr)
                     {
@@ -183,6 +188,7 @@ namespace application
 
                     mObdToDoipConverter = _converter;
                     mObdEmulator = _emulator;
+#endif
                 }
                 else if (cDebouncingStatus ==
                          ara::diag::DebouncingState::kFinallyDefective)
@@ -391,6 +397,7 @@ namespace application
 
         DiagnosticManager::~DiagnosticManager()
         {
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
             if (mObdEmulator)
             {
                 delete mObdEmulator;
@@ -400,6 +407,7 @@ namespace application
             {
                 delete mObdToDoipConverter;
             }
+#endif
 
             if (mMonitor)
             {

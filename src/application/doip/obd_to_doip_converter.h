@@ -5,7 +5,9 @@
 #ifndef OBD_TO_DOIP_CONVERTER_H
 #define OBD_TO_DOIP_CONVERTER_H
 
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
 #include <obdemulator/obd_service.h>
+#endif
 #include "./doip_client.h"
 
 namespace application
@@ -14,7 +16,10 @@ namespace application
     {
         /// @brief A OBD service class to handle OBD queries asynchronously
         /// @details The class based on the queried PID may convert the query to a UDS message and send it via DoIP to a UDS server.
-        class ObdToDoipConverter : public ObdEmulator::ObdService
+        class ObdToDoipConverter
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
+            : public ObdEmulator::ObdService
+#endif
         {
         private:
             // Show current data mode
@@ -47,9 +52,17 @@ namespace application
 
             bool TryGetResponse(
                 const std::vector<uint8_t> &pid,
-                std::vector<uint8_t> &response) const override;
+                std::vector<uint8_t> &response) const
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
+                override
+#endif
+                ;
 
-            bool TryGetResponseAsync(const std::vector<uint8_t> &pid) override;
+            bool TryGetResponseAsync(const std::vector<uint8_t> &pid)
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
+                override
+#endif
+                ;
         };
     }
 }

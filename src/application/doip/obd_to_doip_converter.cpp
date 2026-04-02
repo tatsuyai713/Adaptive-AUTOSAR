@@ -16,8 +16,13 @@ namespace application
         ObdToDoipConverter::ObdToDoipConverter(
             AsyncBsdSocketLib::Poller *poller,
             std::string ipAddress,
-            uint16_t port) : ObdService(cService),
+            uint16_t port)
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
+                             : ObdService(cService),
                              mClient(
+#else
+                             : mClient(
+#endif
                                  poller,
                                  ipAddress,
                                  port,
@@ -67,7 +72,9 @@ namespace application
 
             if (cSuccessful)
             {
+#ifdef AUTOSAR_HAS_OBD_EMULATOR
                 Callback({_pid}, std::move(_obdData));
+#endif
             }
         }
 
@@ -90,6 +97,11 @@ namespace application
 
         bool ObdToDoipConverter::TryGetResponseAsync(const std::vector<uint8_t> &pid)
         {
+#ifndef AUTOSAR_HAS_OBD_EMULATOR
+            // OBD emulator is not available on this platform.
+            static_cast<void>(pid);
+            return false;
+#else
             const size_t cPidIndex{0};
             bool _result{true};
             uint8_t _queriedPid{pid.at(cPidIndex)};
@@ -309,6 +321,7 @@ namespace application
             }
 
             return _result;
+#endif
         }
     }
 }

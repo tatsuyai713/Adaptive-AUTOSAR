@@ -4,7 +4,7 @@
 
 #include "./rate_corrector.h"
 #include <cmath>
-#if defined(__linux__) || defined(__QNX__)
+#if defined(__linux__)
 #include <sys/timex.h>
 #endif
 
@@ -51,7 +51,7 @@ namespace ara
 
             mCorrectionPpb = Clamp(correction, mConfig.MaxCorrectionPpb);
 
-#if defined(__linux__) || defined(__QNX__)
+#if defined(__linux__)
             // Apply the computed frequency correction to the kernel clock.
             // Kernel ADJ_FREQUENCY unit: parts-per-million scaled by 2^16.
             // 1 ppb = 1e-3 ppm, so kernel_freq = ppb * 65536 / 1000.

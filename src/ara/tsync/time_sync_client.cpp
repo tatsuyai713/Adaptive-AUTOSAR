@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <ctime>
 
-#if defined(__linux__) || defined(__QNX__)
+#if defined(__linux__)
 #include <sys/timex.h>
 #endif
 
@@ -472,9 +472,8 @@ namespace ara
             //   timex::tai    : current TAI-UTC offset in seconds
             LeapSecondInfo info{};
 
-#if defined(__linux__) || defined(__QNX__)
+#if defined(__linux__)
             struct timex tx{};
-            // adjtimex is POSIX; ntp_adjtime is the same on Linux/QNX.
             int state = ::adjtimex(&tx);
 
             // STA_INS (0x0010): next leap second will be inserted.
