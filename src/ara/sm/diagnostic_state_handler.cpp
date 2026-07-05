@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./diagnostic_state_handler.h"
+#include <utility>
 
 namespace ara
 {
@@ -48,41 +49,56 @@ namespace ara
         // -----------------------------------------------------------------------
         // Start / Stop
         // -----------------------------------------------------------------------
-        void DiagnosticStateHandler::Start()
-        {
-            if (mActive)
+	        void DiagnosticStateHandler::Start()
+	        {
             {
-                return;
+                std::lock_guard<std::mutex> gateLock(*mCallbackGate);
+                if (mActive)
+                {
+                    return;
+                }
+
+                // Snapshot current session before registering callbacks
+                mCurrentSession = mSessionManager.GetCurrentSession();
+                mPreviousSession = mCurrentSession;
+                mActive = true;
             }
 
-            // Snapshot current session before registering callbacks
-            mCurrentSession = mSessionManager.GetCurrentSession();
-            mPreviousSession = mCurrentSession;
+            auto gate = mCallbackGate;
 
-            // Register session-change callback
-            mSessionManager.SetSessionChangeCallback(
-                [this](ara::diag::SessionControlType newSession) {
-                    onSessionChanged(newSession);
-                });
+	            // Register session-change callback
+	            mSessionManager.SetSessionChangeCallback(
+	                [this, gate](ara::diag::SessionControlType newSession) {
+                    std::lock_guard<std::mutex> gateLock(*gate);
+                    if (!mActive)
+                    {
+                        return;
+                    }
+	                    onSessionChanged(newSession);
+	                });
 
-            // Register S3 timeout callback
-            mSessionManager.SetS3TimeoutCallback(
-                [this]() {
-                    onS3Timeout();
-                });
+	            // Register S3 timeout callback
+	            mSessionManager.SetS3TimeoutCallback(
+	                [this, gate]() {
+                    std::lock_guard<std::mutex> gateLock(*gate);
+                    if (!mActive)
+                    {
+                        return;
+                    }
+	                    onS3Timeout();
+	                });
+	        }
 
-            mActive = true;
-        }
-
-        void DiagnosticStateHandler::Stop()
-        {
+	        void DiagnosticStateHandler::Stop()
+	        {
+            std::lock_guard<std::mutex> gateLock(*mCallbackGate);
             if (!mActive)
             {
                 return;
             }
 
-            // Clear callbacks from session manager
-            mSessionManager.SetSessionChangeCallback(nullptr);
+	            // Clear callbacks from session manager
+	            mSessionManager.SetSessionChangeCallback(nullptr);
             mSessionManager.SetS3TimeoutCallback(nullptr);
 
             mActive = false;

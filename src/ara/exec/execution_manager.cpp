@@ -4,8 +4,10 @@
 
 #include "./execution_manager.h"
 
+#include <cerrno>
 #include <csignal>
 #include <cstring>
+#include <fcntl.h>
 #include <stdexcept>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -353,16 +355,42 @@ namespace ara
             return static_cast<int>(_pid);
 #else
             // Linux: traditional fork()/exec() path.
+            int _execStatusPipe[2]{-1, -1};
+            if (::pipe(_execStatusPipe) != 0)
+            {
+                return -1;
+            }
+
+            (void)::fcntl(_execStatusPipe[0], F_SETFD, FD_CLOEXEC);
+            (void)::fcntl(_execStatusPipe[1], F_SETFD, FD_CLOEXEC);
+
             const pid_t _pid{::fork()};
             if (_pid < 0)
             {
+                ::close(_execStatusPipe[0]);
+                ::close(_execStatusPipe[1]);
                 return -1;
             }
 
             if (_pid == 0)
             {
+                ::close(_execStatusPipe[0]);
                 ::execv(cExe.c_str(), const_cast<char *const *>(_argv.data()));
+                const int _err{errno};
+                (void)::write(_execStatusPipe[1], &_err, sizeof(_err));
                 ::_exit(1);
+            }
+
+            ::close(_execStatusPipe[1]);
+
+            int _execErr{0};
+            const ssize_t _read{
+                ::read(_execStatusPipe[0], &_execErr, sizeof(_execErr))};
+            ::close(_execStatusPipe[0]);
+            if (_read > 0)
+            {
+                (void)::waitpid(_pid, nullptr, 0);
+                return -1;
             }
 
             return static_cast<int>(_pid);

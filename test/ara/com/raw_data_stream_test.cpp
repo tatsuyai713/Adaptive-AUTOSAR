@@ -147,6 +147,49 @@ namespace ara
             EXPECT_EQ(states[1], StreamState::kClosed);
         }
 
+        TEST(RawDataStreamServerTest, StateHandlerCanReenterAndQuery)
+        {
+            RawDataStreamServer server;
+            std::vector<StreamState> observedStates;
+            server.SetStateHandler(
+                [&server, &observedStates](StreamState)
+                {
+                    observedStates.push_back(server.GetState());
+                    EXPECT_EQ(server.GetActiveSessionCount(), 0U);
+                });
+
+            auto result = server.Open();
+            ASSERT_TRUE(result.HasValue());
+            server.Close();
+
+            ASSERT_EQ(observedStates.size(), 2U);
+            EXPECT_EQ(observedStates[0], StreamState::kOpen);
+            EXPECT_EQ(observedStates[1], StreamState::kClosed);
+        }
+
+        TEST(RawDataStreamServerTest, DataHandlerCanReenterAndRead)
+        {
+            RawDataStreamServer server;
+            server.Open();
+
+            std::vector<std::uint8_t> dataReadByHandler;
+            server.SetDataHandler(
+                [&server, &dataReadByHandler](const std::uint8_t *, std::size_t)
+                {
+                    EXPECT_EQ(server.GetBufferedSize(), 3U);
+                    auto readResult = server.Read();
+                    ASSERT_TRUE(readResult.HasValue());
+                    dataReadByHandler = readResult.Value();
+                });
+
+            std::vector<std::uint8_t> data = {0x01, 0x02, 0x03};
+            auto result = server.OnDataReceived(data.data(), data.size());
+            ASSERT_TRUE(result.HasValue());
+
+            EXPECT_EQ(dataReadByHandler, data);
+            EXPECT_EQ(server.GetBufferedSize(), 0U);
+        }
+
         TEST(RawDataStreamServerTest, MultipleChunksAccumulate)
         {
             RawDataStreamServer server;
@@ -247,6 +290,54 @@ namespace ara
             ASSERT_EQ(states.size(), 2U);
             EXPECT_EQ(states[0], StreamState::kOpen);
             EXPECT_EQ(states[1], StreamState::kClosed);
+        }
+
+        TEST(RawDataStreamClientTest, StateHandlerCanReenterAndMutateHandler)
+        {
+            RawDataStreamServer server;
+            server.Open();
+
+            RawDataStreamClient client;
+            std::vector<StreamState> observedStates;
+            client.SetStateHandler(
+                [&client, &observedStates](StreamState)
+                {
+                    observedStates.push_back(client.GetState());
+                    client.SetStateHandler(nullptr);
+                });
+
+            auto result = client.Connect(server);
+            ASSERT_TRUE(result.HasValue());
+            EXPECT_EQ(client.GetState(), StreamState::kOpen);
+            client.Disconnect();
+
+            ASSERT_EQ(observedStates.size(), 1U);
+            EXPECT_EQ(observedStates[0], StreamState::kOpen);
+        }
+
+        TEST(RawDataStreamClientTest, ServerDataHandlerCanReenterClientDuringWrite)
+        {
+            RawDataStreamServer server;
+            server.Open();
+
+            RawDataStreamClient client;
+            auto connectResult = client.Connect(server);
+            ASSERT_TRUE(connectResult.HasValue());
+
+            std::size_t observedBytesSent = 1U;
+            server.SetDataHandler(
+                [&client, &observedBytesSent](const std::uint8_t *, std::size_t)
+                {
+                    EXPECT_EQ(client.GetState(), StreamState::kOpen);
+                    observedBytesSent = client.GetTotalBytesSent();
+                });
+
+            std::vector<std::uint8_t> data = {0x10, 0x20};
+            auto writeResult = client.Write(data);
+            ASSERT_TRUE(writeResult.HasValue());
+
+            EXPECT_EQ(observedBytesSent, 0U);
+            EXPECT_EQ(client.GetTotalBytesSent(), data.size());
         }
 
         TEST(RawDataStreamClientTest, BackpressureSuspends)

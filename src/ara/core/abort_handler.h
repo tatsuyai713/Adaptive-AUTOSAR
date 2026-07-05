@@ -40,8 +40,9 @@ namespace ara
         using AbortCallback = std::function<void(const AbortInfo &)>;
 
         /// @brief Manages OS signal handlers and abort callbacks.
-        /// @details Thread-safe singleton. Installs signal handlers that
-        ///          invoke registered callbacks before termination.
+        /// @details Thread-safe singleton. User callbacks are invoked by
+        ///          TriggerAbort(). OS signal handlers only perform
+        ///          async-signal-safe termination.
         class AbortHandler
         {
         public:

@@ -1897,6 +1897,7 @@ if(build_tests)
     ${test_ara_sm_dir}/machine_state_client_test.cpp
     ${test_ara_sm_dir}/state_transition_handler_test.cpp
     ${test_ara_sm_dir}/function_group_state_machine_test.cpp
+    ${test_ara_sm_dir}/update_request_handler_test.cpp
     ${test_ara_com_e2e_dir}/profile07_test.cpp
     ${test_ara_com_e2e_dir}/profile11_test.cpp
     ${test_ara_com_entry_dir}/eventgroup_entry_test.cpp
@@ -2052,6 +2053,7 @@ if(build_tests)
     ${test_ara_iam_dir}/abac_policy_engine_test.cpp
     ${test_ara_iam_dir}/policy_signer_test.cpp
     ${test_ara_com_secoc_dir}/secoc_key_manager_test.cpp
+    ${test_ara_com_secoc_dir}/secoc_pdu_collective_test.cpp
     ${test_ara_nm_dir}/network_manager_test.cpp
     ${test_ara_nm_dir}/nm_coordinator_test.cpp
     ${test_ara_nm_dir}/nm_transport_adapter_test.cpp

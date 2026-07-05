@@ -28,6 +28,24 @@ namespace ara
             EXPECT_FALSE(_result.HasValue());
         }
 
+        TEST(KeyStorageProviderTest, CreateSlotRejectsUnsafeSlotIds)
+        {
+            KeyStorageProvider _provider;
+
+            EXPECT_FALSE(
+                _provider.CreateSlot({"../slot", KeySlotType::kSymmetric, 128U, true})
+                    .HasValue());
+            EXPECT_FALSE(
+                _provider.CreateSlot({"slot/name", KeySlotType::kSymmetric, 128U, true})
+                    .HasValue());
+            EXPECT_FALSE(
+                _provider.CreateSlot({"slot\\name", KeySlotType::kSymmetric, 128U, true})
+                    .HasValue());
+            EXPECT_FALSE(
+                _provider.CreateSlot({".", KeySlotType::kSymmetric, 128U, true})
+                    .HasValue());
+        }
+
         TEST(KeyStorageProviderTest, DeleteSlot)
         {
             KeyStorageProvider _provider;

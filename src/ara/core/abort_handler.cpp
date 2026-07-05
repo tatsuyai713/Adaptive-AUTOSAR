@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./abort_handler.h"
+#include <cstdlib>
 #include <csignal>
 
 namespace ara
@@ -110,52 +111,7 @@ namespace ara
 
         void AbortHandler::SignalDispatcher(int signum)
         {
-            AbortInfo info;
-            info.SignalNumber = signum;
-            switch (signum)
-            {
-            case SIGABRT:
-                info.Reason = AbortReason::kUserAbort;
-                info.Message = "SIGABRT";
-                break;
-            case SIGSEGV:
-                info.Reason = AbortReason::kSegmentationFault;
-                info.Message = "SIGSEGV";
-                break;
-            case SIGFPE:
-                info.Reason = AbortReason::kFloatingPoint;
-                info.Message = "SIGFPE";
-                break;
-            case SIGILL:
-                info.Reason = AbortReason::kIllegalInstruction;
-                info.Message = "SIGILL";
-                break;
-            case SIGTERM:
-                info.Reason = AbortReason::kTermination;
-                info.Message = "SIGTERM";
-                break;
-            case SIGINT:
-                info.Reason = AbortReason::kInterrupt;
-                info.Message = "SIGINT";
-                break;
-            default:
-                info.Reason = AbortReason::kUnknown;
-                info.Message = "Unknown signal";
-                break;
-            }
-#ifdef SIGBUS
-            if (signum == SIGBUS)
-            {
-                info.Reason = AbortReason::kBusError;
-                info.Message = "SIGBUS";
-            }
-#endif
-
-            Instance().InvokeCallbacks(info);
-
-            // Re-raise with default handler for proper exit behavior.
-            std::signal(signum, SIG_DFL);
-            std::raise(signum);
+            std::_Exit(128 + signum);
         }
     }
 }

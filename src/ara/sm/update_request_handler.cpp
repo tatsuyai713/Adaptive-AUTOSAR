@@ -28,18 +28,48 @@ namespace ara
 
         core::Result<void> UpdateRequestHandler::PrepareUpdate()
         {
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                if (mState != UpdateState::kIdle &&
+                    mState != UpdateState::kCompleted &&
+                    mState != UpdateState::kFailed)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(SmErrc::kInvalidState));
+                }
+            }
             notifyAndSetState(UpdateState::kPending);
             return core::Result<void>::FromValue();
         }
 
         core::Result<void> UpdateRequestHandler::VerifyUpdate()
         {
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                if (mState != UpdateState::kPending &&
+                    mState != UpdateState::kInProgress)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(SmErrc::kInvalidState));
+                }
+            }
+            notifyAndSetState(UpdateState::kInProgress);
             notifyAndSetState(UpdateState::kCompleted);
             return core::Result<void>::FromValue();
         }
 
         core::Result<void> UpdateRequestHandler::RollbackUpdate()
         {
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                if (mState != UpdateState::kPending &&
+                    mState != UpdateState::kInProgress &&
+                    mState != UpdateState::kFailed)
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(SmErrc::kInvalidState));
+                }
+            }
             notifyAndSetState(UpdateState::kFailed);
             return core::Result<void>::FromValue();
         }

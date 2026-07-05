@@ -4,6 +4,7 @@
 
 #include "./key_storage_provider.h"
 
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <sys/stat.h>
@@ -13,10 +14,29 @@ namespace ara
 {
     namespace crypto
     {
+        namespace
+        {
+            bool IsSafeSlotId(const std::string &slotId)
+            {
+                if (slotId.empty() || slotId == "." || slotId == "..")
+                {
+                    return false;
+                }
+                for (unsigned char ch : slotId)
+                {
+                    if (!(std::isalnum(ch) || ch == '_' || ch == '-' || ch == '.'))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
         core::Result<void> KeyStorageProvider::CreateSlot(
             const KeySlotMetadata &metadata)
         {
-            if (metadata.SlotId.empty())
+            if (!IsSafeSlotId(metadata.SlotId))
             {
                 return core::Result<void>::FromError(
                     MakeErrorCode(CryptoErrc::kInvalidArgument));
@@ -168,6 +188,10 @@ namespace ara
                 }
 
                 std::string _slotId = _name.substr(0, _name.size() - _suffix.size());
+                if (!IsSafeSlotId(_slotId))
+                {
+                    continue;
+                }
                 std::string _filePath = dirPath + "/" + _name;
                 std::ifstream _ifs{_filePath, std::ios::binary};
                 if (!_ifs.is_open())

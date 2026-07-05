@@ -255,15 +255,23 @@ namespace ara
                     MakeErrorCode(CryptoErrc::kCertificateParseError));
             }
 
-            // Check if serial is in the CRL
-            X509_REVOKED *_revoked = nullptr;
-            int _rc = X509_CRL_get0_by_cert(
-                _crl, &_revoked, _cert);
+	            if (X509_NAME_cmp(X509_get_issuer_name(_cert),
+	                              X509_CRL_get_issuer(_crl)) != 0)
+	            {
+	                X509_CRL_free(_crl);
+	                X509_free(_cert);
+	                return core::Result<bool>::FromValue(false);
+	            }
+
+	            // Check if serial is in the CRL. OpenSSL returns 1 when revoked.
+	            X509_REVOKED *_revoked = nullptr;
+	            int _rc = X509_CRL_get0_by_cert(
+	                _crl, &_revoked, _cert);
 
             X509_CRL_free(_crl);
             X509_free(_cert);
 
-            return core::Result<bool>::FromValue(_rc == 1);
+	            return core::Result<bool>::FromValue(_rc != 1);
         }
     }
 }

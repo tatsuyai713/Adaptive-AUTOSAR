@@ -84,11 +84,12 @@ namespace ara
             const std::string &resource,
             const std::string &action,
             const AbacAttributes &attributes) const
-        {
-            AbacDecision decision{AbacDecision::kNotApplicable};
+	        {
+	            AbacDecision decision{AbacDecision::kNotApplicable};
+            AuditCallback auditCallback;
 
-            {
-                std::lock_guard<std::mutex> lock(mMutex);
+	            {
+	                std::lock_guard<std::mutex> lock(mMutex);
                 for (const auto &rule : mRules)
                 {
                     if (!wildcardMatch(rule.Subject, subject)) continue;
@@ -109,15 +110,16 @@ namespace ara
                     if (conditionsMet)
                     {
                         decision = rule.Effect;
-                        break; // first-match semantics
-                    }
-                }
-            }
+	                        break; // first-match semantics
+	                    }
+	                }
+                auditCallback = mAuditCallback;
+	            }
 
-            if (mAuditCallback)
-            {
-                mAuditCallback(subject, resource, action, attributes, decision);
-            }
+	            if (auditCallback)
+	            {
+	                auditCallback(subject, resource, action, attributes, decision);
+	            }
 
             return decision;
         }

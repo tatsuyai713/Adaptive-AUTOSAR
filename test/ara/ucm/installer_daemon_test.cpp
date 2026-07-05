@@ -139,6 +139,16 @@ namespace ara
             EXPECT_EQ(_result.Value(), "task_1");
         }
 
+        TEST(InstallerDaemonTest, EnqueueTaskRejectsPathTraversal)
+        {
+            InstallerDaemon _daemon;
+
+            EXPECT_FALSE(_daemon.EnqueueTask("../pkg", "cluster_a").HasValue());
+            EXPECT_FALSE(_daemon.EnqueueTask("pkg_v1", "../cluster").HasValue());
+            EXPECT_FALSE(_daemon.EnqueueTask("pkg/v1", "cluster_a").HasValue());
+            EXPECT_FALSE(_daemon.EnqueueTask("pkg_v1", "cluster/a").HasValue());
+        }
+
         TEST(InstallerDaemonTest, ProcessNextTask)
         {
             if (!PrepareStagedPackage("pkg_v1", "cluster_a"))
@@ -239,6 +249,26 @@ namespace ara
             _daemon.EnqueueTask("pkg1", "c1");
             _daemon.ProcessNextTask();
             EXPECT_EQ(_lastId, "task_1");
+        }
+
+        TEST(InstallerDaemonTest, TaskCallbackCanReenterDaemon)
+        {
+            if (!PrepareStagedPackage("pkg_reentrant", "c_reentrant"))
+            {
+                GTEST_SKIP() << "Cannot create temporary UCM staging paths";
+            }
+
+            InstallerDaemon _daemon;
+            bool _callbackQueriedTasks{false};
+            _daemon.SetTaskCallback([&](const InstallerTask &) {
+                (void)_daemon.GetAllTasks();
+                _callbackQueriedTasks = true;
+            });
+
+            _daemon.EnqueueTask("pkg_reentrant", "c_reentrant");
+            auto _result = _daemon.ProcessNextTask();
+            EXPECT_TRUE(_result.HasValue());
+            EXPECT_TRUE(_callbackQueriedTasks);
         }
 
         TEST(InstallerDaemonTest, MultipleTasksSequential)

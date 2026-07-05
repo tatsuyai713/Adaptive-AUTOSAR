@@ -308,6 +308,38 @@ namespace ara_com_zerocopy_extended_test
         EXPECT_TRUE(snapshot.MemorySegments.empty());
     }
 
+    TEST(PortIntrospectionTest, InMemoryPortIntrospectionTakesSnapshot)
+    {
+        InMemoryPortIntrospection introspection;
+        PublisherPortInfo publisher;
+        publisher.Channel = {"svc", "inst", "evt"};
+        publisher.RuntimeName = "publisher";
+        publisher.IsOffered = true;
+
+        SubscriberPortInfo subscriber;
+        subscriber.Channel = publisher.Channel;
+        subscriber.RuntimeName = "subscriber";
+        subscriber.ConnectionState = PortConnectionState::kConnected;
+
+        SharedMemoryInfo memory;
+        memory.SegmentName = "iox";
+        memory.TotalBytes = 4096U;
+        memory.UsedBytes = 1024U;
+
+        introspection.SetPublisherPorts({publisher});
+        introspection.SetSubscriberPorts({subscriber});
+        introspection.SetMemoryUsage({memory});
+
+        auto snapshot = introspection.TakeSnapshot();
+        ASSERT_EQ(snapshot.Publishers.size(), 1U);
+        ASSERT_EQ(snapshot.Subscribers.size(), 1U);
+        ASSERT_EQ(snapshot.MemorySegments.size(), 1U);
+        EXPECT_EQ(snapshot.Publishers.front().RuntimeName, "publisher");
+        EXPECT_EQ(snapshot.Subscribers.front().ConnectionState,
+                  PortConnectionState::kConnected);
+        EXPECT_EQ(snapshot.MemorySegments.front().FreeBytes(), 3072U);
+    }
+
     TEST(PortIntrospectionTest, PublisherPortWithChannel)
     {
         PublisherPortInfo info;

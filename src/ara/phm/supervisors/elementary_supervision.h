@@ -59,6 +59,9 @@ namespace ara
                 /// @param callback On supervision status changed callback
                 void SetCallback(
                     std::function<void(SupervisionStatus)> &&callback);
+
+                /// @brief Remove the registered status-change callback.
+                void ResetCallback() noexcept;
             };
         }
     }

@@ -42,7 +42,7 @@ namespace ara
                 /// @param supervisors A list of elementary supervision pointers
                 explicit GlobalSupervision(
                     std::initializer_list<ElementarySupervision *> supervisors);
-                ~GlobalSupervision() noexcept = default;
+                ~GlobalSupervision() noexcept;
 
                 /// @brief Get the supervision status
                 /// @returns Current global supervision status

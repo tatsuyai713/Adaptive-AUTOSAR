@@ -68,6 +68,11 @@ namespace ara
             {
                 mOnStatusChanged = std::move(callback);
             }
+
+            void ElementarySupervision::ResetCallback() noexcept
+            {
+                mOnStatusChanged = nullptr;
+            }
         }
     }
 }

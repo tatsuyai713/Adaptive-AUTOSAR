@@ -4,89 +4,103 @@
 
 namespace ara
 {
-    namespace ucm
-    {
-        TEST(SecureBootManagerTest, VerifyBootChainWithoutRootFails)
+        namespace ucm
         {
+        namespace
+        {
+            CertificateEntry MakeValidRoot(
+                const ara::crypto::RsaKeyPair &rootKeyPair)
+            {
+                CertificateEntry _root;
+                _root.SubjectName = "RootCA";
+                _root.IssuerName = "RootCA";
+                _root.PublicKey = rootKeyPair.PublicKeyDer;
+                _root.NotBefore = std::chrono::system_clock::now() -
+                                  std::chrono::hours(1);
+                _root.NotAfter = std::chrono::system_clock::now() +
+                                 std::chrono::hours(24 * 365);
+                return _root;
+            }
+
+            CertificateEntry MakeSignedCertificate(
+                const std::string &subject,
+                const std::string &issuer,
+                const ara::crypto::RsaKeyPair &subjectKeyPair,
+                const ara::crypto::RsaKeyPair &issuerKeyPair)
+            {
+                CertificateEntry _cert;
+                _cert.SubjectName = subject;
+                _cert.IssuerName = issuer;
+                _cert.PublicKey = subjectKeyPair.PublicKeyDer;
+                auto _signature = ara::crypto::RsaSign(
+                    _cert.PublicKey, issuerKeyPair.PrivateKeyDer);
+                EXPECT_TRUE(_signature.HasValue());
+                if (_signature.HasValue())
+                {
+                    _cert.Signature = _signature.Value();
+                }
+                _cert.NotBefore = std::chrono::system_clock::now() -
+                                  std::chrono::hours(1);
+                _cert.NotAfter = std::chrono::system_clock::now() +
+                                 std::chrono::hours(24 * 365);
+                return _cert;
+            }
+        }
+
+	        TEST(SecureBootManagerTest, VerifyBootChainWithoutRootFails)
+	        {
             SecureBootManager _mgr;
             auto _report = _mgr.VerifyBootChain();
             EXPECT_EQ(_report.Result, BootVerifyResult::kChainIncomplete);
         }
 
-        TEST(SecureBootManagerTest, SetRootAndVerifyBootChain)
-        {
-            SecureBootManager _mgr;
+	        TEST(SecureBootManagerTest, SetRootAndVerifyBootChain)
+	        {
+            auto _rootKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            ASSERT_TRUE(_rootKeyPair.HasValue());
 
-            CertificateEntry _root;
-            _root.SubjectName = "RootCA";
-            _root.IssuerName = "RootCA";
-            _root.PublicKey = {0x01, 0x02};
-            _root.Signature = {0x03, 0x04};
-            _root.NotBefore = std::chrono::system_clock::now() -
-                              std::chrono::hours(24);
-            _root.NotAfter = std::chrono::system_clock::now() +
-                             std::chrono::hours(24 * 365);
-            _mgr.SetRootCertificate(_root);
+	            SecureBootManager _mgr;
+	            _mgr.SetRootCertificate(MakeValidRoot(_rootKeyPair.Value()));
 
             auto _report = _mgr.VerifyBootChain();
             EXPECT_EQ(_report.Result, BootVerifyResult::kVerified);
         }
 
-        TEST(SecureBootManagerTest, AddIntermediateCertificate)
-        {
-            SecureBootManager _mgr;
+	        TEST(SecureBootManagerTest, AddIntermediateCertificate)
+	        {
+            auto _rootKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            auto _interKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            ASSERT_TRUE(_rootKeyPair.HasValue());
+            ASSERT_TRUE(_interKeyPair.HasValue());
 
-            CertificateEntry _root;
-            _root.SubjectName = "RootCA";
-            _root.IssuerName = "RootCA";
-            _root.PublicKey = {0x01};
-            _root.Signature = {0x02};
-            _root.NotBefore = std::chrono::system_clock::now() -
-                              std::chrono::hours(1);
-            _root.NotAfter = std::chrono::system_clock::now() +
-                             std::chrono::hours(24 * 365);
-            _mgr.SetRootCertificate(_root);
-
-            CertificateEntry _inter;
-            _inter.SubjectName = "IntermediateCA";
-            _inter.IssuerName = "RootCA";
-            _inter.PublicKey = {0x03};
-            _inter.Signature = {0x04};
-            _inter.NotBefore = std::chrono::system_clock::now() -
-                               std::chrono::hours(1);
-            _inter.NotAfter = std::chrono::system_clock::now() +
-                              std::chrono::hours(24 * 365);
-            _mgr.AddIntermediateCertificate(_inter);
+	            SecureBootManager _mgr;
+	            _mgr.SetRootCertificate(MakeValidRoot(_rootKeyPair.Value()));
+	            _mgr.AddIntermediateCertificate(
+                MakeSignedCertificate(
+                    "IntermediateCA",
+                    "RootCA",
+                    _interKeyPair.Value(),
+                    _rootKeyPair.Value()));
 
             auto _report = _mgr.VerifyBootChain();
             EXPECT_EQ(_report.Result, BootVerifyResult::kVerified);
         }
 
-        TEST(SecureBootManagerTest, RevokeCertificate)
-        {
-            SecureBootManager _mgr;
+	        TEST(SecureBootManagerTest, RevokeCertificate)
+	        {
+            auto _rootKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            auto _badKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            ASSERT_TRUE(_rootKeyPair.HasValue());
+            ASSERT_TRUE(_badKeyPair.HasValue());
 
-            CertificateEntry _root;
-            _root.SubjectName = "RootCA";
-            _root.IssuerName = "RootCA";
-            _root.PublicKey = {0x01};
-            _root.Signature = {0x02};
-            _root.NotBefore = std::chrono::system_clock::now() -
-                              std::chrono::hours(1);
-            _root.NotAfter = std::chrono::system_clock::now() +
-                             std::chrono::hours(24 * 365);
-            _mgr.SetRootCertificate(_root);
-
-            CertificateEntry _inter;
-            _inter.SubjectName = "BadCert";
-            _inter.IssuerName = "RootCA";
-            _inter.PublicKey = {0x03};
-            _inter.Signature = {0x04};
-            _inter.NotBefore = std::chrono::system_clock::now() -
-                               std::chrono::hours(1);
-            _inter.NotAfter = std::chrono::system_clock::now() +
-                              std::chrono::hours(24 * 365);
-            _mgr.AddIntermediateCertificate(_inter);
+	            SecureBootManager _mgr;
+	            _mgr.SetRootCertificate(MakeValidRoot(_rootKeyPair.Value()));
+	            _mgr.AddIntermediateCertificate(
+                MakeSignedCertificate(
+                    "BadCert",
+                    "RootCA",
+                    _badKeyPair.Value(),
+                    _rootKeyPair.Value()));
 
             bool _revoked = _mgr.RevokeCertificate("BadCert");
             EXPECT_TRUE(_revoked);
@@ -109,35 +123,25 @@ namespace ara
             EXPECT_EQ(_report.Result, BootVerifyResult::kTpmAttestationFailed);
         }
 
-        TEST(SecureBootManagerTest, VerifyPackageSignatureUsesSignerPublicKey)
-        {
-            auto _keyPair = ara::crypto::GenerateRsaKeyPair(2048U);
-            ASSERT_TRUE(_keyPair.HasValue());
+	        TEST(SecureBootManagerTest, VerifyPackageSignatureUsesSignerPublicKey)
+	        {
+	            auto _rootKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+	            auto _signerKeyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+	            ASSERT_TRUE(_rootKeyPair.HasValue());
+	            ASSERT_TRUE(_signerKeyPair.HasValue());
 
-            SecureBootManager _mgr;
-            CertificateEntry _root;
-            _root.SubjectName = "RootCA";
-            _root.IssuerName = "RootCA";
-            _root.PublicKey = _keyPair.Value().PublicKeyDer;
-            _root.NotBefore = std::chrono::system_clock::now() -
-                              std::chrono::hours(1);
-            _root.NotAfter = std::chrono::system_clock::now() +
-                             std::chrono::hours(24);
-            _mgr.SetRootCertificate(_root);
+	            SecureBootManager _mgr;
+	            _mgr.SetRootCertificate(MakeValidRoot(_rootKeyPair.Value()));
+	            _mgr.AddIntermediateCertificate(
+                MakeSignedCertificate(
+                    "Signer",
+                    "RootCA",
+                    _signerKeyPair.Value(),
+                    _rootKeyPair.Value()));
 
-            CertificateEntry _signer;
-            _signer.SubjectName = "Signer";
-            _signer.IssuerName = "RootCA";
-            _signer.PublicKey = _keyPair.Value().PublicKeyDer;
-            _signer.NotBefore = std::chrono::system_clock::now() -
-                                std::chrono::hours(1);
-            _signer.NotAfter = std::chrono::system_clock::now() +
-                               std::chrono::hours(24);
-            _mgr.AddIntermediateCertificate(_signer);
-
-            std::vector<uint8_t> _digest{0x10, 0x20, 0x30, 0x40};
-            auto _signature = ara::crypto::RsaSign(
-                _digest, _keyPair.Value().PrivateKeyDer);
+	            std::vector<uint8_t> _digest{0x10, 0x20, 0x30, 0x40};
+	            auto _signature = ara::crypto::RsaSign(
+	                _digest, _signerKeyPair.Value().PrivateKeyDer);
             ASSERT_TRUE(_signature.HasValue());
 
             auto _ok = _mgr.VerifyPackageSignature(

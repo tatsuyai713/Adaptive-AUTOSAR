@@ -12,7 +12,9 @@
 
 #include <chrono>
 #include <cstdint>
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 #include "./zero_copy.h"
 
@@ -106,7 +108,7 @@ namespace ara
 
             /// @brief Port introspection interface.
             ///        Abstracts iceoryx port/memory introspection topics.
-            class PortIntrospection
+	            class PortIntrospection
             {
             public:
                 virtual ~PortIntrospection() noexcept = default;
@@ -131,10 +133,63 @@ namespace ara
                     snap.Subscribers = GetSubscriberPorts();
                     snap.MemorySegments = GetMemoryUsage();
                     snap.Timestamp = std::chrono::steady_clock::now();
-                    return snap;
-                }
-            };
-        }
+	                    return snap;
+	                }
+	            };
+
+	            /// @brief Thread-safe in-process introspection snapshot backend.
+	            /// @details Production iceoryx deployments can feed this backend from
+	            ///          RouDi introspection topics, while tests and simulations can
+	            ///          update it directly.
+	            class InMemoryPortIntrospection final : public PortIntrospection
+	            {
+	            public:
+	                void SetPublisherPorts(std::vector<PublisherPortInfo> publishers)
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    mPublishers = std::move(publishers);
+	                }
+
+	                void SetSubscriberPorts(std::vector<SubscriberPortInfo> subscribers)
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    mSubscribers = std::move(subscribers);
+	                }
+
+	                void SetMemoryUsage(std::vector<SharedMemoryInfo> memorySegments)
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    mMemorySegments = std::move(memorySegments);
+	                }
+
+	                std::vector<PublisherPortInfo>
+	                GetPublisherPorts() const override
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    return mPublishers;
+	                }
+
+	                std::vector<SubscriberPortInfo>
+	                GetSubscriberPorts() const override
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    return mSubscribers;
+	                }
+
+	                std::vector<SharedMemoryInfo>
+	                GetMemoryUsage() const override
+	                {
+	                    std::lock_guard<std::mutex> lock(mMutex);
+	                    return mMemorySegments;
+	                }
+
+	            private:
+	                mutable std::mutex mMutex;
+	                std::vector<PublisherPortInfo> mPublishers;
+	                std::vector<SubscriberPortInfo> mSubscribers;
+	                std::vector<SharedMemoryInfo> mMemorySegments;
+	            };
+	        }
     }
 }
 

@@ -327,6 +327,21 @@ namespace ara
             ASSERT_FALSE(_result.HasValue());
         }
 
+        TEST(UpdateManagerTest, TransferDataRejectsSizeOverflow)
+        {
+            UpdateManager _manager;
+            SoftwarePackageMetadata _metadata{
+                "OtaPkg", "Cluster", "1.0.0"};
+
+            ASSERT_TRUE(_manager.PrepareUpdate("s2-overflow").HasValue());
+            ASSERT_TRUE(
+                _manager.TransferStart(_metadata, 2U, GetAbcSha256Digest())
+                    .HasValue());
+
+            auto _result = _manager.TransferData({'a', 'b', 'c'});
+            ASSERT_FALSE(_result.HasValue());
+        }
+
         TEST(UpdateManagerTest, TransferExitEmptyBuffer)
         {
             UpdateManager _manager;

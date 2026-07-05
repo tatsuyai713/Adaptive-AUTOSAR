@@ -1,12 +1,48 @@
 #include <gtest/gtest.h>
+#include <chrono>
 #include <stdexcept>
+#include <vector>
 #include "../../../src/ara/exec/state_client.h"
+#include "../../../src/ara/com/someip/rpc/someip_rpc_message.h"
 #include "./helper/mock_rpc_client.h"
 
 namespace ara
 {
     namespace exec
     {
+        class DeferredRpcClient : public com::someip::rpc::RpcClient
+        {
+        private:
+            std::vector<com::someip::rpc::SomeIpRpcMessage> mRequests;
+
+        protected:
+            void Send(const std::vector<uint8_t> &payload) override
+            {
+                mRequests.push_back(
+                    com::someip::rpc::SomeIpRpcMessage::Deserialize(payload));
+            }
+
+        public:
+            DeferredRpcClient() noexcept : com::someip::rpc::RpcClient(1, 1)
+            {
+            }
+
+            void Respond(std::size_t requestIndex)
+            {
+                const auto &_request{mRequests.at(requestIndex)};
+                const com::someip::rpc::SomeIpRpcMessage _response(
+                    _request.MessageId(),
+                    _request.ClientId(),
+                    _request.SessionId(),
+                    _request.ProtocolVersion(),
+                    _request.InterfaceVersion(),
+                    com::someip::SomeIpReturnCode::eOK,
+                    std::vector<uint8_t>());
+
+                InvokeHandler(_response.Payload());
+            }
+        };
+
         class StateClientTest : public testing::Test
         {
         private:
@@ -79,6 +115,34 @@ namespace ara
             _status = _redundantSucceed.wait_for(cTimeout);
             EXPECT_NE(_status, cTimeoutStatus);
             EXPECT_NO_THROW(_redundantSucceed.get());
+        }
+
+        TEST(StateClientRaceTest, LateStateTransitionResponseDoesNotCompleteReplacementPromise)
+        {
+            DeferredRpcClient _rpcClient;
+            std::function<void(const ExecutionErrorEvent &)> _emptyCallback;
+            StateClient _client{_emptyCallback, &_rpcClient};
+
+            auto _first{
+                _client.GetInitialMachineStateTransitionResult()};
+            auto _second{
+                _client.GetInitialMachineStateTransitionResult()};
+
+            ASSERT_EQ(
+                _first.wait_for(std::chrono::seconds(1)),
+                std::future_status::ready);
+            EXPECT_THROW(_first.get(), ExecException);
+
+            _rpcClient.Respond(0);
+            EXPECT_EQ(
+                _second.wait_for(std::chrono::milliseconds(10)),
+                std::future_status::timeout);
+
+            _rpcClient.Respond(1);
+            ASSERT_EQ(
+                _second.wait_for(std::chrono::seconds(1)),
+                std::future_status::ready);
+            EXPECT_NO_THROW(_second.get());
         }
 
         TEST_F(StateClientTest, TimeoutScenario)

@@ -3,6 +3,7 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include "./global_supervision.h"
+#include <stdexcept>
 
 namespace ara
 {
@@ -14,6 +15,14 @@ namespace ara
                 std::initializer_list<ElementarySupervision *> supervisors) : mSupervisors{supervisors},
                                                                               mOnGlobalStatusChanged{nullptr}
             {
+                for (auto supervisor : mSupervisors)
+                {
+                    if (supervisor == nullptr)
+                    {
+                        throw std::invalid_argument("GlobalSupervision supervisor must not be null.");
+                    }
+                }
+
                 mStatus =
                     mSupervisors.size() > 0 ? getGlobalUpdate().status : SupervisionStatus::kDeactivated;
 
@@ -24,6 +33,17 @@ namespace ara
                             &GlobalSupervision::onElementaryStatusChanged,
                             this, std::placeholders::_1)};
                     supervisor->SetCallback(std::move(_callback));
+                }
+            }
+
+            GlobalSupervision::~GlobalSupervision() noexcept
+            {
+                for (auto supervisor : mSupervisors)
+                {
+                    if (supervisor != nullptr)
+                    {
+                        supervisor->ResetCallback();
+                    }
                 }
             }
 

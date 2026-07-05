@@ -168,6 +168,33 @@ namespace ara
             EXPECT_EQ(engine.Evaluate("x", "y", "read", withOtherGroup), AbacDecision::kNotApplicable);
         }
 
+        TEST(AbacPolicyEngineTest, AuditCallbackCanBeChangedDuringEvaluate)
+        {
+            AbacPolicyEngine engine;
+            AbacRule rule;
+            rule.Subject = "*";
+            rule.Resource = "*";
+            rule.Action = "*";
+            rule.Effect = AbacDecision::kAllow;
+            ASSERT_TRUE(engine.AddRule(rule).HasValue());
+
+            bool callbackInvoked{false};
+            engine.SetAuditCallback(
+                [&](const std::string &,
+                    const std::string &,
+                    const std::string &,
+                    const AbacAttributes &,
+                    AbacDecision) {
+                    callbackInvoked = true;
+                    engine.SetAuditCallback({});
+                });
+
+            EXPECT_EQ(
+                engine.Evaluate("subject", "resource", "action"),
+                AbacDecision::kAllow);
+            EXPECT_TRUE(callbackInvoked);
+        }
+
         // -----------------------------------------------------------------------
         // First-match semantics
         // -----------------------------------------------------------------------

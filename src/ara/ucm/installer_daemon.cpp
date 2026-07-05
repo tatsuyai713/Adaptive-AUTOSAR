@@ -3,6 +3,7 @@
 
 #include "./installer_daemon.h"
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <sstream>
 #if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
@@ -21,11 +22,27 @@ namespace ara
         InstallerDaemon::InstallerDaemon() = default;
         InstallerDaemon::~InstallerDaemon() = default;
 
-#if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
         namespace
         {
-            bool WriteAll(int fd, const char *buffer, size_t size)
+            bool IsSafePathSegment(const std::string &value)
             {
+                if (value.empty() || value == "." || value == "..")
+                {
+                    return false;
+                }
+                for (unsigned char ch : value)
+                {
+                    if (!(std::isalnum(ch) || ch == '_' || ch == '-' || ch == '.'))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
+	            bool WriteAll(int fd, const char *buffer, size_t size)
+	            {
                 size_t written = 0;
                 while (written < size)
                 {
@@ -48,15 +65,22 @@ namespace ara
                     return defaultValue;
                 }
                 return value;
-            }
-        }
+	            }
 #endif
+	        }
 
-        core::Result<std::string> InstallerDaemon::EnqueueTask(
-            const std::string &packageName,
-            const std::string &targetCluster)
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
+	        core::Result<std::string> InstallerDaemon::EnqueueTask(
+	            const std::string &packageName,
+	            const std::string &targetCluster)
+	        {
+            if (!IsSafePathSegment(packageName) ||
+                !IsSafePathSegment(targetCluster))
+            {
+                return core::Result<std::string>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidArgument));
+            }
+
+	            std::lock_guard<std::mutex> lock(mMutex);
 
             InstallerTask task;
             std::ostringstream oss;
@@ -118,11 +142,11 @@ namespace ara
                 MakeErrorCode(UcmErrc::kInvalidArgument));
         }
 
-        core::Result<void> InstallerDaemon::ProcessNextTask()
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
+	        core::Result<void> InstallerDaemon::ProcessNextTask()
+	        {
+	            std::unique_lock<std::mutex> lock(mMutex);
 
-            if (mQueue.empty())
+	            if (mQueue.empty())
             {
                 return core::Result<void>::FromError(
                     MakeErrorCode(UcmErrc::kInvalidState));
@@ -132,16 +156,27 @@ namespace ara
             mQueue.pop();
             mHasCurrentTask = true;
 
-            mCurrentTask.State = InstallerTaskState::kInProgress;
-            mCurrentTask.ProgressPercent = 0;
-            NotifyCallback(mCurrentTask);
+	            mCurrentTask.State = InstallerTaskState::kInProgress;
+	            mCurrentTask.ProgressPercent = 0;
+            auto notifyCurrentTask = [&]() {
+                const InstallerTask task = mCurrentTask;
+                const InstallerTaskCallback callback = mCallback;
+                lock.unlock();
+                if (callback)
+                {
+                    callback(task);
+                }
+                lock.lock();
+            };
 
-            auto failTask = [&](const std::string &message) {
-                mCurrentTask.State = InstallerTaskState::kFailed;
-                mCurrentTask.ErrorMessage = message;
-                NotifyCallback(mCurrentTask);
-                mCompleted.push_back(mCurrentTask);
-                mHasCurrentTask = false;
+	            notifyCurrentTask();
+
+	            auto failTask = [&](const std::string &message) {
+	                mCurrentTask.State = InstallerTaskState::kFailed;
+	                mCurrentTask.ErrorMessage = message;
+	                notifyCurrentTask();
+	                mCompleted.push_back(mCurrentTask);
+	                mHasCurrentTask = false;
                 return core::Result<void>::FromError(
                     MakeErrorCode(UcmErrc::kInvalidState));
             };
@@ -166,8 +201,8 @@ namespace ara
             }
 
             // Phase: prepare target cluster directory (25 %)
-            mCurrentTask.ProgressPercent = 25;
-            NotifyCallback(mCurrentTask);
+	            mCurrentTask.ProgressPercent = 25;
+	            notifyCurrentTask();
 
             if (::stat(clusterRoot.c_str(), &st) != 0)
             {
@@ -287,11 +322,11 @@ namespace ara
                 ++done;
                 if (total > 0)
                 {
-                    mCurrentTask.ProgressPercent =
-                        static_cast<uint8_t>(25 + done * 75 / total);
-                    NotifyCallback(mCurrentTask);
-                }
-            }
+	                    mCurrentTask.ProgressPercent =
+	                        static_cast<uint8_t>(25 + done * 75 / total);
+	                    notifyCurrentTask();
+	                }
+	            }
 
             if (::closedir(dir) != 0)
             {
@@ -299,9 +334,9 @@ namespace ara
             }
 #endif
 
-            mCurrentTask.ProgressPercent = 100;
-            mCurrentTask.State = InstallerTaskState::kCompleted;
-            NotifyCallback(mCurrentTask);
+	            mCurrentTask.ProgressPercent = 100;
+	            mCurrentTask.State = InstallerTaskState::kCompleted;
+	            notifyCurrentTask();
 
             mCompleted.push_back(mCurrentTask);
             mHasCurrentTask = false;
@@ -309,9 +344,9 @@ namespace ara
             return core::Result<void>::FromValue();
         }
 
-        core::Result<void> InstallerDaemon::RollbackLastTask()
-        {
-            std::lock_guard<std::mutex> lock(mMutex);
+	        core::Result<void> InstallerDaemon::RollbackLastTask()
+	        {
+	            std::unique_lock<std::mutex> lock(mMutex);
 
             if (mCompleted.empty())
             {
@@ -326,10 +361,16 @@ namespace ara
                     MakeErrorCode(UcmErrc::kInvalidState));
             }
 
-            last.State = InstallerTaskState::kRolledBack;
-            NotifyCallback(last);
+	            last.State = InstallerTaskState::kRolledBack;
+            const InstallerTask task = last;
+            const InstallerTaskCallback callback = mCallback;
+            lock.unlock();
+            if (callback)
+            {
+                callback(task);
+            }
 
-            return core::Result<void>::FromValue();
+	            return core::Result<void>::FromValue();
         }
 
         void InstallerDaemon::SetTaskCallback(

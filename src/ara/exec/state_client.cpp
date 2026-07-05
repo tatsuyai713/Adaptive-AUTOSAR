@@ -5,6 +5,7 @@
 #include "./state_client.h"
 #include <chrono>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -109,24 +110,54 @@ namespace ara
         void StateClient::setStateHandler(
             const com::someip::rpc::SomeIpRpcMessage &message)
         {
-            genericHandler(mSetStatePromise, message);
+            const std::lock_guard<std::recursive_mutex> _lock{
+                mSetStateRequest.mutex};
+            if (!mSetStateRequest.hasPendingRequest ||
+                message.SessionId() != mSetStateRequest.pendingSessionId)
+            {
+                return;
+            }
+
+            mSetStateRequest.hasPendingRequest = false;
+            genericHandler(mSetStateRequest.promise, message);
         }
 
         void StateClient::stateTransitionHandler(
             const com::someip::rpc::SomeIpRpcMessage &message)
         {
-            genericHandler(mStateTransitionPromise, message);
+            const std::lock_guard<std::recursive_mutex> _lock{
+                mStateTransitionRequest.mutex};
+            if (!mStateTransitionRequest.hasPendingRequest ||
+                message.SessionId() != mStateTransitionRequest.pendingSessionId)
+            {
+                return;
+            }
+
+            mStateTransitionRequest.hasPendingRequest = false;
+            genericHandler(mStateTransitionRequest.promise, message);
+        }
+
+        void StateClient::advanceSessionId(uint16_t &sessionId) noexcept
+        {
+            const uint16_t cSessionIdMin{1};
+            constexpr uint16_t cSessionIdMax{
+                std::numeric_limits<uint16_t>::max()};
+            sessionId =
+                (sessionId == cSessionIdMax) ? cSessionIdMin : sessionId + 1;
         }
 
         std::shared_future<void> StateClient::getFuture(
-            std::promise<void> &promise,
+            RequestState &request,
             uint16_t methodId,
             const std::vector<uint8_t> &rpcPayload)
         {
             try
             {
-                std::shared_future<void> _result{promise.get_future()};
+                std::shared_future<void> _result{request.promise.get_future()};
+                request.pendingSessionId = request.nextSessionId;
+                request.hasPendingRequest = true;
                 mRpcClient->Send(cServiceId, methodId, cClientId, rpcPayload);
+                advanceSessionId(request.nextSessionId);
 
                 return _result;
             }
@@ -144,51 +175,59 @@ namespace ara
         std::shared_future<void> StateClient::SetState(
             const FunctionGroupState &state)
         {
-            if (mSetStateFuture.valid())
+            const std::lock_guard<std::recursive_mutex> _lock{
+                mSetStateRequest.mutex};
+
+            if (mSetStateRequest.future.valid())
             {
                 try
                 {
                     const ExecErrc cExecErrc{ExecErrc::kCancelled};
-                    setPromiseException(mSetStatePromise, cExecErrc);
+                    setPromiseException(mSetStateRequest.promise, cExecErrc);
                 }
                 catch (std::future_error)
                 {
                     // Catch the exception if the promise is already set
                 }
 
-                mSetStatePromise = std::promise<void>();
+                mSetStateRequest.promise = std::promise<void>();
+                mSetStateRequest.hasPendingRequest = false;
             }
 
             std::vector<uint8_t> _rpcPayload;
             state.Serialize(_rpcPayload);
-            mSetStateFuture =
-                getFuture(mSetStatePromise, cSetStateId, _rpcPayload);
+            mSetStateRequest.future =
+                getFuture(mSetStateRequest, cSetStateId, _rpcPayload);
 
-            return mSetStateFuture;
+            return mSetStateRequest.future;
         }
 
         std::shared_future<void> StateClient::GetInitialMachineStateTransitionResult()
         {
-            if (mStateTransitionFuture.valid())
+            const std::lock_guard<std::recursive_mutex> _lock{
+                mStateTransitionRequest.mutex};
+
+            if (mStateTransitionRequest.future.valid())
             {
                 try
                 {
                     const ExecErrc cExecErrc{ExecErrc::kCancelled};
-                    setPromiseException(mStateTransitionPromise, cExecErrc);
+                    setPromiseException(mStateTransitionRequest.promise, cExecErrc);
                 }
                 catch (std::future_error)
                 {
                     // Catch the exception if the promise is already set
                 }
 
-                mStateTransitionPromise = std::promise<void>();
+                mStateTransitionRequest.promise = std::promise<void>();
+                mStateTransitionRequest.hasPendingRequest = false;
             }
 
             const std::vector<uint8_t> cRpcPayload;
-            mStateTransitionFuture =
-                getFuture(mStateTransitionPromise, cStateTransition, cRpcPayload);
+            mStateTransitionRequest.future =
+                getFuture(mStateTransitionRequest, cStateTransition, cRpcPayload);
 
-            return mStateTransitionFuture;
+            return mStateTransitionRequest.future;
         }
 
         core::Result<FunctionGroupState> StateClient::GetState(

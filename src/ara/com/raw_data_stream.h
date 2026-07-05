@@ -15,6 +15,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 #include "./com_error_domain.h"
 #include "../core/result.h"
@@ -74,23 +75,35 @@ namespace ara
             /// @returns Result indicating success.
             core::Result<void> Open()
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                mState = StreamState::kOpen;
-                mTotalBytesReceived = 0U;
-                mBufferedSize = 0U;
-                mReceiveBuffer.clear();
-                NotifyStateChange();
+                StateHandler handler;
+                StreamState state;
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    mState = StreamState::kOpen;
+                    mTotalBytesReceived = 0U;
+                    mBufferedSize = 0U;
+                    mReceiveBuffer.clear();
+                    handler = mStateHandler;
+                    state = mState;
+                }
+                NotifyStateChange(handler, state);
                 return core::Result<void>::FromValue();
             }
 
             /// @brief Close the stream.
             void Close()
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                mState = StreamState::kClosed;
-                mReceiveBuffer.clear();
-                mBufferedSize = 0U;
-                NotifyStateChange();
+                StateHandler handler;
+                StreamState state;
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    mState = StreamState::kClosed;
+                    mReceiveBuffer.clear();
+                    mBufferedSize = 0U;
+                    handler = mStateHandler;
+                    state = mState;
+                }
+                NotifyStateChange(handler, state);
             }
 
             /// @brief Get current stream state.
@@ -123,28 +136,44 @@ namespace ara
             core::Result<void> OnDataReceived(
                 const std::uint8_t *data, std::size_t size)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (mState != StreamState::kOpen)
+                DataHandler dataHandler;
+                StateHandler stateHandler;
+                StreamState state;
+                bool bufferOverflow{false};
                 {
-                    return core::Result<void>::FromError(
-                        MakeErrorCode(ComErrc::kServiceNotAvailable));
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    if (mState != StreamState::kOpen)
+                    {
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(ComErrc::kServiceNotAvailable));
+                    }
+
+                    if (mBufferedSize + size > mMaxBufferSize)
+                    {
+                        mState = StreamState::kSuspended;
+                        stateHandler = mStateHandler;
+                        state = mState;
+                        bufferOverflow = true;
+                    }
+                    else
+                    {
+                        mReceiveBuffer.emplace_back(data, data + size);
+                        mBufferedSize += size;
+                        mTotalBytesReceived += size;
+                        dataHandler = mDataHandler;
+                    }
                 }
 
-                if (mBufferedSize + size > mMaxBufferSize)
+                if (bufferOverflow)
                 {
-                    mState = StreamState::kSuspended;
-                    NotifyStateChange();
+                    NotifyStateChange(stateHandler, state);
                     return core::Result<void>::FromError(
                         MakeErrorCode(ComErrc::kMaxSamplesExceeded));
                 }
 
-                mReceiveBuffer.emplace_back(data, data + size);
-                mBufferedSize += size;
-                mTotalBytesReceived += size;
-
-                if (mDataHandler)
+                if (dataHandler)
                 {
-                    mDataHandler(data, size);
+                    dataHandler(data, size);
                 }
 
                 return core::Result<void>::FromValue();
@@ -156,39 +185,46 @@ namespace ara
             core::Result<std::vector<std::uint8_t>> Read(
                 std::size_t maxBytes = std::numeric_limits<std::size_t>::max())
             {
-                std::lock_guard<std::mutex> lock(mMutex);
                 std::vector<std::uint8_t> result;
-
-                while (!mReceiveBuffer.empty() &&
-                       result.size() < maxBytes)
+                StateHandler handler;
+                StreamState state;
                 {
-                    auto &front = mReceiveBuffer.front();
-                    std::size_t remaining = maxBytes - result.size();
+                    std::lock_guard<std::mutex> lock(mMutex);
 
-                    if (front.size() <= remaining)
+                    while (!mReceiveBuffer.empty() &&
+                           result.size() < maxBytes)
                     {
-                        mBufferedSize -= front.size();
-                        result.insert(result.end(), front.begin(), front.end());
-                        mReceiveBuffer.pop_front();
+                        auto &front = mReceiveBuffer.front();
+                        std::size_t remaining = maxBytes - result.size();
+
+                        if (front.size() <= remaining)
+                        {
+                            mBufferedSize -= front.size();
+                            result.insert(result.end(), front.begin(), front.end());
+                            mReceiveBuffer.pop_front();
+                        }
+                        else
+                        {
+                            mBufferedSize -= remaining;
+                            result.insert(result.end(),
+                                          front.begin(),
+                                          front.begin() +
+                                              static_cast<std::ptrdiff_t>(remaining));
+                            front.erase(front.begin(),
+                                        front.begin() +
+                                            static_cast<std::ptrdiff_t>(remaining));
+                        }
                     }
-                    else
+
+                    if (mState == StreamState::kSuspended && mReceiveBuffer.empty())
                     {
-                        mBufferedSize -= remaining;
-                        result.insert(result.end(),
-                                      front.begin(),
-                                      front.begin() +
-                                          static_cast<std::ptrdiff_t>(remaining));
-                        front.erase(front.begin(),
-                                    front.begin() +
-                                        static_cast<std::ptrdiff_t>(remaining));
+                        mState = StreamState::kOpen;
+                        handler = mStateHandler;
+                        state = mState;
                     }
                 }
 
-                if (mState == StreamState::kSuspended && mReceiveBuffer.empty())
-                {
-                    mState = StreamState::kOpen;
-                    NotifyStateChange();
-                }
+                NotifyStateChange(handler, state);
 
                 return core::Result<std::vector<std::uint8_t>>::FromValue(
                     std::move(result));
@@ -249,11 +285,12 @@ namespace ara
             }
 
         private:
-            void NotifyStateChange()
+            static void NotifyStateChange(const StateHandler &handler,
+                                          StreamState state)
             {
-                if (mStateHandler)
+                if (handler)
                 {
-                    mStateHandler(mState);
+                    handler(state);
                 }
             }
 
@@ -287,31 +324,47 @@ namespace ara
             /// @returns Result indicating success.
             core::Result<void> Connect(RawDataStreamServer &server)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                mServer = &server;
                 auto sessionResult = server.AcceptSession();
-                if (sessionResult.HasValue())
+                StateHandler handler;
+                StreamState state;
                 {
-                    mSessionId = sessionResult.Value();
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    mServer = &server;
+                    if (sessionResult.HasValue())
+                    {
+                        mSessionId = sessionResult.Value();
+                    }
+                    mState = StreamState::kOpen;
+                    mTotalBytesSent = 0U;
+                    handler = mStateHandler;
+                    state = mState;
                 }
-                mState = StreamState::kOpen;
-                mTotalBytesSent = 0U;
-                NotifyStateChange();
+                NotifyStateChange(handler, state);
                 return core::Result<void>::FromValue();
             }
 
             /// @brief Disconnect from the server and close session.
             void Disconnect()
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (mServer && mSessionId != 0U)
+                RawDataStreamServer *server{nullptr};
+                StreamSessionId sessionId{0U};
+                StateHandler handler;
+                StreamState state;
                 {
-                    mServer->CloseSession(mSessionId);
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    server = mServer;
+                    sessionId = mSessionId;
                     mSessionId = 0U;
+                    mServer = nullptr;
+                    mState = StreamState::kClosed;
+                    handler = mStateHandler;
+                    state = mState;
                 }
-                mServer = nullptr;
-                mState = StreamState::kClosed;
-                NotifyStateChange();
+                if (server && sessionId != 0U)
+                {
+                    server->CloseSession(sessionId);
+                }
+                NotifyStateChange(handler, state);
             }
 
             /// @brief Get session ID assigned by the server.
@@ -342,23 +395,35 @@ namespace ara
             /// @returns Result indicating success or backpressure error.
             core::Result<void> Write(const std::uint8_t *data, std::size_t size)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (mState != StreamState::kOpen || !mServer)
+                RawDataStreamServer *server{nullptr};
                 {
-                    return core::Result<void>::FromError(
-                        MakeErrorCode(ComErrc::kServiceNotAvailable));
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    if (mState != StreamState::kOpen || !mServer)
+                    {
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(ComErrc::kServiceNotAvailable));
+                    }
+                    server = mServer;
                 }
 
-                auto result = mServer->OnDataReceived(data, size);
-                if (result.HasValue())
+                auto result = server->OnDataReceived(data, size);
+                StateHandler handler;
+                StreamState state;
                 {
-                    mTotalBytesSent += size;
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    if (result.HasValue())
+                    {
+                        mTotalBytesSent += size;
+                    }
+                    else
+                    {
+                        mState = StreamState::kSuspended;
+                        handler = mStateHandler;
+                        state = mState;
+                    }
                 }
-                else
-                {
-                    mState = StreamState::kSuspended;
-                    NotifyStateChange();
-                }
+
+                NotifyStateChange(handler, state);
                 return result;
             }
 
@@ -378,11 +443,12 @@ namespace ara
             }
 
         private:
-            void NotifyStateChange()
+            static void NotifyStateChange(const StateHandler &handler,
+                                          StreamState state)
             {
-                if (mStateHandler)
+                if (handler)
                 {
-                    mStateHandler(mState);
+                    handler(state);
                 }
             }
         };

@@ -45,6 +45,7 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include "../core/result.h"
 #include "../diag/diagnostic_session_manager.h"
@@ -114,9 +115,11 @@ namespace ara
             ara::diag::SessionControlType mPreviousSession{
                 ara::diag::SessionControlType::kDefaultSession};
 
-            bool mActive{false};
+	            bool mActive{false};
+	            std::shared_ptr<std::mutex> mCallbackGate{
+	                std::make_shared<std::mutex>()};
 
-            void onSessionChanged(ara::diag::SessionControlType newSession);
+	            void onSessionChanged(ara::diag::SessionControlType newSession);
             void onS3Timeout();
         };
 

@@ -80,7 +80,7 @@ namespace ara
                 /// @brief Set override status (diagnostic bypass).
                 void SetOverrideStatus(SecOcOverrideStatus status);
 
-                SecOcOverrideStatus GetOverrideStatus() const noexcept { return mOverrideStatus; }
+                SecOcOverrideStatus GetOverrideStatus() const noexcept;
 
             private:
                 std::map<PduId, SecOcPdu *> mPdus;

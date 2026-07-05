@@ -6,6 +6,7 @@
 #define STATE_CLIENT_H
 
 #include <chrono>
+#include <cstdint>
 #include <future>
 #include <map>
 #include <mutex>
@@ -34,10 +35,19 @@ namespace ara
             com::someip::rpc::RpcClient *const mRpcClient;
             std::map<std::string, ExecutionErrorEvent> mExecutionErrors;
             std::mutex mErrorsMutex;
-            std::promise<void> mSetStatePromise;
-            std::shared_future<void> mSetStateFuture;
-            std::promise<void> mStateTransitionPromise;
-            std::shared_future<void> mStateTransitionFuture;
+
+            struct RequestState
+            {
+                std::recursive_mutex mutex;
+                std::promise<void> promise;
+                std::shared_future<void> future;
+                uint16_t nextSessionId{1};
+                uint16_t pendingSessionId{0};
+                bool hasPendingRequest{false};
+            };
+
+            RequestState mSetStateRequest;
+            RequestState mStateTransitionRequest;
 
             static void setPromiseException(
                 std::promise<void> &promise, ExecErrc executionErrorCode);
@@ -46,6 +56,8 @@ namespace ara
                 std::promise<void> &promise,
                 const com::someip::rpc::SomeIpRpcMessage &message);
 
+            static void advanceSessionId(uint16_t &sessionId) noexcept;
+
             void setStateHandler(
                 const com::someip::rpc::SomeIpRpcMessage &message);
 
@@ -53,7 +65,7 @@ namespace ara
                 const com::someip::rpc::SomeIpRpcMessage &message);
 
             std::shared_future<void> getFuture(
-                std::promise<void> &promise,
+                RequestState &request,
                 uint16_t methodId,
                 const std::vector<uint8_t> &rpcPayload);
 

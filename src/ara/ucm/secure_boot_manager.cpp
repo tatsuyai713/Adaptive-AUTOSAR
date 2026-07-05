@@ -127,11 +127,18 @@ namespace ara
                 return report;
             }
 
-            size_t depth = 1;
-            std::string expectedIssuer = mRootCert.SubjectName;
+	            if (mRootCert.PublicKey.empty() ||
+	                mRootCert.IssuerName != mRootCert.SubjectName)
+	            {
+	                report.Result = BootVerifyResult::kChainIncomplete;
+	                report.Details = "Invalid root certificate";
+	                return report;
+	            }
 
-            for (const auto &cert : mIntermediateCerts)
-            {
+	            size_t depth = 1;
+
+	            for (const auto &cert : mIntermediateCerts)
+	            {
                 if (cert.IsRevoked)
                 {
                     report.Result = BootVerifyResult::kCertificateRevoked;
@@ -144,19 +151,35 @@ namespace ara
                     report.Details = "Expired: " + cert.SubjectName;
                     return report;
                 }
-                if (cert.IssuerName != expectedIssuer)
-                {
-                    report.Result = BootVerifyResult::kChainIncomplete;
-                    report.Details = "Issuer mismatch: " + cert.SubjectName;
-                    return report;
-                }
-                expectedIssuer = cert.SubjectName;
-                ++depth;
-            }
+	                const CertificateEntry *issuer = FindCertificate(cert.IssuerName);
+	                if (issuer == nullptr || issuer->PublicKey.empty())
+	                {
+	                    report.Result = BootVerifyResult::kChainIncomplete;
+	                    report.Details = "Issuer not found: " + cert.SubjectName;
+	                    return report;
+	                }
+	                if (cert.PublicKey.empty() || cert.Signature.empty())
+	                {
+	                    report.Result = BootVerifyResult::kSignatureInvalid;
+	                    report.Details = "Certificate signature missing: " + cert.SubjectName;
+	                    return report;
+	                }
+	                auto verifyResult = ara::crypto::RsaVerify(
+	                    cert.PublicKey, cert.Signature, issuer->PublicKey);
+	                if (!verifyResult.HasValue() || !verifyResult.Value())
+	                {
+	                    report.Result = BootVerifyResult::kSignatureInvalid;
+	                    report.Details = "Certificate signature invalid: " + cert.SubjectName;
+	                    return report;
+	                }
+	                ++depth;
+	            }
 
-            report.Result = BootVerifyResult::kVerified;
-            report.ChainDepth = depth;
-            report.VerifiedSubject = expectedIssuer;
+	            report.Result = BootVerifyResult::kVerified;
+	            report.ChainDepth = depth;
+	            report.VerifiedSubject = mIntermediateCerts.empty()
+                    ? mRootCert.SubjectName
+                    : mIntermediateCerts.back().SubjectName;
             report.Details = "Boot chain verified";
             return report;
         }
@@ -275,19 +298,47 @@ namespace ara
         bool SecureBootManager::VerifySignatureChain(
             const std::string &subjectName) const
         {
-            // Walk from signer up to root
-            std::string current = subjectName;
-            for (int depth = 0; depth < 10; ++depth)
-            {
-                if (current == mRootCert.SubjectName)
-                    return true; // Reached root
+	            if (mRootCert.SubjectName.empty() ||
+	                mRootCert.PublicKey.empty() ||
+	                mRootCert.IssuerName != mRootCert.SubjectName ||
+	                !VerifyCertificateValidity(mRootCert))
+	            {
+	                return false;
+	            }
 
-                const CertificateEntry *cert = FindCertificate(current);
-                if (!cert)
-                    return false;
+	            // Walk from signer up to root and verify every certificate signature.
+	            std::string current = subjectName;
+	            for (int depth = 0; depth < 10; ++depth)
+	            {
+	                if (current == mRootCert.SubjectName)
+	                {
+	                    return true;
+	                }
 
-                current = cert->IssuerName;
-            }
+	                const CertificateEntry *cert = FindCertificate(current);
+	                if (!cert || cert->IsRevoked ||
+	                    !VerifyCertificateValidity(*cert) ||
+	                    cert->PublicKey.empty() ||
+	                    cert->Signature.empty())
+	                    return false;
+
+	                const CertificateEntry *issuer = FindCertificate(cert->IssuerName);
+	                if (issuer == nullptr || issuer->PublicKey.empty() ||
+	                    issuer->IsRevoked ||
+	                    !VerifyCertificateValidity(*issuer))
+	                {
+	                    return false;
+	                }
+
+	                auto verifyResult = ara::crypto::RsaVerify(
+	                    cert->PublicKey, cert->Signature, issuer->PublicKey);
+	                if (!verifyResult.HasValue() || !verifyResult.Value())
+	                {
+	                    return false;
+	                }
+
+	                current = issuer->SubjectName;
+	            }
             return false;
         }
     }

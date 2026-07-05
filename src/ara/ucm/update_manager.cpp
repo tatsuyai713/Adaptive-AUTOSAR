@@ -410,13 +410,22 @@ namespace ara
             std::uint8_t progress{0U};
             {
                 std::lock_guard<std::mutex> lock{mMutex};
-                if (mState != UpdateSessionState::kTransferring)
+	                if (mState != UpdateSessionState::kTransferring)
+	                {
+	                    return core::Result<void>::FromError(
+	                        MakeErrorCode(UcmErrc::kInvalidState));
+	                }
+
+                const std::size_t expectedSize =
+                    static_cast<std::size_t>(mExpectedTransferSize);
+                if (chunk.size() > expectedSize ||
+                    mTransferBuffer.size() > expectedSize - chunk.size())
                 {
                     return core::Result<void>::FromError(
-                        MakeErrorCode(UcmErrc::kInvalidState));
+                        MakeErrorCode(UcmErrc::kTransferSizeMismatch));
                 }
 
-                mTransferBuffer.insert(
+	                mTransferBuffer.insert(
                     mTransferBuffer.end(), chunk.begin(), chunk.end());
 
                 const auto transferred =

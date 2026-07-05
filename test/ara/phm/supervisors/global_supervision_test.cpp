@@ -55,6 +55,34 @@ namespace ara
                 _actualResult = cGlobalSupervision.GetStatus();
                 EXPECT_EQ(_expectedResult, _actualResult);
             }
+
+            TEST(GlobalSupervisionTest, RejectsNullSupervisor)
+            {
+                EXPECT_THROW(
+                    GlobalSupervision({static_cast<ElementarySupervision *>(nullptr)}),
+                    std::invalid_argument);
+            }
+
+            TEST(GlobalSupervisionTest, DestructorResetsElementaryCallback)
+            {
+                DummySupervision _supervision;
+                bool _callbackInvoked{false};
+
+                {
+                    GlobalSupervision _globalSupervision({&_supervision});
+                    _globalSupervision.SetCallback(
+                        [&](SupervisionUpdate) {
+                            _callbackInvoked = true;
+                        });
+
+                    _supervision.ReportStatus(SupervisionStatus::kOk);
+                    EXPECT_TRUE(_callbackInvoked);
+                }
+
+                _callbackInvoked = false;
+                _supervision.ReportStatus(SupervisionStatus::kFailed);
+                EXPECT_FALSE(_callbackInvoked);
+            }
         }
     }
 }
