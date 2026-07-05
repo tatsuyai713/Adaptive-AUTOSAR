@@ -154,29 +154,27 @@ namespace ara
             std::promise<void> _resultPromise;
             std::future<void> _result;
 
-            // Set the requested reset type if it has not been requested yet
-            if (!mResetTypeFuture.valid())
-            {
-                mResetTypeFuture = mResetTypePromise.get_future();
-                mResetTypePromise.set_value(resetType);
-
-                _result = _resultPromise.get_future();
-                _resultPromise.set_value();
-            }
+            // Queue the latest reset request until Diagnostic Manager executes it.
+            mPendingResetType = resetType;
+            _result = _resultPromise.get_future();
+            _resultPromise.set_value();
 
             return _result;
         }
 
         void EcuResetRequest::ExecuteReset(const MetaInfo &metaInfo)
         {
-            if (mResetTypeFuture.valid())
-            {
-                throw std::logic_error("ECU reset is not supported.");
-            }
-            else
+            (void)metaInfo;
+
+            if (!mPendingResetType.HasValue())
             {
                 throw std::logic_error("No reset type has been requested yet.");
             }
+
+            // This library cannot physically reset the host ECU process. The
+            // diagnostic action is considered executed once the pending request
+            // is consumed, allowing subsequent reset requests to be accepted.
+            mPendingResetType.Reset();
         }
 
         std::future<void> EcuResetRequest::EnableRapidShutdown(

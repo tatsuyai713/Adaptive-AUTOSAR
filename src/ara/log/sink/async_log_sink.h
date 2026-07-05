@@ -86,6 +86,7 @@ namespace ara
                 mutable std::size_t mHead{0U}; ///< Next write position.
                 mutable std::size_t mTail{0U}; ///< Next read position.
                 mutable std::size_t mSize{0U}; ///< Current number of entries.
+                mutable bool mInFlight{false}; ///< Entry currently being written.
 
                 mutable std::mutex mMutex;
                 mutable std::condition_variable mNotEmpty;

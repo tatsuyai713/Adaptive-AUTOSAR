@@ -16,7 +16,7 @@ This repository provides a working implementation of the AUTOSAR Adaptive Platfo
 
 ### What you get
 
-- **15 `ara::*` modules** fully implemented (R24-11 baseline, 100% SWS API coverage)
+- **13 `ara::*` libraries** implemented for the R24-11-oriented educational baseline
 - **3 communication transports**: SOME/IP (vSomeIP), DDS (CycloneDDS), zero-copy IPC (iceoryx) — switchable at runtime
 - **E2E protection**: Profiles 01–07 and 11, with state machine and per-sample status
 - **SecOC**: Freshness management, HMAC-based MAC, key rotation
@@ -161,7 +161,7 @@ The repository includes a full deployment profile for running a Raspberry Pi as 
 
 ### What gets deployed
 
-The ECU profile installs 14 systemd services that form the AUTOSAR AP runtime:
+The ECU profile installs 20 systemd services that form the AUTOSAR AP runtime:
 
 | Service | Role |
 |---|---|
@@ -177,6 +177,14 @@ The ECU profile installs 14 systemd services that form the AUTOSAR AP runtime:
 | `autosar-user-app-monitor` | User app heartbeat/health monitor with restart recovery |
 | `autosar-watchdog` | Watchdog supervisor |
 | `autosar-sm-state` | Machine state / network mode manager |
+| `autosar-iox-roudi` | iceoryx RouDi daemon |
+| `autosar-ecu-full-stack` | Full ECU integration sample service |
+| `autosar-network-manager` | Network Management daemon |
+| `autosar-ucm` | Update and Configuration Management daemon |
+| `autosar-dlt` | DLT logging daemon |
+| `autosar-diag-server` | DoIP/UDS diagnostic server |
+| `autosar-phm-daemon` | Platform Health Management daemon |
+| `autosar-crypto-provider` | Crypto provider daemon |
 
 User apps are launched via `/etc/autosar/bringup.sh`.
 
@@ -250,7 +258,7 @@ Tutorials: [`user_apps/tutorials/`](user_apps/tutorials/)
 
 ### Porting vendor assets
 
-This repository can rebuild Vector/ETAS/EB-developed C++ app assets at source level. See [`user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`](user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md).
+This repository can rebuild Vector/ETAS/EB-developed C++ app assets at source level. See [`user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md`](user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md).
 
 ---
 
@@ -295,32 +303,32 @@ Docs: [`tools/host_tools/doip_diag_tester/README.md`](tools/host_tools/doip_diag
 
 ## Implemented Feature Matrix
 
-Release baseline: `R24-11`. All 15 core `ara::*` modules have reached **100% SWS API coverage**.
+Release baseline: `R24-11`. The implemented `ara::*` libraries and feature areas are listed below.
 
-Hardware-dependent features (HSM, biometric sensors, CAN-TP/FlexRay, TPM secure boot, etc.) are provided as software abstractions with mock/simulation backends.
+Hardware-dependent features (HSM, biometric sensors, CAN-TP/FlexRay, TPM secure boot, etc.) are provided as software abstractions with mock/simulation backends. External middleware integrations may require their CMake option and runtime configuration.
 
-| Module | Coverage | Key Capabilities |
+| Module | Status | Key Capabilities |
 | --- | :---: | --- |
-| `ara::core` | 100% | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, `String/StringView` (C++14 polyfill), `Variant`, `Span`, `Byte`, monadic chaining (`AndThen/OrElse/Map/MapError`), exception hierarchy, `AbortHandler` |
-| `ara::log` | 100% | `Logger` with severity filtering, `LogStream` operators, 3 sink types (console/file/network), DLT backend, `AsyncLogSink` (ring-buffer), `FormatterPlugin` (JSON/custom) |
-| `ara::com` Common | 100% | Proxy/Skeleton Event/Method/Field wrappers, `FindService`/`StartFindService`, serialization framework (CDR/trivial-copy/string/vector/map), fire-and-forget methods, `CommunicationGroup`, `RawDataStream`, `InstanceIdentifier`, `ServiceVersion`, QoS profiles, `EventCacheUpdatePolicy`, `FilterConfig`, `Transformer` chain, `SampleInfo`/`E2ESampleStatus` |
-| `ara::com` SOME/IP | 100% | SD client/server, pub/sub, RPC, SOME/IP-TP segmentation/reassembly, Magic Cookie, `SessionHandler`, IPv6 endpoint, `SdNetworkConfig`, `ConfigurationOption` |
-| `ara::com` DDS | 100% | CycloneDDS pub/sub, method bindings (request/reply topics), QoS config (reliable/best-effort/transient-local), `DdsParticipantFactory`, content filters, extended QoS (ownership/partition/resource-limits) |
-| `ara::com` Zero-Copy | 100% | iceoryx pub/sub, method bindings, zero-copy loan/publish, `QueueOverflowPolicy`, `ZeroCopyServiceDiscovery`, `PortIntrospection` |
-| `ara::com` E2E | 100% | Profiles 01–07 and 11, event/method decorators, `E2EStateMachine` (windowed, enable/disable), per-sample status propagation |
-| `ara::com` SecOC | 100% | `FreshnessManager` (monotonic counter, persistence), `SecOcPdu` (HMAC MAC), `SecOcKeyManager`, batch protect/verify, `FreshnessSyncManager` (cross-ECU sync) |
-| `ara::exec` | 100% | `ExecutionClient/Server`, `StateClient/Server`, `DeterministicClient`, `FunctionGroup`, `ProcessWatchdog`, `ExecutionManager` (fork/exec lifecycle), `ManifestLoader` (ARXML), `ApplicationClient`, QNX portability |
-| `ara::diag` | 100% | `Monitor` (debouncing), UDS services (0x10/0x11/0x14/0x22/0x27/0x28/0x2E/0x2F/0x31/0x34/0x35/0x36/0x37/0x3E/0x85), OBD-II (Mode 01/09), `EventMemory`, `DiagnosticManager` (P2/P2* timing) |
-| `ara::phm` | 100% | `SupervisedEntity`, `HealthChannel`, `RecoveryAction`, `AliveSupervision`, `DeadlineSupervision`, `LogicalSupervision`, `PhmOrchestrator` |
-| `ara::per` | 100% | `KeyValueStorage`, `FileStorage`, `ReadAccessor`/`ReadWriteAccessor`, recover/reset, batch operations, change observers, `RedundantStorage`, `UpdatePersistency` (UCM migration) |
-| `ara::sm` | 100% | `MachineStateClient` (shutdown/restart), `NetworkHandle`, `FunctionGroupStateMachine` (guard/timeout/history), `PowerModeManager`, `DiagnosticStateHandler`, `UpdateRequestHandler` |
-| `ara::crypto` | 100% | SHA-1/256/384/512, HMAC, AES-CBC/GCM/CTR, ChaCha20, PBKDF2/HKDF, RSA 2048/4096, ECDSA P-256/P-384, ECDH, X.509 chain verification, CRL revocation, streaming contexts, `KeySlot`/`KeyStorageProvider`, `CryptoServiceProvider` |
-| `ara::nm` | 100% | Multi-channel NM state machine (5 states), `NmCoordinator`, `NmPdu` serialization, `CanTpNmAdapter`/`FlexRayNmAdapter` |
-| `ara::iam` | 100% | RBAC (`RoleManager`), ABAC (`AbacPolicyEngine`), `Grant`/`GrantManager`, `PolicySigner` (ECDSA), `PasswordStore`, `IdentityManager`, `AuditTrail`, `CapabilityManager` |
-| `ara::ucm` | 100% | Update session lifecycle, Transfer API, SHA-256 verification, `CampaignManager` (multi-package), `UpdateHistory`, `DependencyChecker`, `SecureBootManager` |
-| `ara::tsync` | 100% | `TimeSyncClient` (drift correction, quality levels), `PtpTimeBaseProvider` (ptp4l/gPTP), `NtpTimeBaseProvider` (chrony/ntpd), `TimeSyncServer`, `RateCorrector` |
+| `ara::core` | Implemented | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, `String/StringView` (C++14 polyfill), `Variant`, `Span`, `Byte`, monadic chaining (`AndThen/OrElse/Map/MapError`), exception hierarchy, `AbortHandler` |
+| `ara::log` | Implemented | `Logger` with severity filtering, `LogStream` operators, 3 sink types (console/file/network), DLT backend, `AsyncLogSink` (ring-buffer), `FormatterPlugin` (JSON/custom) |
+| `ara::com` Common | Implemented | Proxy/Skeleton Event/Method/Field wrappers, `FindService`/`StartFindService`, serialization framework (CDR/trivial-copy/string/vector/map), fire-and-forget methods, `CommunicationGroup`, `RawDataStream`, `InstanceIdentifier`, `ServiceVersion`, QoS profiles, `EventCacheUpdatePolicy`, `FilterConfig`, `Transformer` chain, `SampleInfo`/`E2ESampleStatus` |
+| `ara::com` SOME/IP | Implemented | SD client/server, pub/sub, RPC, SOME/IP-TP segmentation/reassembly, Magic Cookie, `SessionHandler`, IPv6 endpoint, `SdNetworkConfig`, `ConfigurationOption` |
+| `ara::com` DDS | Implemented | CycloneDDS pub/sub, method bindings (request/reply topics), QoS config (reliable/best-effort/transient-local), `DdsParticipantFactory`, content filters, extended QoS (ownership/partition/resource-limits) |
+| `ara::com` Zero-Copy | Implemented | iceoryx pub/sub, method bindings, zero-copy loan/publish, `QueueOverflowPolicy`, `ZeroCopyServiceDiscovery`, `PortIntrospection` |
+| `ara::com` E2E | Implemented | Profiles 01–07 and 11, event/method decorators, `E2EStateMachine` (windowed, enable/disable), per-sample status propagation |
+| `ara::com` SecOC | Implemented | `FreshnessManager` (monotonic counter, persistence), `SecOcPdu` (HMAC MAC), `SecOcKeyManager`, batch protect/verify, `FreshnessSyncManager` (cross-ECU sync) |
+| `ara::exec` | Implemented | `ExecutionClient/Server`, `StateClient/Server`, `DeterministicClient`, `FunctionGroup`, `ProcessWatchdog`, `ExecutionManager` (fork/exec lifecycle), `ManifestLoader` (ARXML), `ApplicationClient`, QNX portability |
+| `ara::diag` | Implemented | `Monitor` (debouncing), UDS services (0x10/0x11/0x14/0x22/0x27/0x28/0x2E/0x2F/0x31/0x34/0x35/0x36/0x37/0x3E/0x85), OBD-II (Mode 01/09), `EventMemory`, `DiagnosticManager` (P2/P2* timing) |
+| `ara::phm` | Implemented | `SupervisedEntity`, `HealthChannel`, `RecoveryAction`, `AliveSupervision`, `DeadlineSupervision`, `LogicalSupervision`, `PhmOrchestrator` |
+| `ara::per` | Implemented | `KeyValueStorage`, `FileStorage`, `ReadAccessor`/`ReadWriteAccessor`, recover/reset, batch operations, change observers, `RedundantStorage`, `UpdatePersistency` (UCM migration) |
+| `ara::sm` | Implemented | `MachineStateClient` (shutdown/restart), `NetworkHandle`, `FunctionGroupStateMachine` (guard/timeout/history), `PowerModeManager`, `DiagnosticStateHandler`, `UpdateRequestHandler` |
+| `ara::crypto` | Implemented | SHA-1/256/384/512, HMAC, AES-CBC/GCM/CTR, ChaCha20, PBKDF2/HKDF, RSA 2048/4096, ECDSA P-256/P-384, ECDH, X.509 chain verification, CRL revocation, streaming contexts, `KeySlot`/`KeyStorageProvider`, `CryptoServiceProvider` |
+| `ara::nm` | Implemented | Multi-channel NM state machine (5 states), `NmCoordinator`, `NmPdu` serialization, `CanTpNmAdapter`/`FlexRayNmAdapter` |
+| `ara::iam` | Implemented | RBAC (`RoleManager`), ABAC (`AbacPolicyEngine`), `Grant`/`GrantManager`, `PolicySigner` (ECDSA), `PasswordStore`, `IdentityManager`, `AuditTrail`, `CapabilityManager` |
+| `ara::ucm` | Implemented | Update session lifecycle, Transfer API, SHA-256 verification, `CampaignManager` (multi-package), `UpdateHistory`, `DependencyChecker`, `SecureBootManager` |
+| `ara::tsync` | Implemented | `TimeSyncClient` (drift correction, quality levels), `PtpTimeBaseProvider` (ptp4l/gPTP), `NtpTimeBaseProvider` (chrony/ntpd), `TimeSyncServer`, `RateCorrector` |
 | ARXML Tooling | — | YAML → ARXML, ARXML → ara::com binding header generation |
-| RPi ECU Profile | — | systemd deployment, 14 resident daemons, SocketCAN, time sync, health monitoring |
+| RPi ECU Profile | — | systemd deployment, 20 resident services, SocketCAN, time sync, health monitoring |
 
 ### AUTOSAR AP release profile
 

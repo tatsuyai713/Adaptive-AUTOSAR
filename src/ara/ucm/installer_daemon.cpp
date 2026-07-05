@@ -3,8 +3,9 @@
 
 #include "./installer_daemon.h"
 #include <algorithm>
+#include <cstdlib>
 #include <sstream>
-#if defined(__linux__) || defined(__QNX__) || defined(__unix__)
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
 #include <cerrno>
 #include <dirent.h>
 #include <fcntl.h>
@@ -19,6 +20,37 @@ namespace ara
     {
         InstallerDaemon::InstallerDaemon() = default;
         InstallerDaemon::~InstallerDaemon() = default;
+
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
+        namespace
+        {
+            bool WriteAll(int fd, const char *buffer, size_t size)
+            {
+                size_t written = 0;
+                while (written < size)
+                {
+                    ssize_t n = ::write(fd, buffer + written, size - written);
+                    if (n <= 0)
+                    {
+                        return false;
+                    }
+                    written += static_cast<size_t>(n);
+                }
+                return true;
+            }
+
+            std::string GetEnvironmentOrDefault(const char *name,
+                                                const char *defaultValue)
+            {
+                const char *value = std::getenv(name);
+                if (value == nullptr || value[0] == '\0')
+                {
+                    return defaultValue;
+                }
+                return value;
+            }
+        }
+#endif
 
         core::Result<std::string> InstallerDaemon::EnqueueTask(
             const std::string &packageName,
@@ -104,89 +136,167 @@ namespace ara
             mCurrentTask.ProgressPercent = 0;
             NotifyCallback(mCurrentTask);
 
-#if defined(__linux__) || defined(__QNX__) || defined(__unix__)
+            auto failTask = [&](const std::string &message) {
+                mCurrentTask.State = InstallerTaskState::kFailed;
+                mCurrentTask.ErrorMessage = message;
+                NotifyCallback(mCurrentTask);
+                mCompleted.push_back(mCurrentTask);
+                mHasCurrentTask = false;
+                return core::Result<void>::FromError(
+                    MakeErrorCode(UcmErrc::kInvalidState));
+            };
+
+#if defined(__linux__) || defined(__QNX__) || defined(__unix__) || defined(__APPLE__)
             // Locate staged package under /var/autosar/staging/<packageName>
+            const std::string stagingRoot = GetEnvironmentOrDefault(
+                "ARA_UCM_STAGING_ROOT", "/var/autosar/staging");
             const std::string stagingPath =
-                "/var/autosar/staging/" + mCurrentTask.PackageName;
-            const std::string clusterRoot = "/var/autosar/clusters";
+                stagingRoot + "/" + mCurrentTask.PackageName;
+            const std::string clusterRoot = GetEnvironmentOrDefault(
+                "ARA_UCM_CLUSTER_ROOT", "/var/autosar/clusters");
             const std::string targetPath  =
                 clusterRoot + "/" + mCurrentTask.TargetCluster;
 
             struct stat st{};
             const bool stagingExists = (::stat(stagingPath.c_str(), &st) == 0 &&
                                         S_ISDIR(st.st_mode));
-            if (stagingExists)
+            if (!stagingExists)
             {
-                // Phase: prepare target cluster directory (25 %)
-                mCurrentTask.ProgressPercent = 25;
-                NotifyCallback(mCurrentTask);
+                return failTask("Staging package path is absent");
+            }
 
-                if (::stat(targetPath.c_str(), &st) != 0)
+            // Phase: prepare target cluster directory (25 %)
+            mCurrentTask.ProgressPercent = 25;
+            NotifyCallback(mCurrentTask);
+
+            if (::stat(clusterRoot.c_str(), &st) != 0)
+            {
+                if (::mkdir(clusterRoot.c_str(), 0755) < 0 && errno != EEXIST)
                 {
-                    ::mkdir(clusterRoot.c_str(), 0755);
-                    if (::mkdir(targetPath.c_str(), 0755) < 0 && errno != EEXIST)
-                    {
-                        mCurrentTask.State = InstallerTaskState::kFailed;
-                        mCurrentTask.ErrorMessage = "Cannot create target directory";
-                        NotifyCallback(mCurrentTask);
-                        mCompleted.push_back(mCurrentTask);
-                        mHasCurrentTask = false;
-                        return core::Result<void>::FromError(
-                            MakeErrorCode(UcmErrc::kInvalidState));
-                    }
-                }
-
-                // Phase: copy files from staging to target (25–100 %)
-                DIR *dir = ::opendir(stagingPath.c_str());
-                if (dir)
-                {
-                    auto isRegularFile = [&](const char *name) -> bool {
-                        const std::string full = stagingPath + "/" + name;
-                        struct stat st{};
-                        if (::stat(full.c_str(), &st) != 0) return false;
-                        return S_ISREG(st.st_mode);
-                    };
-
-                    uint32_t total = 0;
-                    struct dirent *ent;
-                    while ((ent = ::readdir(dir)) != nullptr)
-                        if (isRegularFile(ent->d_name)) ++total;
-                    ::rewinddir(dir);
-
-                    uint32_t done = 0;
-                    while ((ent = ::readdir(dir)) != nullptr)
-                    {
-                        if (!isRegularFile(ent->d_name))
-                            continue;
-                        const std::string src = stagingPath + "/" + ent->d_name;
-                        const std::string dst = targetPath   + "/" + ent->d_name;
-
-                        int sfd = ::open(src.c_str(), O_RDONLY);
-                        int dfd = (sfd >= 0) ? ::open(dst.c_str(),
-                                      O_WRONLY | O_CREAT | O_TRUNC, 0644) : -1;
-                        if (sfd >= 0 && dfd >= 0)
-                        {
-                            char buf[4096];
-                            ssize_t n;
-                            while ((n = ::read(sfd, buf, sizeof(buf))) > 0)
-                                ::write(dfd, buf, static_cast<size_t>(n));
-                        }
-                        if (sfd >= 0) ::close(sfd);
-                        if (dfd >= 0) ::close(dfd);
-
-                        ++done;
-                        if (total > 0)
-                        {
-                            mCurrentTask.ProgressPercent =
-                                static_cast<uint8_t>(25 + done * 75 / total);
-                            NotifyCallback(mCurrentTask);
-                        }
-                    }
-                    ::closedir(dir);
+                    return failTask("Cannot create cluster root directory");
                 }
             }
-            // If staging directory is absent the package is not yet transferred;
-            // complete silently (test/no-hardware scenario).
+            else if (!S_ISDIR(st.st_mode))
+            {
+                return failTask("Cluster root path is not a directory");
+            }
+
+            if (::stat(targetPath.c_str(), &st) != 0)
+            {
+                if (::mkdir(targetPath.c_str(), 0755) < 0 && errno != EEXIST)
+                {
+                    return failTask("Cannot create target directory");
+                }
+            }
+            else if (!S_ISDIR(st.st_mode))
+            {
+                return failTask("Target path is not a directory");
+            }
+
+            // Phase: copy files from staging to target (25-100 %)
+            DIR *dir = ::opendir(stagingPath.c_str());
+            if (dir == nullptr)
+            {
+                return failTask("Cannot open staging directory");
+            }
+
+            auto isRegularFile = [&](const char *name) -> bool {
+                const std::string full = stagingPath + "/" + name;
+                struct stat fileStat{};
+                if (::stat(full.c_str(), &fileStat) != 0)
+                {
+                    return false;
+                }
+                return S_ISREG(fileStat.st_mode);
+            };
+
+            uint32_t total = 0;
+            struct dirent *ent;
+            while ((ent = ::readdir(dir)) != nullptr)
+            {
+                if (isRegularFile(ent->d_name))
+                {
+                    ++total;
+                }
+            }
+            ::rewinddir(dir);
+
+            uint32_t done = 0;
+            while ((ent = ::readdir(dir)) != nullptr)
+            {
+                if (!isRegularFile(ent->d_name))
+                {
+                    continue;
+                }
+
+                const std::string src = stagingPath + "/" + ent->d_name;
+                const std::string dst = targetPath + "/" + ent->d_name;
+
+                int sfd = ::open(src.c_str(), O_RDONLY);
+                if (sfd < 0)
+                {
+                    ::closedir(dir);
+                    return failTask("Cannot open staged file for reading");
+                }
+
+                int dfd = ::open(dst.c_str(),
+                                 O_WRONLY | O_CREAT | O_TRUNC,
+                                 0644);
+                if (dfd < 0)
+                {
+                    const bool closeOk = (::close(sfd) == 0);
+                    ::closedir(dir);
+                    return failTask(closeOk
+                                        ? "Cannot open target file for writing"
+                                        : "Cannot close staged file");
+                }
+
+                char buf[4096];
+                ssize_t n = 0;
+                bool copyOk = true;
+                while ((n = ::read(sfd, buf, sizeof(buf))) > 0)
+                {
+                    if (!WriteAll(dfd, buf, static_cast<size_t>(n)))
+                    {
+                        copyOk = false;
+                        break;
+                    }
+                }
+                if (n < 0)
+                {
+                    copyOk = false;
+                }
+
+                const bool sourceCloseOk = (::close(sfd) == 0);
+                const bool targetCloseOk = (::close(dfd) == 0);
+
+                if (!copyOk || !sourceCloseOk || !targetCloseOk)
+                {
+                    ::closedir(dir);
+                    if (!copyOk)
+                    {
+                        return failTask("Cannot copy staged file");
+                    }
+                    if (!sourceCloseOk)
+                    {
+                        return failTask("Cannot close staged file");
+                    }
+                    return failTask("Cannot close target file");
+                }
+
+                ++done;
+                if (total > 0)
+                {
+                    mCurrentTask.ProgressPercent =
+                        static_cast<uint8_t>(25 + done * 75 / total);
+                    NotifyCallback(mCurrentTask);
+                }
+            }
+
+            if (::closedir(dir) != 0)
+            {
+                return failTask("Cannot close staging directory");
+            }
 #endif
 
             mCurrentTask.ProgressPercent = 100;

@@ -3,6 +3,10 @@
 # Requirements and dependencies:
 
 cmake_minimum_required(VERSION 3.14)
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+  set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
+endif()
 project(Adaptive_Platform)
 
 # This AUTOSAR Adaptive Platform requires C++14
@@ -807,6 +811,16 @@ add_library(
   ${source_ara_diag_dir}/diag_error_domain.h
   ${source_ara_diag_dir}/diag_error_domain.cpp
   ${source_ara_diag_dir}/generic_uds_service.h
+  ${source_ara_diag_dir}/clear_diagnostic_information.h
+  ${source_ara_diag_dir}/clear_diagnostic_information.cpp
+  ${source_ara_diag_dir}/data_identifier.h
+  ${source_ara_diag_dir}/data_identifier.cpp
+  ${source_ara_diag_dir}/communication_control.h
+  ${source_ara_diag_dir}/communication_control.cpp
+  ${source_ara_diag_dir}/input_output_control.h
+  ${source_ara_diag_dir}/input_output_control.cpp
+  ${source_ara_diag_dir}/control_dtc_setting.h
+  ${source_ara_diag_dir}/control_dtc_setting.cpp
   ${source_ara_diag_dir}/security_access.h
   ${source_ara_diag_dir}/security_access.cpp
   ${source_ara_diag_dir}/download.h
@@ -861,6 +875,8 @@ add_library(
   ${source_ara_phm_dir}/function_group_state_recovery_action.cpp
   ${source_ara_phm_dir}/platform_reset_recovery_action.h
   ${source_ara_phm_dir}/platform_reset_recovery_action.cpp
+  ${source_ara_phm_dir}/logical_supervision.h
+  ${source_ara_phm_dir}/logical_supervision.cpp
   ${source_ara_phm_dir}/recovery_action_dispatcher.h
   ${source_ara_phm_dir}/recovery_action_dispatcher.cpp
   ${source_ara_phm_dir}/health_channel.h
@@ -1959,6 +1975,7 @@ if(build_tests)
     ${test_ara_phm_dir}/recovery_action_test.cpp
     ${test_ara_phm_dir}/mocked_checkpoint_communicator.h
     ${test_ara_phm_dir}/supervised_entity_test.cpp
+    ${test_ara_phm_dir}/logical_supervision_test.cpp
     ${test_ara_phm_supervisors_dir}/dummy_supervision.h
     ${test_ara_phm_supervisors_dir}/elementary_supervision_test.cpp
     ${test_ara_phm_supervisors_dir}/alive_supervision_test.cpp
@@ -2012,6 +2029,7 @@ if(build_tests)
     ${test_ara_crypto_dir}/crypto_provider_test.cpp
     ${test_ara_iam_dir}/iam_error_domain_test.cpp
     ${test_ara_iam_dir}/access_control_test.cpp
+    ${test_ara_iam_dir}/identity_manager_test.cpp
     ${test_ara_tsync_dir}/tsync_error_domain_test.cpp
     ${test_ara_tsync_dir}/time_sync_client_test.cpp
     ${test_ara_tsync_dir}/ptp_time_base_provider_test.cpp
@@ -2034,6 +2052,7 @@ if(build_tests)
     ${test_ara_iam_dir}/abac_policy_engine_test.cpp
     ${test_ara_iam_dir}/policy_signer_test.cpp
     ${test_ara_com_secoc_dir}/secoc_key_manager_test.cpp
+    ${test_ara_nm_dir}/network_manager_test.cpp
     ${test_ara_nm_dir}/nm_coordinator_test.cpp
     ${test_ara_nm_dir}/nm_transport_adapter_test.cpp
     ${test_ara_nm_dir}/nm_pdu_test.cpp
@@ -2058,6 +2077,17 @@ if(build_tests)
     ${test_ara_per_dir}/persistency_registered_ids_test.cpp
   )
 
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    get_target_property(_ara_unit_test_sources ara_unit_test SOURCES)
+    list(
+      REMOVE_ITEM
+      _ara_unit_test_sources
+      ${test_ara_diag_dir}/obd_communication_test.cpp)
+    set_target_properties(
+      ara_unit_test
+      PROPERTIES SOURCES "${_ara_unit_test_sources}")
+  endif()
+
   target_link_libraries(
     arxml_unit_test
     gtest_main
@@ -2073,14 +2103,13 @@ if(build_tests)
     ara_phm
     ara_diag
     ara_per
-    ara_crypto
     ara_iam
     ara_tsync
     ara_ucm
     ara_nm
   )
 
-  if(NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(ara_unit_test obd_ii_emulator)
   endif()
 

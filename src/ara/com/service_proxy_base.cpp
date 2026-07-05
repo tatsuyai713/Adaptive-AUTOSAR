@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <cstdint>
 #include <map>
 #include <mutex>
@@ -50,6 +51,39 @@ namespace
     {
         static FindServiceContext context;
         return context;
+    }
+
+    bool ShouldUseVsomeipRuntime()
+    {
+        return std::getenv("ADAPTIVE_AUTOSAR_RUN_VSOMEIP_SD_INTEGRATION") != nullptr ||
+               std::getenv("ADAPTIVE_AUTOSAR_ENABLE_VSOMEIP_RUNTIME") != nullptr;
+    }
+
+    void ReportSimulatedAvailability(std::uint64_t handleId)
+    {
+        auto &ctx{GetFindServiceContext()};
+        ara::com::FindServiceHandler<ara::com::ServiceHandleType> callback;
+        ara::com::ServiceHandleContainer<ara::com::ServiceHandleType> handles;
+        {
+            std::lock_guard<std::mutex> lock(ctx.Mutex);
+            auto searchIt = ctx.Searches.find(handleId);
+            if (searchIt == ctx.Searches.end())
+            {
+                return;
+            }
+
+            ara::com::ServiceHandleType discoveredHandle{
+                searchIt->second.ServiceId,
+                searchIt->second.InstanceId};
+            searchIt->second.Handles.push_back(discoveredHandle);
+            handles = searchIt->second.Handles;
+            callback = searchIt->second.Handler;
+        }
+
+        if (callback)
+        {
+            callback(std::move(handles));
+        }
     }
 
     ServiceKey MakeServiceKey(
@@ -198,6 +232,8 @@ namespace ara
             if (shouldRegister)
             {
 #if ARA_COM_USE_VSOMEIP
+                if (ShouldUseVsomeipRuntime())
+                {
                 auto app{someip::VsomeipApplication::GetClientApplication()};
                 const auto requestedInstance{
                     instanceId == 0xFFFFU
@@ -278,6 +314,11 @@ namespace ara
                 app->request_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
+                }
+                else
+                {
+                    ReportSimulatedAvailability(handleId);
+                }
 #elif defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
                 // DDS uses data-centric discovery: topics are matched
                 // automatically.  Immediately report the requested
@@ -396,6 +437,8 @@ namespace ara
             if (shouldUnregister)
             {
 #if ARA_COM_USE_VSOMEIP
+                if (ShouldUseVsomeipRuntime())
+                {
                 auto app{someip::VsomeipApplication::GetClientApplication()};
                 const auto requestedInstance{
                     instanceId == 0xFFFFU
@@ -408,6 +451,7 @@ namespace ara
                 app->release_service(
                     static_cast<vsomeip::service_t>(serviceId),
                     requestedInstance);
+                }
 #elif defined(ARA_COM_USE_CYCLONEDDS) && (ARA_COM_USE_CYCLONEDDS == 1)
                 // DDS: no explicit unregistration needed
                 (void)serviceId;

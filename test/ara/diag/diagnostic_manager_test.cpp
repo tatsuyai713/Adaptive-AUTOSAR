@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/diag/diagnostic_manager.h"
+#include <thread>
 
 namespace ara
 {
@@ -97,6 +98,26 @@ namespace ara
             auto _count = _dm.CheckTimingConstraints();
             // P2ServerMs=0 means threshold is never reached
             EXPECT_EQ(_count, 0U);
+        }
+
+        TEST(DiagnosticManagerTest, ResponsePendingCallbackCanCompleteRequest)
+        {
+            DiagnosticManager _dm;
+            ResponseTiming _timing;
+            _timing.P2ServerMs = 1;
+            _dm.SetResponseTiming(_timing);
+            ASSERT_TRUE(_dm.RegisterService(0x22).HasValue());
+            auto _rid = _dm.SubmitRequest(0x22, 0x00, {});
+            ASSERT_TRUE(_rid.HasValue());
+
+            _dm.SetResponsePendingCallback(
+                [&_dm](uint32_t requestId, uint8_t) {
+                    EXPECT_TRUE(_dm.CompleteRequest(requestId).HasValue());
+                });
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            EXPECT_EQ(_dm.CheckTimingConstraints(), 1U);
+            EXPECT_TRUE(_dm.GetPendingRequests().empty());
         }
     }
 }

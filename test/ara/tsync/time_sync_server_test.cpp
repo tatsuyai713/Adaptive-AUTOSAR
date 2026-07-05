@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include "../../../src/ara/tsync/time_sync_server.h"
@@ -35,6 +36,34 @@ namespace ara
             }
 
             bool mAvailable{true};
+        };
+
+        class StepTimeBaseProvider : public SynchronizedTimeBaseProvider
+        {
+        public:
+            core::Result<void> UpdateTimeBase(TimeSyncClient &client) override
+            {
+                const auto steady = std::chrono::steady_clock::now();
+                const auto step = mUpdates.fetch_add(1) == 0
+                                      ? std::chrono::milliseconds{0}
+                                      : std::chrono::milliseconds{250};
+                client.UpdateReferenceTime(
+                    std::chrono::system_clock::now() + step,
+                    steady);
+                return core::Result<void>::FromValue();
+            }
+
+            bool IsSourceAvailable() const override
+            {
+                return true;
+            }
+
+            const char *GetProviderName() const noexcept override
+            {
+                return "StepProvider";
+            }
+
+            std::atomic<int> mUpdates{0};
         };
 
         TEST(TimeSyncServerTest, ConstructAndDestroy)
@@ -146,6 +175,43 @@ namespace ara
             _server.Stop();
 
             EXPECT_TRUE(_callbackCalled);
+        }
+
+        TEST(TimeSyncServerTest, CorrectionCallbackReceivesTimeStep)
+        {
+            StepTimeBaseProvider _provider;
+            TimeSyncServer _server{_provider, {20U, 5U}};
+
+            std::atomic<int> _callbackCount{0};
+            std::atomic<long long> _lastCorrectionNs{0};
+            _server.SetCorrectionCallback(
+                [&](std::chrono::nanoseconds correction,
+                    std::chrono::system_clock::time_point)
+                {
+                    _lastCorrectionNs.store(correction.count());
+                    _callbackCount.fetch_add(1);
+                });
+
+            _server.Start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(120));
+            _server.Stop();
+
+            EXPECT_GT(_callbackCount.load(), 0);
+            EXPECT_NE(_lastCorrectionNs.load(), 0);
+        }
+
+        TEST(TimeSyncServerTest, PollIntervalCanChangeWhileRunning)
+        {
+            StubTimeBaseProvider _provider;
+            TimeSyncServer _server{_provider, {20U, 5U}};
+
+            ASSERT_TRUE(_server.Start().HasValue());
+            for (uint32_t interval : {5U, 15U, 25U, 10U})
+            {
+                _server.SetPollIntervalMs(interval);
+                EXPECT_GE(_server.GetPollIntervalMs(), 10U);
+            }
+            _server.Stop();
         }
     }
 }

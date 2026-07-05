@@ -26,8 +26,7 @@ namespace ara
         private:
             static const uint8_t cSid{0x11};
 
-            std::promise<ResetRequestType> mResetTypePromise;
-            std::future<ResetRequestType> mResetTypeFuture;
+            core::Optional<ResetRequestType> mPendingResetType;
             bool mRapidShutdownEnabled;
 
             bool TryHandleSubFunction(

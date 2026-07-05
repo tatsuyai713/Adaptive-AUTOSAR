@@ -66,7 +66,7 @@ See [tutorials/README.md](../user_apps/tutorials/README.md) for the full index.
 | 07 | SocketCAN message decoding | [07_socketcan_decode.ja.md](../user_apps/tutorials/07_socketcan_decode.ja.md) |
 | 08 | Full ECU stack implementation | [08_ecu_full_stack.ja.md](../user_apps/tutorials/08_ecu_full_stack.ja.md) |
 | 09 | Raspberry Pi ECU deployment | [09_rpi_ecu_deployment.ja.md](../user_apps/tutorials/09_rpi_ecu_deployment.ja.md) |
-| 10 | Porting from Vector/ETAS/EB assets | [10_vendor_autosar_asset_porting.ja.md](../user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md) |
+| 52 | Porting from Vector/ETAS/EB assets | [52_vendor_autosar_asset_porting.ja.md](../user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md) |
 
 ---
 

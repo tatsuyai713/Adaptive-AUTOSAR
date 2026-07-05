@@ -15,8 +15,13 @@ namespace ara
         TimeSyncServer::TimeSyncServer(
             SynchronizedTimeBaseProvider &provider,
             const TimeSyncServerConfig &config) noexcept
-            : mProvider{provider}, mConfig{config}
+            : mProvider{provider},
+              mConfig{config},
+              mPollIntervalMs{config.pollIntervalMs >= 10U
+                                  ? config.pollIntervalMs
+                                  : 10U}
         {
+            mConfig.pollIntervalMs = mPollIntervalMs.load();
         }
 
         TimeSyncServer::~TimeSyncServer()
@@ -95,12 +100,13 @@ namespace ara
 
         uint32_t TimeSyncServer::GetPollIntervalMs() const noexcept
         {
-            return mConfig.pollIntervalMs;
+            return mPollIntervalMs.load();
         }
 
         void TimeSyncServer::SetPollIntervalMs(uint32_t ms) noexcept
         {
-            mConfig.pollIntervalMs = (ms >= 10U) ? ms : 10U;
+            const uint32_t interval = (ms >= 10U) ? ms : 10U;
+            mPollIntervalMs.store(interval);
         }
 
         // -----------------------------------------------------------------------
@@ -111,13 +117,14 @@ namespace ara
             while (mRunning.load())
             {
                 const auto sleepDuration =
-                    std::chrono::milliseconds(mConfig.pollIntervalMs);
+                    std::chrono::milliseconds(mPollIntervalMs.load());
                 std::this_thread::sleep_for(sleepDuration);
 
                 if (!mRunning.load()) break;
 
                 // Capture steady time before and after provider query
                 const auto steadyBefore = std::chrono::steady_clock::now();
+                const auto previousTime = mInternalClient.GetCurrentTime(steadyBefore);
                 auto updateResult = mProvider.UpdateTimeBase(mInternalClient);
                 const auto steadyAfter = std::chrono::steady_clock::now();
                 // Use midpoint of before/after as the steady-clock reference
@@ -138,6 +145,21 @@ namespace ara
                     auto globalResult = mInternalClient.GetCurrentTime(steadyRef);
                     if (globalResult.HasValue())
                     {
+                        if (previousTime.HasValue())
+                        {
+                            const auto steadyDelta =
+                                std::chrono::duration_cast<std::chrono::system_clock::duration>(
+                                    steadyRef - steadyBefore);
+                            const auto expectedTime =
+                                previousTime.Value() + steadyDelta;
+                            const auto correction =
+                                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                    globalResult.Value() - expectedTime);
+                            if (correction.count() != 0)
+                            {
+                                notifyCorrection(correction, globalResult.Value());
+                            }
+                        }
                         distributeToConsumers(globalResult.Value(), steadyRef);
                     }
                 }
@@ -208,6 +230,21 @@ namespace ara
         {
             std::lock_guard<std::mutex> lock(mMutex);
             mCorrectionCallback = std::move(cb);
+        }
+
+        void TimeSyncServer::notifyCorrection(
+            std::chrono::nanoseconds correctionAmount,
+            std::chrono::system_clock::time_point correctedTime)
+        {
+            CorrectionCallback cb;
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                cb = mCorrectionCallback;
+            }
+            if (cb)
+            {
+                cb(correctionAmount, correctedTime);
+            }
         }
 
     } // namespace tsync

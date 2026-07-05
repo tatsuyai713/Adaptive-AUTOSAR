@@ -62,6 +62,9 @@ namespace ara
             /// @brief Maximum PDU length per AUTOSAR NM.
             static constexpr std::size_t cMaxPduLength{254U};
 
+            /// @brief Maximum PN filter mask length used by this implementation.
+            static constexpr std::size_t cMaxPnFilterMaskLength{7U};
+
             // ----------------------------------------------------------------
             // Control-bit helpers
             // ----------------------------------------------------------------
@@ -85,9 +88,9 @@ namespace ara
 
             /// @brief Deserialize an NM PDU from raw bytes.
             /// @param data       Raw byte buffer.
-            /// @param userDataLen Expected user-data length; remaining bytes
+            /// @param userDataLen Configured user-data length; remaining bytes
             ///                   after header and user data are treated as PN
-            ///                   filter mask (0 = auto-detect).
+            ///                   filter mask and require kPartialNetwork.
             /// @returns Parsed NmPdu, or error on invalid data.
             static core::Result<NmPdu> Deserialize(
                 const std::vector<std::uint8_t> &data,

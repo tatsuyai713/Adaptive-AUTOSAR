@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include "../../helper/ipv4_address.h"
 #include "../vsomeip_application.h"
@@ -36,6 +37,10 @@ namespace ara
                     bool mOffered;
                     bool mOwnOfferedIpEnv;
                     bool mOwnOfferedPortEnv;
+                    mutable std::mutex mMutex;
+
+                    void onMessageReceived(SomeIpSdMessage &&message);
+                    void sendOffer(bool available);
 
                 protected:
                     void StartAgent(helper::SdServerState state) override;

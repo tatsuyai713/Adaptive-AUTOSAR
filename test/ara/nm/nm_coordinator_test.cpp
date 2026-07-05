@@ -60,6 +60,26 @@ namespace ara
             EXPECT_TRUE(_result.HasValue());
         }
 
+        TEST(NmCoordinatorTest, TickCompletesSleepReadyNotification)
+        {
+            NetworkManager _nm;
+            _nm.AddChannel({"ch1", 5000U, 1500U, 2000U, false});
+
+            NmCoordinator _coord{_nm};
+            bool _callbackCalled{false};
+            _coord.SetSleepReadyCallback([&_callbackCalled]() {
+                _callbackCalled = true;
+            });
+
+            auto _result = _coord.RequestCoordinatedSleep();
+            ASSERT_TRUE(_result.HasValue());
+
+            _coord.Tick(1000U);
+
+            EXPECT_TRUE(_callbackCalled);
+            EXPECT_TRUE(_coord.GetStatus().CoordinatedSleepReady);
+        }
+
         TEST(NmCoordinatorTest, EmptyManagerFails)
         {
             NetworkManager _nm;

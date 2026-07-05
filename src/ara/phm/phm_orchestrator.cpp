@@ -51,33 +51,57 @@ namespace ara
             const std::string &entityName,
             TypeOfSupervision type)
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            auto it = mEntities.find(entityName);
-            if (it == mEntities.end())
+            PlatformHealthCallback callback;
+            PlatformHealthState oldState{PlatformHealthState::kNormal};
+            PlatformHealthState newState{PlatformHealthState::kNormal};
+            bool changed{false};
             {
-                return core::Result<void>::FromError(
-                    MakeErrorCode(PhmErrc::kNotFound));
+                std::lock_guard<std::mutex> lock(mMutex);
+                auto it = mEntities.find(entityName);
+                if (it == mEntities.end())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PhmErrc::kNotFound));
+                }
+                it->second.Status = GlobalSupervisionStatus::kFailed;
+                it->second.LastFailedSupervision = type;
+                it->second.FailureCount++;
+                it->second.LastFailureTime = std::chrono::steady_clock::now();
+                changed = UpdatePlatformState(oldState, newState);
+                callback = mCallback;
             }
-            it->second.Status = GlobalSupervisionStatus::kFailed;
-            it->second.LastFailedSupervision = type;
-            it->second.FailureCount++;
-            it->second.LastFailureTime = std::chrono::steady_clock::now();
-            UpdatePlatformState();
+
+            if (changed && callback)
+            {
+                callback(oldState, newState);
+            }
             return {};
         }
 
         core::Result<void> PhmOrchestrator::ReportSupervisionRecovery(
             const std::string &entityName)
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            auto it = mEntities.find(entityName);
-            if (it == mEntities.end())
+            PlatformHealthCallback callback;
+            PlatformHealthState oldState{PlatformHealthState::kNormal};
+            PlatformHealthState newState{PlatformHealthState::kNormal};
+            bool changed{false};
             {
-                return core::Result<void>::FromError(
-                    MakeErrorCode(PhmErrc::kNotFound));
+                std::lock_guard<std::mutex> lock(mMutex);
+                auto it = mEntities.find(entityName);
+                if (it == mEntities.end())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PhmErrc::kNotFound));
+                }
+                it->second.Status = GlobalSupervisionStatus::kOk;
+                changed = UpdatePlatformState(oldState, newState);
+                callback = mCallback;
             }
-            it->second.Status = GlobalSupervisionStatus::kOk;
-            UpdatePlatformState();
+
+            if (changed && callback)
+            {
+                callback(oldState, newState);
+            }
             return {};
         }
 
@@ -122,17 +146,27 @@ namespace ara
 
         void PhmOrchestrator::ResetAllCounters()
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            for (auto &kv : mEntities)
+            PlatformHealthCallback callback;
+            PlatformHealthState oldState{PlatformHealthState::kNormal};
+            PlatformHealthState newState{PlatformHealthState::kNormal};
+            bool changed{false};
             {
-                kv.second.FailureCount = 0;
-                kv.second.Status = GlobalSupervisionStatus::kDeactivated;
+                std::lock_guard<std::mutex> lock(mMutex);
+                for (auto &kv : mEntities)
+                {
+                    kv.second.FailureCount = 0;
+                    kv.second.Status = GlobalSupervisionStatus::kDeactivated;
+                }
+                oldState = mCurrentState;
+                mCurrentState = PlatformHealthState::kNormal;
+                newState = mCurrentState;
+                changed = oldState != newState;
+                callback = mCallback;
             }
-            auto oldState = mCurrentState;
-            mCurrentState = PlatformHealthState::kNormal;
-            if (mCallback && oldState != mCurrentState)
+
+            if (changed && callback)
             {
-                mCallback(oldState, mCurrentState);
+                callback(oldState, newState);
             }
         }
 
@@ -142,9 +176,11 @@ namespace ara
             return mEntities.size();
         }
 
-        void PhmOrchestrator::UpdatePlatformState()
+        bool PhmOrchestrator::UpdatePlatformState(
+            PlatformHealthState &oldState,
+            PlatformHealthState &newState)
         {
-            if (mEntities.empty()) return;
+            if (mEntities.empty()) return false;
 
             uint32_t failedCount = 0;
             for (const auto &kv : mEntities)
@@ -159,21 +195,20 @@ namespace ara
             double ratio = static_cast<double>(failedCount) /
                            static_cast<double>(mEntities.size());
 
-            PlatformHealthState newState = PlatformHealthState::kNormal;
+            PlatformHealthState computedState = PlatformHealthState::kNormal;
             if (ratio >= mCriticalThreshold)
-                newState = PlatformHealthState::kCritical;
+                computedState = PlatformHealthState::kCritical;
             else if (ratio > mDegradedThreshold)
-                newState = PlatformHealthState::kDegraded;
+                computedState = PlatformHealthState::kDegraded;
 
-            if (newState != mCurrentState)
+            if (computedState != mCurrentState)
             {
-                auto oldState = mCurrentState;
-                mCurrentState = newState;
-                if (mCallback)
-                {
-                    mCallback(oldState, newState);
-                }
+                oldState = mCurrentState;
+                newState = computedState;
+                mCurrentState = computedState;
+                return true;
             }
+            return false;
         }
     }
 }

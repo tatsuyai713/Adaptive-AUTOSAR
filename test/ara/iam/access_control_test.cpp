@@ -228,5 +228,38 @@ namespace ara
             EXPECT_FALSE(_decision.Value());
             EXPECT_FALSE(_auditAllowed);
         }
+
+        TEST(AccessControlTest, AuditCallbackCanUpdatePolicy)
+        {
+            AccessControl _accessControl;
+            bool _callbackInvoked{false};
+
+            _accessControl.SetAuditCallback(
+                [&](const std::string &,
+                    const std::string &,
+                    const std::string &,
+                    bool)
+                {
+                    _callbackInvoked = true;
+                    auto _setResult = _accessControl.SetPolicy(
+                        "audited_app",
+                        "audited_service",
+                        "read",
+                        PermissionDecision::kAllow);
+                    EXPECT_TRUE(_setResult.HasValue());
+                });
+
+            auto _initialDecision = _accessControl.IsAllowed(
+                "unknown", "svc", "read");
+            ASSERT_TRUE(_initialDecision.HasValue());
+            EXPECT_FALSE(_initialDecision.Value());
+            EXPECT_TRUE(_callbackInvoked);
+
+            _accessControl.SetAuditCallback(nullptr);
+            auto _updatedDecision = _accessControl.IsAllowed(
+                "audited_app", "audited_service", "read");
+            ASSERT_TRUE(_updatedDecision.HasValue());
+            EXPECT_TRUE(_updatedDecision.Value());
+        }
     }
 }

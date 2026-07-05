@@ -118,8 +118,19 @@ namespace ara
             {
                 return core::Result<bool>::FromValue(false);
             }
-            // Simple credential check: credential must not be empty.
-            return core::Result<bool>::FromValue(!credential.empty());
+
+            const auto &identity = it->second;
+            std::vector<std::uint8_t> identityBytes(
+                identity.begin(), identity.end());
+            auto expected = crypto::ComputeDigest(
+                identityBytes, crypto::DigestAlgorithm::kSha256);
+            if (!expected.HasValue())
+            {
+                return core::Result<bool>::FromError(
+                    MakeErrorCode(IamErrc::kPolicyStoreError));
+            }
+
+            return core::Result<bool>::FromValue(credential == expected.Value());
         }
     }
 }

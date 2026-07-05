@@ -35,6 +35,19 @@ namespace ara
 
         core::Result<std::vector<std::uint8_t>> NmPdu::Serialize() const
         {
+            if (!PnFilterMask.empty() &&
+                !HasControlBit(NmControlBit::kPartialNetwork))
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(NmErrc::kInvalidState));
+            }
+
+            if (PnFilterMask.size() > cMaxPnFilterMaskLength)
+            {
+                return core::Result<std::vector<std::uint8_t>>::FromError(
+                    MakeErrorCode(NmErrc::kInvalidState));
+            }
+
             const std::size_t totalSize =
                 cHeaderSize + UserData.size() + PnFilterMask.size();
 
@@ -86,7 +99,9 @@ namespace ara
 
             const std::size_t payloadSize = data.size() - cHeaderSize;
 
-            // Determine how much is user data vs PN filter mask.
+            // Determine how much is user data vs PN filter mask. userDataLen
+            // is the configured user-data length for the NM channel; bytes
+            // beyond it are only valid when PN information is present.
             const std::size_t actualUserLen =
                 (userDataLen <= payloadSize) ? userDataLen : payloadSize;
 
@@ -97,13 +112,25 @@ namespace ara
                     data.begin() + static_cast<std::ptrdiff_t>(cHeaderSize + actualUserLen));
             }
 
-            // Remaining bytes are PN filter mask (if any and if PN bit set)
+            // Remaining bytes are PN filter mask (if any and if PN bit set).
             if (payloadSize > actualUserLen)
             {
+                if (!pdu.HasControlBit(NmControlBit::kPartialNetwork))
+                {
+                    return core::Result<NmPdu>::FromError(
+                        MakeErrorCode(NmErrc::kInvalidState));
+                }
+
                 const auto pnStart =
                     data.begin() +
                     static_cast<std::ptrdiff_t>(cHeaderSize + actualUserLen);
                 pdu.PnFilterMask.assign(pnStart, data.end());
+
+                if (pdu.PnFilterMask.size() > cMaxPnFilterMaskLength)
+                {
+                    return core::Result<NmPdu>::FromError(
+                        MakeErrorCode(NmErrc::kInvalidState));
+                }
             }
 
             return core::Result<NmPdu>::FromValue(std::move(pdu));

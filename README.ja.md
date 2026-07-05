@@ -16,7 +16,7 @@ Linux 向けの教育用途 Adaptive AUTOSAR 風 API 実装です。
 
 ### このリポジトリでできること
 
-- **15 の `ara::*` モジュール**を完全実装（R24-11 ベースライン、SWS API カバレッジ 100%）
+- **13 の `ara::*` ライブラリ**を R24-11 指向の教育用途ベースラインとして実装
 - **3 種の通信トランスポート**: SOME/IP (vSomeIP)、DDS (CycloneDDS)、ゼロコピー IPC (iceoryx) — 実行時に切り替え可能
 - **E2E 保護**: Profile 01〜07 および 11、状態機械とサンプル単位ステータス付き
 - **SecOC**: フレッシュネス管理、HMAC ベース MAC、鍵ローテーション
@@ -161,7 +161,7 @@ Raspberry Pi をプロトタイプ ECU として動作させるための、syste
 
 ### デプロイされるもの
 
-ECU プロファイルは AUTOSAR AP ランタイムを構成する 14 の systemd サービスをインストールします:
+ECU プロファイルは AUTOSAR AP ランタイムを構成する 20 の systemd サービスをインストールします:
 
 | サービス | 役割 |
 |---|---|
@@ -177,6 +177,14 @@ ECU プロファイルは AUTOSAR AP ランタイムを構成する 14 の syste
 | `autosar-user-app-monitor` | ユーザーアプリ監視・再起動リカバリ |
 | `autosar-watchdog` | ウォッチドッグ監視 |
 | `autosar-sm-state` | マシン状態/ネットワークモード管理 |
+| `autosar-iox-roudi` | iceoryx RouDi デーモン |
+| `autosar-ecu-full-stack` | フル ECU 統合サンプルサービス |
+| `autosar-network-manager` | Network Management デーモン |
+| `autosar-ucm` | Update and Configuration Management デーモン |
+| `autosar-dlt` | DLT ロギングデーモン |
+| `autosar-diag-server` | DoIP/UDS 診断サーバ |
+| `autosar-phm-daemon` | Platform Health Management デーモン |
+| `autosar-crypto-provider` | Crypto provider デーモン |
 
 ユーザーアプリは `/etc/autosar/bringup.sh` 経由で起動されます。
 
@@ -250,7 +258,7 @@ sudo ./scripts/install_middleware_stack_qnx.sh --arch aarch64le --enable-shm
 
 ### ベンダ資産の移植
 
-Vector/ETAS/EB で開発した C++ 資産をソース互換で再ビルドできます。手順は [`user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md`](user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md) を参照してください。
+Vector/ETAS/EB で開発した C++ 資産をソース互換で再ビルドできます。手順は [`user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md`](user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md) を参照してください。
 
 ---
 
@@ -295,32 +303,32 @@ cmake --build build-host-doip-tester -j"$(nproc)"
 
 ## 実装機能マトリクス
 
-リリースベースライン: `R24-11`。全 15 コア `ara::*` モジュールは **SWS API カバレッジ 100%** に到達しています。
+リリースベースライン: `R24-11`。実装済みの `ara::*` ライブラリと機能領域を以下に示します。
 
-ハードウェア依存機能（HSM、生体認証センサー、CAN-TP/FlexRay、TPM セキュアブート等）は、モック/シミュレーションバックエンドによるソフトウェア抽象化として提供しています。
+ハードウェア依存機能（HSM、生体認証センサー、CAN-TP/FlexRay、TPM セキュアブート等）は、モック/シミュレーションバックエンドによるソフトウェア抽象化として提供しています。外部ミドルウェア統合は、対応する CMake オプションと実行時設定が必要になる場合があります。
 
-| モジュール | カバレッジ | 主な機能 |
+| モジュール | 状態 | 主な機能 |
 | --- | :---: | --- |
-| `ara::core` | 100% | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, `String/StringView` (C++14 ポリフィル), `Variant`, `Span`, `Byte`, モナディックチェーン (`AndThen/OrElse/Map/MapError`), 例外階層, `AbortHandler` |
-| `ara::log` | 100% | `Logger` (重要度フィルタリング), `LogStream` 演算子, 3 種シンク (console/file/network), DLT バックエンド, `AsyncLogSink` (リングバッファ), `FormatterPlugin` (JSON/カスタム) |
-| `ara::com` 共通 | 100% | Proxy/Skeleton Event/Method/Field ラッパー, `FindService`/`StartFindService`, シリアライズフレームワーク (CDR 等), fire-and-forget メソッド, `CommunicationGroup`, `RawDataStream`, `InstanceIdentifier`, `ServiceVersion`, QoS, `EventCacheUpdatePolicy`, `FilterConfig`, `Transformer` チェーン, `SampleInfo`/`E2ESampleStatus` |
-| `ara::com` SOME/IP | 100% | SD client/server, pub/sub, RPC, SOME/IP-TP セグメンテーション/リアセンブリ, Magic Cookie, `SessionHandler`, IPv6 エンドポイント, `SdNetworkConfig` |
-| `ara::com` DDS | 100% | CycloneDDS pub/sub, メソッドバインディング (request/reply), QoS 設定, `DdsParticipantFactory`, コンテンツフィルタ, 拡張 QoS (ownership/partition/resource-limits) |
-| `ara::com` ZeroCopy | 100% | iceoryx pub/sub, メソッドバインディング, ゼロコピー Loan/Publish, `QueueOverflowPolicy`, `ZeroCopyServiceDiscovery`, `PortIntrospection` |
-| `ara::com` E2E | 100% | Profile 01〜07 および 11, event/method デコレータ, `E2EStateMachine` (ウィンドウ方式, 有効/無効制御), サンプル単位ステータス伝搬 |
-| `ara::com` SecOC | 100% | `FreshnessManager` (モノトニックカウンタ, 永続化), `SecOcPdu` (HMAC MAC), `SecOcKeyManager`, 一括保護/検証, `FreshnessSyncManager` (ECU 間同期) |
-| `ara::exec` | 100% | `ExecutionClient/Server`, `StateClient/Server`, `DeterministicClient`, `FunctionGroup`, `ProcessWatchdog`, `ExecutionManager` (fork/exec ライフサイクル), `ManifestLoader` (ARXML), `ApplicationClient`, QNX 移植性 |
-| `ara::diag` | 100% | `Monitor` (デバウンス), UDS サービス (0x10/0x11/0x14/0x22/0x27/0x28/0x2E/0x2F/0x31/0x34〜0x37/0x3E/0x85), OBD-II (Mode 01/09), `EventMemory`, `DiagnosticManager` (P2/P2* タイミング) |
-| `ara::phm` | 100% | `SupervisedEntity`, `HealthChannel`, `RecoveryAction`, `AliveSupervision`, `DeadlineSupervision`, `LogicalSupervision`, `PhmOrchestrator` |
-| `ara::per` | 100% | `KeyValueStorage`, `FileStorage`, `ReadAccessor`/`ReadWriteAccessor`, recover/reset, バッチ操作, 変更オブザーバ, `RedundantStorage`, `UpdatePersistency` (UCM マイグレーション) |
-| `ara::sm` | 100% | `MachineStateClient` (shutdown/restart), `NetworkHandle`, `FunctionGroupStateMachine` (ガード/タイムアウト/履歴), `PowerModeManager`, `DiagnosticStateHandler`, `UpdateRequestHandler` |
-| `ara::crypto` | 100% | SHA-1/256/384/512, HMAC, AES-CBC/GCM/CTR, ChaCha20, PBKDF2/HKDF, RSA 2048/4096, ECDSA P-256/P-384, ECDH, X.509 チェーン検証, CRL 失効確認, ストリーミングコンテキスト, `KeySlot`/`KeyStorageProvider`, `CryptoServiceProvider` |
-| `ara::nm` | 100% | マルチチャネル NM 状態機械 (5 状態), `NmCoordinator`, `NmPdu` シリアライズ, `CanTpNmAdapter`/`FlexRayNmAdapter` |
-| `ara::iam` | 100% | RBAC (`RoleManager`), ABAC (`AbacPolicyEngine`), `Grant`/`GrantManager`, `PolicySigner` (ECDSA), `PasswordStore`, `IdentityManager`, `AuditTrail`, `CapabilityManager` |
-| `ara::ucm` | 100% | 更新セッションライフサイクル, Transfer API, SHA-256 検証, `CampaignManager` (マルチパッケージ), `UpdateHistory`, `DependencyChecker`, `SecureBootManager` |
-| `ara::tsync` | 100% | `TimeSyncClient` (ドリフト補正, 品質レベル), `PtpTimeBaseProvider` (ptp4l/gPTP), `NtpTimeBaseProvider` (chrony/ntpd), `TimeSyncServer`, `RateCorrector` |
+| `ara::core` | 実装済み | `Result`, `Optional`, `Future/Promise`, `ErrorCode/ErrorDomain`, `InstanceSpecifier`, `String/StringView` (C++14 ポリフィル), `Variant`, `Span`, `Byte`, モナディックチェーン (`AndThen/OrElse/Map/MapError`), 例外階層, `AbortHandler` |
+| `ara::log` | 実装済み | `Logger` (重要度フィルタリング), `LogStream` 演算子, 3 種シンク (console/file/network), DLT バックエンド, `AsyncLogSink` (リングバッファ), `FormatterPlugin` (JSON/カスタム) |
+| `ara::com` 共通 | 実装済み | Proxy/Skeleton Event/Method/Field ラッパー, `FindService`/`StartFindService`, シリアライズフレームワーク (CDR 等), fire-and-forget メソッド, `CommunicationGroup`, `RawDataStream`, `InstanceIdentifier`, `ServiceVersion`, QoS, `EventCacheUpdatePolicy`, `FilterConfig`, `Transformer` チェーン, `SampleInfo`/`E2ESampleStatus` |
+| `ara::com` SOME/IP | 実装済み | SD client/server, pub/sub, RPC, SOME/IP-TP セグメンテーション/リアセンブリ, Magic Cookie, `SessionHandler`, IPv6 エンドポイント, `SdNetworkConfig` |
+| `ara::com` DDS | 実装済み | CycloneDDS pub/sub, メソッドバインディング (request/reply), QoS 設定, `DdsParticipantFactory`, コンテンツフィルタ, 拡張 QoS (ownership/partition/resource-limits) |
+| `ara::com` ZeroCopy | 実装済み | iceoryx pub/sub, メソッドバインディング, ゼロコピー Loan/Publish, `QueueOverflowPolicy`, `ZeroCopyServiceDiscovery`, `PortIntrospection` |
+| `ara::com` E2E | 実装済み | Profile 01〜07 および 11, event/method デコレータ, `E2EStateMachine` (ウィンドウ方式, 有効/無効制御), サンプル単位ステータス伝搬 |
+| `ara::com` SecOC | 実装済み | `FreshnessManager` (モノトニックカウンタ, 永続化), `SecOcPdu` (HMAC MAC), `SecOcKeyManager`, 一括保護/検証, `FreshnessSyncManager` (ECU 間同期) |
+| `ara::exec` | 実装済み | `ExecutionClient/Server`, `StateClient/Server`, `DeterministicClient`, `FunctionGroup`, `ProcessWatchdog`, `ExecutionManager` (fork/exec ライフサイクル), `ManifestLoader` (ARXML), `ApplicationClient`, QNX 移植性 |
+| `ara::diag` | 実装済み | `Monitor` (デバウンス), UDS サービス (0x10/0x11/0x14/0x22/0x27/0x28/0x2E/0x2F/0x31/0x34〜0x37/0x3E/0x85), OBD-II (Mode 01/09), `EventMemory`, `DiagnosticManager` (P2/P2* タイミング) |
+| `ara::phm` | 実装済み | `SupervisedEntity`, `HealthChannel`, `RecoveryAction`, `AliveSupervision`, `DeadlineSupervision`, `LogicalSupervision`, `PhmOrchestrator` |
+| `ara::per` | 実装済み | `KeyValueStorage`, `FileStorage`, `ReadAccessor`/`ReadWriteAccessor`, recover/reset, バッチ操作, 変更オブザーバ, `RedundantStorage`, `UpdatePersistency` (UCM マイグレーション) |
+| `ara::sm` | 実装済み | `MachineStateClient` (shutdown/restart), `NetworkHandle`, `FunctionGroupStateMachine` (ガード/タイムアウト/履歴), `PowerModeManager`, `DiagnosticStateHandler`, `UpdateRequestHandler` |
+| `ara::crypto` | 実装済み | SHA-1/256/384/512, HMAC, AES-CBC/GCM/CTR, ChaCha20, PBKDF2/HKDF, RSA 2048/4096, ECDSA P-256/P-384, ECDH, X.509 チェーン検証, CRL 失効確認, ストリーミングコンテキスト, `KeySlot`/`KeyStorageProvider`, `CryptoServiceProvider` |
+| `ara::nm` | 実装済み | マルチチャネル NM 状態機械 (5 状態), `NmCoordinator`, `NmPdu` シリアライズ, `CanTpNmAdapter`/`FlexRayNmAdapter` |
+| `ara::iam` | 実装済み | RBAC (`RoleManager`), ABAC (`AbacPolicyEngine`), `Grant`/`GrantManager`, `PolicySigner` (ECDSA), `PasswordStore`, `IdentityManager`, `AuditTrail`, `CapabilityManager` |
+| `ara::ucm` | 実装済み | 更新セッションライフサイクル, Transfer API, SHA-256 検証, `CampaignManager` (マルチパッケージ), `UpdateHistory`, `DependencyChecker`, `SecureBootManager` |
+| `ara::tsync` | 実装済み | `TimeSyncClient` (ドリフト補正, 品質レベル), `PtpTimeBaseProvider` (ptp4l/gPTP), `NtpTimeBaseProvider` (chrony/ntpd), `TimeSyncServer`, `RateCorrector` |
 | ARXML ツール | — | YAML → ARXML、ARXML → ara::com binding ヘッダ生成 |
-| RPi ECU プロファイル | — | systemd デプロイ、14 常駐デーモン、SocketCAN、時刻同期、ヘルスモニタリング |
+| RPi ECU プロファイル | — | systemd デプロイ、20 常駐サービス、SocketCAN、時刻同期、ヘルスモニタリング |
 
 ### AUTOSAR AP リリースプロファイル
 

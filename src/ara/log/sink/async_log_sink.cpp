@@ -94,12 +94,8 @@ namespace ara
                             mBuffer[mTail].valid = false;
                             mTail = (mTail + 1U) % mCapacity;
                             --mSize;
+                            mInFlight = true;
                             hasEntry = true;
-                        }
-
-                        if (mSize == 0U)
-                        {
-                            mDrained.notify_all();
                         }
                     }
 
@@ -109,6 +105,16 @@ namespace ara
                         LogStream wrapper;
                         wrapper << message;
                         mInnerSink->Log(wrapper);
+                    }
+
+                    if (hasEntry)
+                    {
+                        std::unique_lock<std::mutex> lock{mMutex};
+                        mInFlight = false;
+                        if (mSize == 0U)
+                        {
+                            mDrained.notify_all();
+                        }
                     }
                 }
             }
@@ -131,7 +137,7 @@ namespace ara
             void AsyncLogSink::Flush()
             {
                 std::unique_lock<std::mutex> lock{mMutex};
-                if (mSize == 0U)
+                if (mSize == 0U && !mInFlight)
                 {
                     return;
                 }
@@ -140,7 +146,9 @@ namespace ara
                 // will re-acquire after mDrained.wait() releases it below.
                 mNotEmpty.notify_all();
                 // Block until the background thread has drained the buffer.
-                mDrained.wait(lock, [this] { return mSize == 0U; });
+                mDrained.wait(lock, [this] {
+                    return mSize == 0U && !mInFlight;
+                });
             }
 
         } // namespace sink

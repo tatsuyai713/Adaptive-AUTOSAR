@@ -164,6 +164,43 @@ namespace ara_com_zerocopy_extended_test
         EXPECT_EQ(lastState, ServiceAvailability::kNotAvailable);
     }
 
+    TEST(ZeroCopyServiceDiscoveryTest, AvailabilityCallbackCanQueryDiscovery)
+    {
+        ZeroCopyServiceDiscovery sd;
+        ChannelDescriptor ch{"svc_reentrant", "inst_reentrant", "evt_reentrant"};
+
+        bool callbackInvoked = false;
+        sd.SetAvailabilityHandler(
+            [&](const DiscoveredService &svc)
+            {
+                callbackInvoked = true;
+                EXPECT_TRUE(sd.IsServiceOffered(svc.Channel));
+            });
+
+        sd.OfferService(ch);
+
+        EXPECT_TRUE(callbackInvoked);
+    }
+
+    TEST(ZeroCopyServiceDiscoveryTest, AvailabilityCallbackCanMutateDiscovery)
+    {
+        ZeroCopyServiceDiscovery sd;
+        ChannelDescriptor ch{"svc_mutate", "inst_mutate", "evt_mutate"};
+
+        sd.SetAvailabilityHandler(
+            [&](const DiscoveredService &svc)
+            {
+                if (svc.State == ServiceAvailability::kAvailable)
+                {
+                    sd.StopOfferService(svc.Channel);
+                }
+            });
+
+        sd.OfferService(ch);
+
+        EXPECT_FALSE(sd.IsServiceOffered(ch));
+    }
+
     TEST(ZeroCopyServiceDiscoveryTest, IsServiceOfferedFalse)
     {
         ZeroCopyServiceDiscovery sd;

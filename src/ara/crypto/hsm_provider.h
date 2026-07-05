@@ -128,8 +128,10 @@ namespace ara
             std::string mTokenLabel;
             uint32_t mNextSlotId{1};
             std::map<uint32_t, HsmSlotInfo> mSlots;
+            std::map<uint32_t, HsmAlgorithm> mAlgorithms;
             /// @brief Simulated key storage for software HSM emulation.
             std::map<uint32_t, std::vector<uint8_t>> mKeyData;
+            std::map<uint32_t, std::vector<uint8_t>> mPublicKeyData;
 
             uint32_t AlgorithmKeySize(HsmAlgorithm alg) const;
             HsmSlotType AlgorithmSlotType(HsmAlgorithm alg) const;

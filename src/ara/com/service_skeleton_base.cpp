@@ -3,10 +3,20 @@
 /// @details This file is part of the Adaptive AUTOSAR educational implementation.
 
 #include <utility>
+#include <cstdlib>
 
 #include "./service_skeleton_base.h"
 #include "./com_error_domain.h"
 #include "./someip/vsomeip_application.h"
+
+namespace
+{
+    bool ShouldUseVsomeipRuntime()
+    {
+        return std::getenv("ADAPTIVE_AUTOSAR_RUN_VSOMEIP_SD_INTEGRATION") != nullptr ||
+               std::getenv("ADAPTIVE_AUTOSAR_ENABLE_VSOMEIP_RUNTIME") != nullptr;
+    }
+}
 
 namespace ara
 {
@@ -64,6 +74,7 @@ namespace ara
             }
 
 #ifdef ARA_COM_USE_VSOMEIP
+            if (ShouldUseVsomeipRuntime())
             {
                 auto app = someip::VsomeipApplication::GetServerApplication();
                 app->offer_service(
@@ -82,6 +93,8 @@ namespace ara
             if (mOffered)
             {
 #ifdef ARA_COM_USE_VSOMEIP
+                if (ShouldUseVsomeipRuntime())
+                {
                 auto app = someip::VsomeipApplication::GetServerApplication();
 
                 std::unordered_set<std::uint16_t> eventGroups;
@@ -103,6 +116,12 @@ namespace ara
                     mInstanceId,
                     static_cast<vsomeip::major_version_t>(mMajorVersion),
                     static_cast<vsomeip::minor_version_t>(mMinorVersion));
+                }
+                else
+                {
+                    std::lock_guard<std::mutex> lock(mSubscriptionMutex);
+                    mRegisteredEventGroups.clear();
+                }
 #else
                 {
                     std::lock_guard<std::mutex> lock(mSubscriptionMutex);
@@ -139,6 +158,8 @@ namespace ara
             }
 
 #ifdef ARA_COM_USE_VSOMEIP
+            if (ShouldUseVsomeipRuntime())
+            {
             auto app = someip::VsomeipApplication::GetServerApplication();
             app->register_subscription_handler(
                 mServiceId,
@@ -154,6 +175,7 @@ namespace ara
                         static_cast<std::uint16_t>(client),
                         subscribed);
                 });
+            }
 #else
             (void)handler;
 #endif
@@ -185,11 +207,14 @@ namespace ara
             }
 
 #ifdef ARA_COM_USE_VSOMEIP
+            if (ShouldUseVsomeipRuntime())
+            {
             auto app = someip::VsomeipApplication::GetServerApplication();
             app->unregister_subscription_handler(
                 mServiceId,
                 mInstanceId,
                 static_cast<vsomeip::eventgroup_t>(eventGroupId));
+            }
 #endif
         }
 

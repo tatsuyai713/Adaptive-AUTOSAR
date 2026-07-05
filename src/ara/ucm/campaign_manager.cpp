@@ -13,6 +13,17 @@ namespace ara
 {
     namespace ucm
     {
+        namespace
+        {
+            bool IsValidPackageMetadata(
+                const SoftwarePackageMetadata &metadata)
+            {
+                return !metadata.PackageName.empty() &&
+                       !metadata.TargetCluster.empty() &&
+                       !metadata.Version.empty();
+            }
+        }
+
         core::Result<std::string> CampaignManager::CreateCampaign(
             const std::string &campaignId,
             const std::vector<SoftwarePackageMetadata> &packages)
@@ -24,6 +35,15 @@ namespace ara
             }
 
             std::lock_guard<std::mutex> _lock{mMutex};
+
+            for (const auto &_pkg : packages)
+            {
+                if (!IsValidPackageMetadata(_pkg))
+                {
+                    return core::Result<std::string>::FromError(
+                        MakeErrorCode(UcmErrc::kInvalidArgument));
+                }
+            }
 
             if (mCampaigns.find(campaignId) != mCampaigns.end())
             {

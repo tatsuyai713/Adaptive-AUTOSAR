@@ -215,5 +215,31 @@ namespace ara
             (void)mEm.ActivateFunctionGroup("MachineFG", "Running");
         }
 
+        TEST_F(ExecutionManagerTest, StateChangeHandlerCanQueryProcessStatus)
+        {
+            ProcessDescriptor _desc;
+            _desc.name = "AppReentrant";
+            _desc.executable = "/definitely/not/an/executable";
+            _desc.functionGroup = "MachineFG";
+            _desc.activeState = "Running";
+            ASSERT_TRUE(mEm.RegisterProcess(_desc).HasValue());
+
+            bool _called{false};
+            mEm.SetProcessStateChangeHandler(
+                [&](const std::string &name, ManagedProcessState state)
+                {
+                    _called = true;
+                    EXPECT_EQ("AppReentrant", name);
+                    EXPECT_EQ(ManagedProcessState::kFailed, state);
+                    auto _status = mEm.GetProcessStatus(name);
+                    ASSERT_TRUE(_status.HasValue());
+                    EXPECT_EQ(ManagedProcessState::kFailed,
+                              _status.Value().managedState);
+                });
+
+            EXPECT_TRUE(mEm.ActivateFunctionGroup("MachineFG", "Running").HasValue());
+            EXPECT_TRUE(_called);
+        }
+
     } // namespace exec
 } // namespace ara

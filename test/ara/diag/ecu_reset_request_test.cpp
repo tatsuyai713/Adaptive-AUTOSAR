@@ -110,7 +110,7 @@ namespace ara
                     _id,
                     GeneralMetaInfo,
                     std::move(_invalidCancellationHander))};
-            EXPECT_FALSE(_invalidFuture.valid());
+            EXPECT_TRUE(_invalidFuture.valid());
         }
 
         TEST_F(EcuResetRequestTest, ExecuteResetMethod)
@@ -129,6 +129,17 @@ namespace ara
                     GeneralMetaInfo,
                     std::move(_cancellationHander))};
             EXPECT_TRUE(_succeedFuture.valid());
+
+            EXPECT_NO_THROW(Service.ExecuteReset(GeneralMetaInfo));
+
+            CancellationHandler _secondCancellationHander(false);
+            std::future<void> _secondFuture{
+                Service.RequestReset(
+                    ResetRequestType::kSoftReset,
+                    _id,
+                    GeneralMetaInfo,
+                    std::move(_secondCancellationHander))};
+            EXPECT_TRUE(_secondFuture.valid());
         }
 
         TEST_F(EcuResetRequestTest, EnableRapidShutdownMethod)

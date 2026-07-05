@@ -66,7 +66,7 @@ Language: [English](README.md)
 | 07 | SocketCAN メッセージ受信・デコード | [07_socketcan_decode.ja.md](../user_apps/tutorials/07_socketcan_decode.ja.md) |
 | 08 | フル ECU スタック実装 | [08_ecu_full_stack.ja.md](../user_apps/tutorials/08_ecu_full_stack.ja.md) |
 | 09 | Raspberry Pi ECU 配備 | [09_rpi_ecu_deployment.ja.md](../user_apps/tutorials/09_rpi_ecu_deployment.ja.md) |
-| 10 | Vector/ETAS/EB 向け資産の移植 | [10_vendor_autosar_asset_porting.ja.md](../user_apps/tutorials/10_vendor_autosar_asset_porting.ja.md) |
+| 52 | Vector/ETAS/EB 向け資産の移植 | [52_vendor_autosar_asset_porting.ja.md](../user_apps/tutorials/52_vendor_autosar_asset_porting.ja.md) |
 
 ---
 

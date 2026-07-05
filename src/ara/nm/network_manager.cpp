@@ -105,122 +105,160 @@ namespace ara
 
         void NetworkManager::Tick(std::uint64_t nowEpochMs)
         {
-            std::lock_guard<std::mutex> lock{mMutex};
+            std::vector<StateNotification> notifications;
+            NmStateChangeHandler handler;
 
-            for (auto &entry : mChannels)
             {
-                auto &channel{entry.second};
-                auto &status{channel.Status};
-                const auto &config{channel.Config};
+                std::lock_guard<std::mutex> lock{mMutex};
+                mLastTickEpochMs = nowEpochMs;
+                notifications.reserve(mChannels.size());
 
-                const std::uint64_t elapsed{
-                    (nowEpochMs >= status.StateEnteredEpochMs)
-                        ? (nowEpochMs - status.StateEnteredEpochMs)
-                        : 0U};
+                for (auto &entry : mChannels)
+                {
+                    auto &channel{entry.second};
+                    auto &status{channel.Status};
+                    const auto &config{channel.Config};
+                    StateNotification notification;
 
-                switch (status.State)
-                {
-                case NmState::kBusSleep:
-                {
-                    // Wake up on network request or received NM message.
-                    if (status.NetworkRequested || status.NmMessageReceived)
+                    const std::uint64_t elapsed{
+                        (nowEpochMs >= status.StateEnteredEpochMs)
+                            ? (nowEpochMs - status.StateEnteredEpochMs)
+                            : 0U};
+
+                    switch (status.State)
                     {
-                        status.NmMessageReceived = false;
-                        ++status.WakeupCount;
-                        TransitionTo(channel, NmState::kRepeatMessage,
-                                     nowEpochMs);
-                    }
-                    break;
-                }
-
-                case NmState::kRepeatMessage:
-                {
-                    status.NmMessageReceived = false;
-                    status.LastNmMessageEpochMs = nowEpochMs;
-                    ++status.RepeatMessageCount;
-
-                    if (elapsed >= config.RepeatMessageTimeMs)
+                    case NmState::kBusSleep:
                     {
-                        if (status.NetworkRequested)
+                        // Wake up on network request or received NM message.
+                        if (status.NetworkRequested || status.NmMessageReceived)
                         {
-                            TransitionTo(channel,
-                                         NmState::kNormalOperation,
-                                         nowEpochMs);
+                            status.NmMessageReceived = false;
+                            ++status.WakeupCount;
+                            if (TransitionTo(channel, NmState::kRepeatMessage,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
                         }
-                        else
-                        {
-                            TransitionTo(channel,
-                                         NmState::kReadySleep,
-                                         nowEpochMs);
-                        }
+                        break;
                     }
-                    break;
-                }
 
-                case NmState::kNormalOperation:
-                {
-                    if (status.NmMessageReceived)
+                    case NmState::kRepeatMessage:
                     {
                         status.NmMessageReceived = false;
                         status.LastNmMessageEpochMs = nowEpochMs;
+                        ++status.RepeatMessageCount;
+
+                        if (elapsed >= config.RepeatMessageTimeMs)
+                        {
+                            const NmState nextState{
+                                status.NetworkRequested
+                                    ? NmState::kNormalOperation
+                                    : NmState::kReadySleep};
+                            if (TransitionTo(channel, nextState, nowEpochMs,
+                                             &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        break;
                     }
 
-                    // NM timeout: no NM messages received within timeout.
-                    const std::uint64_t sinceLast{
-                        (nowEpochMs >= status.LastNmMessageEpochMs)
-                            ? (nowEpochMs - status.LastNmMessageEpochMs)
-                            : 0U};
+                    case NmState::kNormalOperation:
+                    {
+                        if (status.NmMessageReceived)
+                        {
+                            status.NmMessageReceived = false;
+                            status.LastNmMessageEpochMs = nowEpochMs;
+                        }
 
-                    if (!status.NetworkRequested)
-                    {
-                        TransitionTo(channel, NmState::kReadySleep,
-                                     nowEpochMs);
+                        // NM timeout: no NM messages received within timeout.
+                        const std::uint64_t sinceLast{
+                            (nowEpochMs >= status.LastNmMessageEpochMs)
+                                ? (nowEpochMs - status.LastNmMessageEpochMs)
+                                : 0U};
+
+                        if (!status.NetworkRequested)
+                        {
+                            if (TransitionTo(channel, NmState::kReadySleep,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        else if (sinceLast >= config.NmTimeoutMs)
+                        {
+                            ++status.NmTimeoutCount;
+                            // Re-enter RepeatMessage to re-announce.
+                            if (TransitionTo(channel, NmState::kRepeatMessage,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        break;
                     }
-                    else if (sinceLast >= config.NmTimeoutMs)
+
+                    case NmState::kReadySleep:
                     {
-                        ++status.NmTimeoutCount;
-                        // Re-enter RepeatMessage to re-announce.
-                        TransitionTo(channel, NmState::kRepeatMessage,
-                                     nowEpochMs);
+                        if (status.NetworkRequested || status.NmMessageReceived)
+                        {
+                            status.NmMessageReceived = false;
+                            if (TransitionTo(channel, NmState::kNormalOperation,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        else if (elapsed >= config.NmTimeoutMs)
+                        {
+                            if (TransitionTo(channel, NmState::kPrepBusSleep,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        break;
                     }
-                    break;
+
+                    case NmState::kPrepBusSleep:
+                    {
+                        if (status.NetworkRequested || status.NmMessageReceived)
+                        {
+                            status.NmMessageReceived = false;
+                            if (TransitionTo(channel, NmState::kRepeatMessage,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        else if (elapsed >= config.WaitBusSleepTimeMs)
+                        {
+                            ++status.BusSleepCount;
+                            if (TransitionTo(channel, NmState::kBusSleep,
+                                             nowEpochMs, &notification))
+                            {
+                                notifications.push_back(std::move(notification));
+                            }
+                        }
+                        break;
+                    }
+
+                    default:
+                        break;
+                    }
                 }
 
-                case NmState::kReadySleep:
+                handler = mStateChangeHandler;
+            }
+
+            if (handler)
+            {
+                for (const auto &notification : notifications)
                 {
-                    if (status.NetworkRequested || status.NmMessageReceived)
-                    {
-                        status.NmMessageReceived = false;
-                        TransitionTo(channel, NmState::kNormalOperation,
-                                     nowEpochMs);
-                    }
-                    else if (elapsed >= config.NmTimeoutMs)
-                    {
-                        TransitionTo(channel, NmState::kPrepBusSleep,
-                                     nowEpochMs);
-                    }
-                    break;
-                }
-
-                case NmState::kPrepBusSleep:
-                {
-                    if (status.NetworkRequested || status.NmMessageReceived)
-                    {
-                        status.NmMessageReceived = false;
-                        TransitionTo(channel, NmState::kRepeatMessage,
-                                     nowEpochMs);
-                    }
-                    else if (elapsed >= config.WaitBusSleepTimeMs)
-                    {
-                        ++status.BusSleepCount;
-                        TransitionTo(channel, NmState::kBusSleep,
-                                     nowEpochMs);
-                    }
-                    break;
-                }
-
-                default:
-                    break;
+                    handler(notification.ChannelName,
+                            notification.OldState,
+                            notification.NewState);
                 }
             }
         }
@@ -275,26 +313,29 @@ namespace ara
             mStateChangeHandler = nullptr;
         }
 
-        void NetworkManager::TransitionTo(
+        bool NetworkManager::TransitionTo(
             ChannelRuntime &channel,
             NmState newState,
-            std::uint64_t nowEpochMs)
+            std::uint64_t nowEpochMs,
+            StateNotification *notification)
         {
             const NmState oldState{channel.Status.State};
             if (oldState == newState)
             {
-                return;
+                return false;
             }
 
             channel.Status.State = newState;
             channel.Status.Mode = DeriveMode(newState);
             channel.Status.StateEnteredEpochMs = nowEpochMs;
 
-            if (mStateChangeHandler)
+            if (notification != nullptr)
             {
-                mStateChangeHandler(
-                    channel.Config.ChannelName, oldState, newState);
+                notification->ChannelName = channel.Config.ChannelName;
+                notification->OldState = oldState;
+                notification->NewState = newState;
             }
+            return true;
         }
 
         NmMode NetworkManager::DeriveMode(NmState state) const noexcept
@@ -317,22 +358,36 @@ namespace ara
         core::Result<void> NetworkManager::HandleRemoteSleepIndication(
             const std::string &channelName)
         {
-            std::lock_guard<std::mutex> lock{mMutex};
-            auto it{mChannels.find(channelName)};
-            if (it == mChannels.end())
+            StateNotification notification;
+            NmStateChangeHandler handler;
+            bool changed{false};
             {
-                return core::Result<void>::FromError(
-                    MakeErrorCode(NmErrc::kInvalidChannel));
+                std::lock_guard<std::mutex> lock{mMutex};
+                auto it{mChannels.find(channelName)};
+                if (it == mChannels.end())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(NmErrc::kInvalidChannel));
+                }
+
+                auto &channel{it->second};
+                // RSI: remote side requests sleep — transition to PrepBusSleep
+                // if we are in ReadySleep or NormalOperation without local request
+                if (!channel.Status.NetworkRequested &&
+                    (channel.Status.State == NmState::kReadySleep ||
+                     channel.Status.State == NmState::kNormalOperation))
+                {
+                    changed = TransitionTo(channel, NmState::kPrepBusSleep,
+                                           CurrentEpochMs(), &notification);
+                    handler = mStateChangeHandler;
+                }
             }
 
-            auto &channel{it->second};
-            // RSI: remote side requests sleep — transition to PrepBusSleep
-            // if we are in ReadySleep or NormalOperation without local request
-            if (!channel.Status.NetworkRequested &&
-                (channel.Status.State == NmState::kReadySleep ||
-                 channel.Status.State == NmState::kNormalOperation))
+            if (changed && handler)
             {
-                TransitionTo(channel, NmState::kPrepBusSleep, 0U);
+                handler(notification.ChannelName,
+                        notification.OldState,
+                        notification.NewState);
             }
             return core::Result<void>::FromValue();
         }
@@ -340,19 +395,33 @@ namespace ara
         core::Result<void> NetworkManager::HandleRepeatMessageRequest(
             const std::string &channelName)
         {
-            std::lock_guard<std::mutex> lock{mMutex};
-            auto it{mChannels.find(channelName)};
-            if (it == mChannels.end())
+            StateNotification notification;
+            NmStateChangeHandler handler;
+            bool changed{false};
             {
-                return core::Result<void>::FromError(
-                    MakeErrorCode(NmErrc::kInvalidChannel));
+                std::lock_guard<std::mutex> lock{mMutex};
+                auto it{mChannels.find(channelName)};
+                if (it == mChannels.end())
+                {
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(NmErrc::kInvalidChannel));
+                }
+
+                auto &channel{it->second};
+                // RMR: force re-enter RepeatMessage state for re-announcement
+                if (channel.Status.State != NmState::kBusSleep)
+                {
+                    changed = TransitionTo(channel, NmState::kRepeatMessage,
+                                           CurrentEpochMs(), &notification);
+                    handler = mStateChangeHandler;
+                }
             }
 
-            auto &channel{it->second};
-            // RMR: force re-enter RepeatMessage state for re-announcement
-            if (channel.Status.State != NmState::kBusSleep)
+            if (changed && handler)
             {
-                TransitionTo(channel, NmState::kRepeatMessage, 0U);
+                handler(notification.ChannelName,
+                        notification.OldState,
+                        notification.NewState);
             }
             return core::Result<void>::FromValue();
         }
@@ -376,6 +445,11 @@ namespace ara
                 }
             }
             return true;
+        }
+
+        std::uint64_t NetworkManager::CurrentEpochMs() const noexcept
+        {
+            return mLastTickEpochMs;
         }
     }
 }

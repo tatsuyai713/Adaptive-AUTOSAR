@@ -166,6 +166,12 @@ namespace ara
                 ExecutionState reportedState{ExecutionState::kIdle};
             };
 
+            struct StateNotification
+            {
+                std::string processName;
+                ManagedProcessState state{ManagedProcessState::kNotRunning};
+            };
+
             std::map<std::string, ManagedProcess> mProcesses;
             /// @brief Active state per function group (name → state name).
             std::map<std::string, std::string> mFunctionGroupStates;
@@ -179,18 +185,21 @@ namespace ara
             int launchProcess(ManagedProcess &proc);
 
             /// @brief Send SIGTERM to a process and wait for it to exit.
-            void terminateProcess(ManagedProcess &proc);
+            void terminateProcess(
+                ManagedProcess &proc,
+                std::vector<StateNotification> &notifications);
 
             /// @brief Background monitor: reap exited children, update states.
             void monitorLoop();
 
-            /// @brief Notify handler under lock.
+            /// @brief Queue a state-change notification to be invoked out of lock.
             void notifyStateChange(
+                std::vector<StateNotification> &notifications,
                 const std::string &name,
                 ManagedProcessState state);
 
             /// @brief Synchronise reported ExecutionState into managedState.
-            void syncExecutionStates();
+            void syncExecutionStates(std::vector<StateNotification> &notifications);
         };
 
     } // namespace exec

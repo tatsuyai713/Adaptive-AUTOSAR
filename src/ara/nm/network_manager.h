@@ -122,16 +122,26 @@ namespace ara
                 NmChannelStatus Status;
             };
 
-            void TransitionTo(
+            struct StateNotification
+            {
+                std::string ChannelName;
+                NmState OldState{NmState::kBusSleep};
+                NmState NewState{NmState::kBusSleep};
+            };
+
+            bool TransitionTo(
                 ChannelRuntime &channel,
                 NmState newState,
-                std::uint64_t nowEpochMs);
+                std::uint64_t nowEpochMs,
+                StateNotification *notification);
 
             NmMode DeriveMode(NmState state) const noexcept;
+            std::uint64_t CurrentEpochMs() const noexcept;
 
             mutable std::mutex mMutex;
             std::unordered_map<std::string, ChannelRuntime> mChannels;
             NmStateChangeHandler mStateChangeHandler;
+            std::uint64_t mLastTickEpochMs{0U};
         };
     }
 }

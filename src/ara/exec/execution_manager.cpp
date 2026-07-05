@@ -98,66 +98,74 @@ namespace ara
                     MakeErrorCode(ExecErrc::kInvalidArguments));
             }
 
-            std::lock_guard<std::mutex> _lock{mMutex};
+            std::vector<StateNotification> _notifications;
+            ProcessStateChangeHandler _handler;
 
-            // Determine previous state (if any)
-            const std::string cPreviousState = [&]() -> std::string
             {
-                auto _fg{mFunctionGroupStates.find(functionGroup)};
-                return (_fg != mFunctionGroupStates.end()) ? _fg->second : std::string{};
-            }();
+                std::lock_guard<std::mutex> _lock{mMutex};
 
-            // Stop processes that belong to functionGroup but are NOT in the new state
-            for (auto &_pair : mProcesses)
-            {
-                ManagedProcess &_mp{_pair.second};
-                if (_mp.descriptor.functionGroup != functionGroup)
+                // Stop processes that belong to functionGroup but are NOT in the new state
+                for (auto &_pair : mProcesses)
                 {
-                    continue;
-                }
-                if (_mp.descriptor.activeState == state)
-                {
-                    continue; // Should be (or remain) running
-                }
-                // Terminate processes that belong to old state
-                if (_mp.managedState == ManagedProcessState::kRunning ||
-                    _mp.managedState == ManagedProcessState::kStarting)
-                {
-                    terminateProcess(_mp);
-                }
-            }
-
-            // Start processes that belong to the new state
-            for (auto &_pair : mProcesses)
-            {
-                ManagedProcess &_mp{_pair.second};
-                if (_mp.descriptor.functionGroup != functionGroup ||
-                    _mp.descriptor.activeState != state)
-                {
-                    continue;
-                }
-                if (_mp.managedState == ManagedProcessState::kNotRunning ||
-                    _mp.managedState == ManagedProcessState::kTerminated ||
-                    _mp.managedState == ManagedProcessState::kFailed)
-                {
-                    const int _pid{launchProcess(_mp)};
-                    if (_pid > 0)
+                    ManagedProcess &_mp{_pair.second};
+                    if (_mp.descriptor.functionGroup != functionGroup)
                     {
-                        _mp.pid = _pid;
-                        _mp.managedState = ManagedProcessState::kStarting;
-                        notifyStateChange(_mp.descriptor.name,
-                                          ManagedProcessState::kStarting);
+                        continue;
                     }
-                    else
+                    if (_mp.descriptor.activeState == state)
                     {
-                        _mp.managedState = ManagedProcessState::kFailed;
-                        notifyStateChange(_mp.descriptor.name,
-                                          ManagedProcessState::kFailed);
+                        continue; // Should be (or remain) running
+                    }
+                    if (_mp.managedState == ManagedProcessState::kRunning ||
+                        _mp.managedState == ManagedProcessState::kStarting)
+                    {
+                        terminateProcess(_mp, _notifications);
                     }
                 }
+
+                // Start processes that belong to the new state
+                for (auto &_pair : mProcesses)
+                {
+                    ManagedProcess &_mp{_pair.second};
+                    if (_mp.descriptor.functionGroup != functionGroup ||
+                        _mp.descriptor.activeState != state)
+                    {
+                        continue;
+                    }
+                    if (_mp.managedState == ManagedProcessState::kNotRunning ||
+                        _mp.managedState == ManagedProcessState::kTerminated ||
+                        _mp.managedState == ManagedProcessState::kFailed)
+                    {
+                        const int _pid{launchProcess(_mp)};
+                        if (_pid > 0)
+                        {
+                            _mp.pid = _pid;
+                            _mp.managedState = ManagedProcessState::kStarting;
+                            notifyStateChange(
+                                _notifications, _mp.descriptor.name,
+                                ManagedProcessState::kStarting);
+                        }
+                        else
+                        {
+                            _mp.managedState = ManagedProcessState::kFailed;
+                            notifyStateChange(
+                                _notifications, _mp.descriptor.name,
+                                ManagedProcessState::kFailed);
+                        }
+                    }
+                }
+
+                mFunctionGroupStates[functionGroup] = state;
+                _handler = mStateChangeHandler;
             }
 
-            mFunctionGroupStates[functionGroup] = state;
+            if (_handler)
+            {
+                for (const auto &_notification : _notifications)
+                {
+                    _handler(_notification.processName, _notification.state);
+                }
+            }
             return core::Result<void>::FromValue();
         }
 
@@ -170,21 +178,30 @@ namespace ara
                     MakeErrorCode(ExecErrc::kInvalidArguments));
             }
 
-            std::lock_guard<std::mutex> _lock{mMutex};
-
+            std::vector<StateNotification> _notifications;
+            ProcessStateChangeHandler _handler;
             bool _found{false};
-            for (auto &_pair : mProcesses)
             {
-                ManagedProcess &_mp{_pair.second};
-                if (_mp.descriptor.functionGroup != functionGroup)
+                std::lock_guard<std::mutex> _lock{mMutex};
+                for (auto &_pair : mProcesses)
                 {
-                    continue;
+                    ManagedProcess &_mp{_pair.second};
+                    if (_mp.descriptor.functionGroup != functionGroup)
+                    {
+                        continue;
+                    }
+                    _found = true;
+                    if (_mp.managedState == ManagedProcessState::kRunning ||
+                        _mp.managedState == ManagedProcessState::kStarting)
+                    {
+                        terminateProcess(_mp, _notifications);
+                    }
                 }
-                _found = true;
-                if (_mp.managedState == ManagedProcessState::kRunning ||
-                    _mp.managedState == ManagedProcessState::kStarting)
+
+                if (_found)
                 {
-                    terminateProcess(_mp);
+                    mFunctionGroupStates.erase(functionGroup);
+                    _handler = mStateChangeHandler;
                 }
             }
 
@@ -193,8 +210,13 @@ namespace ara
                 return core::Result<void>::FromError(
                     MakeErrorCode(ExecErrc::kFailed));
             }
-
-            mFunctionGroupStates.erase(functionGroup);
+            if (_handler)
+            {
+                for (const auto &_notification : _notifications)
+                {
+                    _handler(_notification.processName, _notification.state);
+                }
+            }
             return core::Result<void>::FromValue();
         }
 
@@ -221,13 +243,14 @@ namespace ara
             // Terminate all running processes
             {
                 std::lock_guard<std::mutex> _lock{mMutex};
+                std::vector<StateNotification> _notifications;
                 for (auto &_pair : mProcesses)
                 {
                     ManagedProcess &_mp{_pair.second};
                     if (_mp.managedState == ManagedProcessState::kRunning ||
                         _mp.managedState == ManagedProcessState::kStarting)
                     {
-                        terminateProcess(_mp);
+                        terminateProcess(_mp, _notifications);
                     }
                 }
             }
@@ -346,7 +369,9 @@ namespace ara
 #endif
         }
 
-        void ExecutionManager::terminateProcess(ManagedProcess &proc)
+        void ExecutionManager::terminateProcess(
+            ManagedProcess &proc,
+            std::vector<StateNotification> &notifications)
         {
             if (proc.pid <= 0)
             {
@@ -357,7 +382,7 @@ namespace ara
             // Send SIGTERM
             ::kill(static_cast<pid_t>(proc.pid), SIGTERM);
             proc.managedState = ManagedProcessState::kTerminating;
-            notifyStateChange(proc.descriptor.name,
+            notifyStateChange(notifications, proc.descriptor.name,
                               ManagedProcessState::kTerminating);
 
             // Wait up to terminationTimeout for the child to exit
@@ -373,7 +398,7 @@ namespace ara
                 {
                     proc.pid = -1;
                     proc.managedState = ManagedProcessState::kTerminated;
-                    notifyStateChange(proc.descriptor.name,
+                    notifyStateChange(notifications, proc.descriptor.name,
                                       ManagedProcessState::kTerminated);
                     return;
                 }
@@ -385,7 +410,7 @@ namespace ara
             ::waitpid(static_cast<pid_t>(proc.pid), nullptr, 0);
             proc.pid = -1;
             proc.managedState = ManagedProcessState::kTerminated;
-            notifyStateChange(proc.descriptor.name,
+            notifyStateChange(notifications, proc.descriptor.name,
                               ManagedProcessState::kTerminated);
         }
 
@@ -395,54 +420,68 @@ namespace ara
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-                std::lock_guard<std::mutex> _lock{mMutex};
-                syncExecutionStates();
-
-                // Reap any exited children (non-blocking)
-                for (auto &_pair : mProcesses)
+                std::vector<StateNotification> _notifications;
+                ProcessStateChangeHandler _handler;
                 {
-                    ManagedProcess &_mp{_pair.second};
-                    if (_mp.pid <= 0)
+                    std::lock_guard<std::mutex> _lock{mMutex};
+                    syncExecutionStates(_notifications);
+
+                    // Reap any exited children (non-blocking)
+                    for (auto &_pair : mProcesses)
                     {
-                        continue;
+                        ManagedProcess &_mp{_pair.second};
+                        if (_mp.pid <= 0)
+                        {
+                            continue;
+                        }
+                        int _status{0};
+                        const pid_t _ret{
+                            ::waitpid(static_cast<pid_t>(_mp.pid), &_status, WNOHANG)};
+                        if (_ret == static_cast<pid_t>(_mp.pid))
+                        {
+                            _mp.pid = -1;
+                            const bool cClean{WIFEXITED(_status) &&
+                                              WEXITSTATUS(_status) == 0};
+                            if (_mp.managedState == ManagedProcessState::kTerminating ||
+                                cClean)
+                            {
+                                _mp.managedState = ManagedProcessState::kTerminated;
+                                notifyStateChange(
+                                    _notifications, _mp.descriptor.name,
+                                    ManagedProcessState::kTerminated);
+                            }
+                            else
+                            {
+                                _mp.managedState = ManagedProcessState::kFailed;
+                                notifyStateChange(
+                                    _notifications, _mp.descriptor.name,
+                                    ManagedProcessState::kFailed);
+                            }
+                        }
                     }
-                    int _status{0};
-                    const pid_t _ret{
-                        ::waitpid(static_cast<pid_t>(_mp.pid), &_status, WNOHANG)};
-                    if (_ret == static_cast<pid_t>(_mp.pid))
+                    _handler = mStateChangeHandler;
+                }
+
+                if (_handler)
+                {
+                    for (const auto &_notification : _notifications)
                     {
-                        _mp.pid = -1;
-                        const bool cClean{WIFEXITED(_status) &&
-                                          WEXITSTATUS(_status) == 0};
-                        if (_mp.managedState == ManagedProcessState::kTerminating ||
-                            cClean)
-                        {
-                            _mp.managedState = ManagedProcessState::kTerminated;
-                            notifyStateChange(_mp.descriptor.name,
-                                              ManagedProcessState::kTerminated);
-                        }
-                        else
-                        {
-                            _mp.managedState = ManagedProcessState::kFailed;
-                            notifyStateChange(_mp.descriptor.name,
-                                              ManagedProcessState::kFailed);
-                        }
+                        _handler(_notification.processName, _notification.state);
                     }
                 }
             }
         }
 
         void ExecutionManager::notifyStateChange(
+            std::vector<StateNotification> &notifications,
             const std::string &name,
             ManagedProcessState state)
         {
-            if (mStateChangeHandler)
-            {
-                mStateChangeHandler(name, state);
-            }
+            notifications.push_back(StateNotification{name, state});
         }
 
-        void ExecutionManager::syncExecutionStates()
+        void ExecutionManager::syncExecutionStates(
+            std::vector<StateNotification> &notifications)
         {
             // Pull reported execution states from ExecutionServer into local records
             const auto cSnapshot{mExecutionServer.GetExecutionStatesSnapshot()};
@@ -466,7 +505,7 @@ namespace ara
                     cNewReported == ExecutionState::kRunning)
                 {
                     _mp.managedState = ManagedProcessState::kRunning;
-                    notifyStateChange(_mp.descriptor.name,
+                    notifyStateChange(notifications, _mp.descriptor.name,
                                       ManagedProcessState::kRunning);
                 }
             }

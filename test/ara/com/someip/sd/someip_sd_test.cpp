@@ -69,6 +69,7 @@ namespace ara
                                          10)}
                     {
                     }
+
                 };
 
                 const std::string SomeIpSdTest::cIpAddress{"127.0.0.1"};

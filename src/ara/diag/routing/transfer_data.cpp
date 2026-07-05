@@ -53,6 +53,13 @@ namespace ara
 
                     if (_result)
                     {
+                        if (transferRequestParameterRecord.size() < mMemorySize)
+                        {
+                            GenerateNegativeResponse(_response, cIncorrectMessageLength);
+                            _result = false;
+                            break;
+                        }
+
                         std::copy(transferRequestParameterRecord.cbegin(),
                                   transferRequestParameterRecord.cbegin() + mMemorySize,
                                   mMemoryPool.begin() + mMemoryAddress);

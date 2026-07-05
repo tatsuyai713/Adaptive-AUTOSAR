@@ -80,6 +80,28 @@ namespace ara
             EXPECT_TRUE(_pdu.HasControlBit(NmControlBit::kPartialNetwork));
         }
 
+        TEST(NmPduTest, SerializeRejectsPnMaskWithoutControlBit)
+        {
+            NmPdu _pdu;
+            _pdu.SourceNodeId = 0x01;
+            _pdu.UserData = {0x00, 0x00};
+            _pdu.PnFilterMask = {0x01};
+
+            auto _result = _pdu.Serialize();
+            EXPECT_FALSE(_result.HasValue());
+        }
+
+        TEST(NmPduTest, SerializeRejectsOversizedPnFilterMask)
+        {
+            NmPdu _pdu;
+            _pdu.SetControlBit(NmControlBit::kPartialNetwork);
+            _pdu.PnFilterMask = {0x00, 0x01, 0x02, 0x03,
+                                 0x04, 0x05, 0x06, 0x07};
+
+            auto _result = _pdu.Serialize();
+            EXPECT_FALSE(_result.HasValue());
+        }
+
         TEST(NmPduTest, DeserializeRoundTrip)
         {
             NmPdu _original;
@@ -129,6 +151,29 @@ namespace ara
             EXPECT_EQ(pdu.PnFilterMask.size(), 3U);
             EXPECT_EQ(pdu.PnFilterMask[0], 0xF0);
             EXPECT_EQ(pdu.PnFilterMask[2], 0xAA);
+        }
+
+        TEST(NmPduTest, DeserializeRejectsExtraPayloadWithoutPnBit)
+        {
+            std::vector<std::uint8_t> raw{
+                0x20, 0x00,
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+                0xAA};
+
+            auto _result = NmPdu::Deserialize(raw, 6U);
+            EXPECT_FALSE(_result.HasValue());
+        }
+
+        TEST(NmPduTest, DeserializeRejectsOversizedPnFilterMask)
+        {
+            std::vector<std::uint8_t> raw{
+                0x20, 0x08,
+                0x00, 0x01,
+                0x10, 0x11, 0x12, 0x13,
+                0x14, 0x15, 0x16, 0x17};
+
+            auto _result = NmPdu::Deserialize(raw, 2U);
+            EXPECT_FALSE(_result.HasValue());
         }
 
         TEST(NmPduTest, MultipleControlBits)

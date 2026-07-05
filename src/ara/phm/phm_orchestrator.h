@@ -100,7 +100,9 @@ namespace ara
             PlatformHealthState mCurrentState{PlatformHealthState::kNormal};
             PlatformHealthCallback mCallback;
 
-            void UpdatePlatformState();
+            bool UpdatePlatformState(
+                PlatformHealthState &oldState,
+                PlatformHealthState &newState);
         };
     }
 }

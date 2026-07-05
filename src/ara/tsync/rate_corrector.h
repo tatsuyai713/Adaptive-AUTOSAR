@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <vector>
 #include "../core/result.h"
@@ -24,6 +25,8 @@ namespace ara
             double Kd{0.1};   ///< Derivative gain.
             double MaxCorrectionPpb{1000.0}; ///< Max adjustment in ppb.
             uint32_t WindowSize{16};         ///< Sliding window size.
+            bool ApplyToSystemClock{true};   ///< Apply correction to OS clock if supported.
+            std::function<int(long)> FrequencyAdjustmentApplier; ///< Test hook for OS adjustment.
         };
 
         /// @brief Snapshot of the corrector state.

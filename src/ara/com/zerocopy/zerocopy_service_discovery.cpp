@@ -26,44 +26,52 @@ namespace ara
             void ZeroCopyServiceDiscovery::OfferService(
                 const ChannelDescriptor &channel)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                for (const auto &svc : mOfferedServices)
+                ServiceAvailabilityHandler notify;
+                DiscoveredService offered;
                 {
-                    if (ChannelMatches(svc.Channel, channel))
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    for (const auto &svc : mOfferedServices)
                     {
-                        return; // already offered
+                        if (ChannelMatches(svc.Channel, channel))
+                        {
+                            return; // already offered
+                        }
                     }
+                    DiscoveredService ds;
+                    ds.Channel = channel;
+                    ds.State = ServiceAvailability::kAvailable;
+                    mOfferedServices.push_back(std::move(ds));
+                    offered = mOfferedServices.back();
+                    notify = mHandler;
                 }
-                DiscoveredService ds;
-                ds.Channel = channel;
-                ds.State = ServiceAvailability::kAvailable;
-                mOfferedServices.push_back(std::move(ds));
 
-                if (mHandler)
+                if (notify)
                 {
-                    mHandler(mOfferedServices.back());
+                    notify(offered);
                 }
             }
 
             void ZeroCopyServiceDiscovery::StopOfferService(
                 const ChannelDescriptor &channel)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
                 ServiceAvailabilityHandler notify;
                 DiscoveredService removed;
-
-                auto it = std::remove_if(
-                    mOfferedServices.begin(), mOfferedServices.end(),
-                    [&](const DiscoveredService &s)
-                    {
-                        return ChannelMatches(s.Channel, channel);
-                    });
-                if (it != mOfferedServices.end())
                 {
-                    removed = *it;
-                    removed.State = ServiceAvailability::kNotAvailable;
-                    notify = mHandler;
-                    mOfferedServices.erase(it, mOfferedServices.end());
+                    std::lock_guard<std::mutex> lock(mMutex);
+
+                    auto it = std::remove_if(
+                        mOfferedServices.begin(), mOfferedServices.end(),
+                        [&](const DiscoveredService &s)
+                        {
+                            return ChannelMatches(s.Channel, channel);
+                        });
+                    if (it != mOfferedServices.end())
+                    {
+                        removed = *it;
+                        removed.State = ServiceAvailability::kNotAvailable;
+                        notify = mHandler;
+                        mOfferedServices.erase(it, mOfferedServices.end());
+                    }
                 }
 
                 if (notify)
@@ -75,45 +83,61 @@ namespace ara
             void ZeroCopyServiceDiscovery::ServiceFound(
                 const ChannelDescriptor &channel)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                for (auto &svc : mFoundServices)
+                ServiceAvailabilityHandler notify;
+                DiscoveredService found;
                 {
-                    if (ChannelMatches(svc.Channel, channel))
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    bool matched{false};
+                    for (auto &svc : mFoundServices)
                     {
-                        svc.State = ServiceAvailability::kAvailable;
-                        if (mHandler)
+                        if (ChannelMatches(svc.Channel, channel))
                         {
-                            mHandler(svc);
+                            matched = true;
+                            svc.State = ServiceAvailability::kAvailable;
+                            found = svc;
+                            notify = mHandler;
+                            break;
                         }
-                        return;
+                    }
+                    if (!matched)
+                    {
+                        DiscoveredService ds;
+                        ds.Channel = channel;
+                        ds.State = ServiceAvailability::kAvailable;
+                        mFoundServices.push_back(std::move(ds));
+                        found = mFoundServices.back();
+                        notify = mHandler;
                     }
                 }
-                DiscoveredService ds;
-                ds.Channel = channel;
-                ds.State = ServiceAvailability::kAvailable;
-                mFoundServices.push_back(std::move(ds));
 
-                if (mHandler)
+                if (notify)
                 {
-                    mHandler(mFoundServices.back());
+                    notify(found);
                 }
             }
 
             void ZeroCopyServiceDiscovery::ServiceLost(
                 const ChannelDescriptor &channel)
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                for (auto &svc : mFoundServices)
+                ServiceAvailabilityHandler notify;
+                DiscoveredService lost;
                 {
-                    if (ChannelMatches(svc.Channel, channel))
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    for (auto &svc : mFoundServices)
                     {
-                        svc.State = ServiceAvailability::kNotAvailable;
-                        if (mHandler)
+                        if (ChannelMatches(svc.Channel, channel))
                         {
-                            mHandler(svc);
+                            svc.State = ServiceAvailability::kNotAvailable;
+                            lost = svc;
+                            notify = mHandler;
+                            break;
                         }
-                        return;
                     }
+                }
+
+                if (notify)
+                {
+                    notify(lost);
                 }
             }
 

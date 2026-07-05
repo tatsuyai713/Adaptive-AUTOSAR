@@ -35,6 +35,40 @@ namespace ara
             EXPECT_FALSE(_result.HasValue());
         }
 
+        TEST(CampaignManagerTest, CreateWithEmptyPackageNameFails)
+        {
+            CampaignManager _mgr;
+            auto _result = _mgr.CreateCampaign(
+                "camp1",
+                {{"pkg1", "cluster1", "1.0.0"},
+                 {"", "cluster2", "2.0.0"}});
+
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_TRUE(_mgr.ListCampaignIds().empty());
+        }
+
+        TEST(CampaignManagerTest, CreateWithEmptyTargetClusterFails)
+        {
+            CampaignManager _mgr;
+            auto _result = _mgr.CreateCampaign(
+                "camp1",
+                {{"pkg1", "", "1.0.0"}});
+
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_TRUE(_mgr.ListCampaignIds().empty());
+        }
+
+        TEST(CampaignManagerTest, CreateWithEmptyVersionFails)
+        {
+            CampaignManager _mgr;
+            auto _result = _mgr.CreateCampaign(
+                "camp1",
+                {{"pkg1", "cluster1", ""}});
+
+            EXPECT_FALSE(_result.HasValue());
+            EXPECT_TRUE(_mgr.ListCampaignIds().empty());
+        }
+
         TEST(CampaignManagerTest, StartCampaign)
         {
             CampaignManager _mgr;

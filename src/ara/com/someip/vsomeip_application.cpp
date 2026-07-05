@@ -5,6 +5,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <mutex>
@@ -115,24 +116,99 @@ namespace ara
 
                         if (_application)
                         {
-                            _application->stop();
+                            try
+                            {
+                                _application->stop();
+                            }
+                            catch (const std::exception &ex)
+                            {
+                                std::cerr
+                                    << "[WARN] vsomeip stop failed: "
+                                    << ex.what()
+                                    << std::endl;
+                            }
+                            catch (...)
+                            {
+                                std::cerr
+                                    << "[WARN] vsomeip stop failed with unknown exception."
+                                    << std::endl;
+                            }
                         }
 
                         if (mThread.joinable())
                         {
-                            if (mThread.get_id() == std::this_thread::get_id())
+                            try
                             {
-                                mThread.detach();
+                                if (mThread.get_id() == std::this_thread::get_id())
+                                {
+                                    mThread.detach();
+                                }
+                                else
+                                {
+                                    mThread.join();
+                                }
                             }
-                            else
+                            catch (const std::exception &ex)
                             {
-                                mThread.join();
+                                std::cerr
+                                    << "[WARN] vsomeip thread shutdown failed: "
+                                    << ex.what()
+                                    << std::endl;
+                                if (mThread.joinable())
+                                {
+                                    mThread.detach();
+                                }
+                            }
+                            catch (...)
+                            {
+                                std::cerr
+                                    << "[WARN] vsomeip thread shutdown failed with unknown exception."
+                                    << std::endl;
+                                if (mThread.joinable())
+                                {
+                                    mThread.detach();
+                                }
                             }
                         }
 
                         _lock.lock();
-                        mApplication.reset();
+                        try
+                        {
+                            mApplication.reset();
+                        }
+                        catch (const std::exception &ex)
+                        {
+                            std::cerr
+                                << "[WARN] vsomeip application release failed: "
+                                << ex.what()
+                                << std::endl;
+                        }
+                        catch (...)
+                        {
+                            std::cerr
+                                << "[WARN] vsomeip application release failed with unknown exception."
+                                << std::endl;
+                        }
                         mRegistered = false;
+                        _lock.unlock();
+
+                        try
+                        {
+                            _application.reset();
+                        }
+                        catch (const std::exception &ex)
+                        {
+                            std::cerr
+                                << "[WARN] vsomeip application destruction failed: "
+                                << ex.what()
+                                << std::endl;
+                        }
+                        catch (...)
+                        {
+                            std::cerr
+                                << "[WARN] vsomeip application destruction failed with unknown exception."
+                                << std::endl;
+                        }
                     }
                 };
 

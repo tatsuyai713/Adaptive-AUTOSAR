@@ -263,8 +263,7 @@ namespace ara
             X509_CRL_free(_crl);
             X509_free(_cert);
 
-            // rc == 0 means found (revoked), otherwise not revoked
-            return core::Result<bool>::FromValue(_rc == 0);
+            return core::Result<bool>::FromValue(_rc == 1);
         }
     }
 }

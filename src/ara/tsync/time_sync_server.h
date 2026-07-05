@@ -129,6 +129,7 @@ namespace ara
         private:
             SynchronizedTimeBaseProvider &mProvider;
             TimeSyncServerConfig mConfig;
+            std::atomic<uint32_t> mPollIntervalMs;
 
             mutable std::mutex mMutex;
             std::vector<TimeSyncClient *> mConsumers;
@@ -149,6 +150,9 @@ namespace ara
                 std::chrono::steady_clock::time_point steadyTime);
             void handleProviderLoss();
             void notifyAvailability(bool available);
+            void notifyCorrection(
+                std::chrono::nanoseconds correctionAmount,
+                std::chrono::system_clock::time_point correctedTime);
         };
 
     } // namespace tsync

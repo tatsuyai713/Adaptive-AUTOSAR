@@ -93,8 +93,13 @@ namespace ara
 
         void AbortHandler::InvokeCallbacks(const AbortInfo &info)
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            for (const auto &cb : mCallbacks)
+            std::vector<AbortCallback> callbacks;
+            {
+                std::lock_guard<std::mutex> lock(mMutex);
+                callbacks = mCallbacks;
+            }
+
+            for (const auto &cb : callbacks)
             {
                 if (cb)
                 {

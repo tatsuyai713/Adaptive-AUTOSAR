@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstdint>
 #include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <vector>
 #include "../../../src/ara/per/key_value_storage.h"
 
@@ -152,6 +154,59 @@ namespace ara
 
             EXPECT_EQ(storage.GetValue<int>("original").Value(), 1);
             EXPECT_FALSE(storage.HasKey("newKey"));
+            EXPECT_EQ(storage.GetPendingChangeCount(), 0U);
+        }
+
+        TEST_F(KeyValueStorageTest, SyncResetsPendingChangeCount)
+        {
+            KeyValueStorage storage(cTestFilePath);
+
+            storage.SetStringValue("name", "AUTOSAR");
+            ASSERT_EQ(storage.GetPendingChangeCount(), 1U);
+
+            auto result = storage.SyncToStorage();
+            ASSERT_TRUE(result.HasValue());
+            EXPECT_EQ(storage.GetPendingChangeCount(), 0U);
+        }
+
+        TEST_F(KeyValueStorageTest, SyncReportsWriteOpenFailure)
+        {
+            const std::string missingDir{"/tmp/ara_per_missing_dir"};
+            const std::string missingDirPath{
+                missingDir + "/kvs.dat"};
+            std::remove(missingDirPath.c_str());
+            ::rmdir(missingDir.c_str());
+
+            KeyValueStorage storage(missingDirPath);
+
+            storage.SetStringValue("name", "AUTOSAR");
+            auto result = storage.SyncToStorage();
+
+            EXPECT_FALSE(result.HasValue());
+            EXPECT_TRUE(result.CheckError(
+                MakeErrorCode(PerErrc::kPhysicalStorageFailure)));
+            EXPECT_EQ(storage.GetPendingChangeCount(), 1U);
+        }
+
+        TEST_F(KeyValueStorageTest, SyncReportsRenameFailure)
+        {
+            const std::string directoryPath{"/tmp/ara_per_kvs_dir_target"};
+            std::remove((directoryPath + ".tmp").c_str());
+            ::rmdir(directoryPath.c_str());
+            ASSERT_EQ(::mkdir(directoryPath.c_str(), 0755), 0);
+
+            KeyValueStorage storage(directoryPath);
+            storage.SetStringValue("name", "AUTOSAR");
+
+            auto result = storage.SyncToStorage();
+
+            EXPECT_FALSE(result.HasValue());
+            EXPECT_TRUE(result.CheckError(
+                MakeErrorCode(PerErrc::kPhysicalStorageFailure)));
+            EXPECT_EQ(storage.GetPendingChangeCount(), 1U);
+
+            std::remove((directoryPath + ".tmp").c_str());
+            ::rmdir(directoryPath.c_str());
         }
 
         TEST_F(KeyValueStorageTest, OverwriteExistingKey)

@@ -40,6 +40,9 @@ namespace ara
 
                     void ensureApplication();
 
+                    void onMessageReceived(SomeIpSdMessage &&message);
+                    void sendFindService();
+
                     void onAvailability(
                         vsomeip::service_t service,
                         vsomeip::instance_t instance,

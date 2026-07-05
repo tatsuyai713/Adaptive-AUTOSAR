@@ -37,8 +37,8 @@ namespace ara
 
             ProxyTrigger(const ProxyTrigger &) = delete;
             ProxyTrigger &operator=(const ProxyTrigger &) = delete;
-            ProxyTrigger(ProxyTrigger &&) = default;
-            ProxyTrigger &operator=(ProxyTrigger &&) = default;
+            ProxyTrigger(ProxyTrigger &&) = delete;
+            ProxyTrigger &operator=(ProxyTrigger &&) = delete;
 
             /// @brief Subscribe to trigger notifications.
             /// @returns Result indicating success or error.
@@ -98,10 +98,15 @@ namespace ara
 
                 mTriggerCount.fetch_add(1U);
 
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (mHandler)
+                std::function<void()> handler;
                 {
-                    mHandler();
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    handler = mHandler;
+                }
+
+                if (handler)
+                {
+                    handler();
                 }
             }
         };
@@ -120,8 +125,8 @@ namespace ara
 
             SkeletonTrigger(const SkeletonTrigger &) = delete;
             SkeletonTrigger &operator=(const SkeletonTrigger &) = delete;
-            SkeletonTrigger(SkeletonTrigger &&) = default;
-            SkeletonTrigger &operator=(SkeletonTrigger &&) = default;
+            SkeletonTrigger(SkeletonTrigger &&) = delete;
+            SkeletonTrigger &operator=(SkeletonTrigger &&) = delete;
 
             /// @brief Offer this trigger for subscription.
             /// @returns Result indicating success or error.
@@ -169,16 +174,30 @@ namespace ara
             /// @returns Error if not offered or no subscribers.
             core::Result<void> Fire()
             {
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (!mOffered)
+                std::vector<ProxyTrigger *> subscribers;
                 {
-                    return core::Result<void>::FromError(
-                        MakeErrorCode(ComErrc::kServiceNotOffered));
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    if (!mOffered)
+                    {
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(ComErrc::kServiceNotOffered));
+                    }
+
+                    if (mSubscribers.empty())
+                    {
+                        return core::Result<void>::FromError(
+                            MakeErrorCode(ComErrc::kNoClients));
+                    }
+
+                    subscribers = mSubscribers;
                 }
 
-                for (auto *sub : mSubscribers)
+                for (auto *sub : subscribers)
                 {
-                    sub->OnTriggerReceived();
+                    if (sub != nullptr)
+                    {
+                        sub->OnTriggerReceived();
+                    }
                 }
 
                 return core::Result<void>::FromValue();

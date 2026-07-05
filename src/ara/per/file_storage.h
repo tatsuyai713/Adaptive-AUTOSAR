@@ -40,6 +40,7 @@ namespace ara
             std::uint64_t mQuotaBytes{0U};
 
             std::string GetFullPath(const std::string &fileName) const;
+            bool IsValidFileName(const std::string &fileName) const noexcept;
 
         public:
             /// @brief Constructor

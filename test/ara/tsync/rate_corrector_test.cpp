@@ -1,13 +1,24 @@
 #include <gtest/gtest.h>
+#include <cmath>
 #include "../../../src/ara/tsync/rate_corrector.h"
 
 namespace ara
 {
     namespace tsync
     {
+        namespace
+        {
+            RateCorrectorConfig NoKernelAdjustmentConfig()
+            {
+                RateCorrectorConfig cfg;
+                cfg.ApplyToSystemClock = false;
+                return cfg;
+            }
+        }
+
         TEST(RateCorrectorTest, InitialState)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             EXPECT_FALSE(_rc.IsLocked());
             EXPECT_DOUBLE_EQ(_rc.GetCorrectionPpb(), 0.0);
             auto _state = _rc.GetState();
@@ -17,7 +28,7 @@ namespace ara
 
         TEST(RateCorrectorTest, FeedOffsetReturnsResult)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             auto _r = _rc.FeedOffset(100.0);
             EXPECT_TRUE(_r.HasValue());
             // Correction should be non-zero after a positive offset
@@ -26,7 +37,7 @@ namespace ara
 
         TEST(RateCorrectorTest, MultipleSamplesConverge)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             for (int i = 0; i < 20; ++i)
             {
                 _rc.FeedOffset(50.0);
@@ -38,7 +49,7 @@ namespace ara
 
         TEST(RateCorrectorTest, ResetClearsState)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             _rc.FeedOffset(100.0);
             _rc.Reset();
             EXPECT_DOUBLE_EQ(_rc.GetCorrectionPpb(), 0.0);
@@ -53,6 +64,7 @@ namespace ara
             _cfg.Ki = 0.0;
             _cfg.Kd = 0.0;
             _cfg.MaxCorrectionPpb = 500.0;
+            _cfg.ApplyToSystemClock = false;
             RateCorrector _rc(_cfg);
             auto _r = _rc.FeedOffset(1000.0);
             EXPECT_TRUE(_r.HasValue());
@@ -62,7 +74,7 @@ namespace ara
 
         TEST(RateCorrectorTest, NegativeOffset)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             auto _r = _rc.FeedOffset(-200.0);
             EXPECT_TRUE(_r.HasValue());
             // Should produce a negative correction
@@ -71,10 +83,42 @@ namespace ara
 
         TEST(RateCorrectorTest, ZeroOffsetProducesZero)
         {
-            RateCorrector _rc;
+            RateCorrector _rc{NoKernelAdjustmentConfig()};
             auto _r = _rc.FeedOffset(0.0);
             EXPECT_TRUE(_r.HasValue());
             EXPECT_DOUBLE_EQ(_r.Value(), 0.0);
+        }
+
+        TEST(RateCorrectorTest, ReportsFrequencyAdjustmentFailure)
+        {
+            RateCorrectorConfig _cfg;
+            _cfg.ApplyToSystemClock = true;
+            _cfg.FrequencyAdjustmentApplier = [](long) { return -1; };
+            RateCorrector _rc{_cfg};
+
+            auto _r = _rc.FeedOffset(100.0);
+
+            EXPECT_FALSE(_r.HasValue());
+            EXPECT_TRUE(_r.CheckError(MakeErrorCode(TsyncErrc::kQueryFailed)));
+        }
+
+        TEST(RateCorrectorTest, AppliesComputedFrequencyAdjustment)
+        {
+            long _appliedFrequency = 0;
+            RateCorrectorConfig _cfg;
+            _cfg.ApplyToSystemClock = true;
+            _cfg.FrequencyAdjustmentApplier =
+                [&](long freq)
+                {
+                    _appliedFrequency = freq;
+                    return 0;
+                };
+            RateCorrector _rc{_cfg};
+
+            auto _r = _rc.FeedOffset(100.0);
+
+            ASSERT_TRUE(_r.HasValue());
+            EXPECT_NE(_appliedFrequency, 0);
         }
     }
 }

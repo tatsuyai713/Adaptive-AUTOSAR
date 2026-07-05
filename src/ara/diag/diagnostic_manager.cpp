@@ -130,30 +130,43 @@ namespace ara
 
         uint32_t DiagnosticManager::CheckTimingConstraints()
         {
-            std::lock_guard<std::mutex> lock(mMutex);
-            auto now = std::chrono::steady_clock::now();
+            std::vector<std::pair<uint32_t, uint8_t>> callbacks;
+            ResponsePendingCallback callback;
             uint32_t rpCount = 0;
 
-            for (auto &kv : mPending)
             {
-                auto &req = kv.second;
-                if (req.ResponsePending) continue;
+                std::lock_guard<std::mutex> lock(mMutex);
+                auto now = std::chrono::steady_clock::now();
+                callback = mRpCallback;
 
-                auto elapsed =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        now - req.ArrivalTime);
-
-                uint16_t threshold = mTiming.P2ServerMs;
-                if (threshold > 0 && elapsed.count() >= threshold)
+                for (auto &kv : mPending)
                 {
-                    req.ResponsePending = true;
-                    ++rpCount;
-                    if (mRpCallback)
+                    auto &req = kv.second;
+                    if (req.ResponsePending) continue;
+
+                    auto elapsed =
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now - req.ArrivalTime);
+
+                    uint16_t threshold = mTiming.P2ServerMs;
+                    if (threshold > 0 && elapsed.count() >= threshold)
                     {
-                        mRpCallback(req.RequestId, req.ServiceId);
+                        req.ResponsePending = true;
+                        ++rpCount;
+                        callbacks.push_back(
+                            std::make_pair(req.RequestId, req.ServiceId));
                     }
                 }
             }
+
+            if (callback)
+            {
+                for (const auto &entry : callbacks)
+                {
+                    callback(entry.first, entry.second);
+                }
+            }
+
             return rpCount;
         }
 

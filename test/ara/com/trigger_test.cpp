@@ -82,6 +82,21 @@ namespace ara
             EXPECT_EQ(trigger.GetTriggerCount(), 2U); // But count still goes up
         }
 
+        TEST(ProxyTriggerTest, ReceiveHandlerCanUnsubscribe)
+        {
+            ProxyTrigger trigger;
+            trigger.Subscribe();
+
+            trigger.SetReceiveHandler([&trigger]()
+                                      { trigger.Unsubscribe(); });
+
+            trigger.OnTriggerReceived();
+
+            EXPECT_EQ(trigger.GetSubscriptionState(),
+                      SubscriptionState::kNotSubscribed);
+            EXPECT_EQ(trigger.GetTriggerCount(), 1U);
+        }
+
         // ── SkeletonTrigger Tests ──────────────────────────
 
         TEST(SkeletonTriggerTest, InitialState)
@@ -137,6 +152,15 @@ namespace ara
             EXPECT_FALSE(result.HasValue());
         }
 
+        TEST(SkeletonTriggerTest, FireWithoutSubscribersFails)
+        {
+            SkeletonTrigger trigger;
+            ASSERT_TRUE(trigger.Offer().HasValue());
+
+            auto result = trigger.Fire();
+            EXPECT_FALSE(result.HasValue());
+        }
+
         TEST(SkeletonTriggerTest, AddSubscriberWhenNotOfferedFails)
         {
             SkeletonTrigger trigger;
@@ -162,8 +186,28 @@ namespace ara
             int callCount = 0;
             proxy.SetReceiveHandler([&callCount]()
                                     { ++callCount; });
-            skeletonTrigger.Fire();
+            auto result = skeletonTrigger.Fire();
+            EXPECT_FALSE(result.HasValue());
             EXPECT_EQ(callCount, 0); // Not notified after removal
+        }
+
+        TEST(SkeletonTriggerTest, SubscriberCanRemoveItselfDuringFire)
+        {
+            SkeletonTrigger skeletonTrigger;
+            ASSERT_TRUE(skeletonTrigger.Offer().HasValue());
+
+            ProxyTrigger proxy;
+            proxy.Subscribe();
+            ASSERT_TRUE(skeletonTrigger.AddSubscriber(proxy).HasValue());
+
+            proxy.SetReceiveHandler([&skeletonTrigger, &proxy]()
+                                    { skeletonTrigger.RemoveSubscriber(proxy); });
+
+            auto fireResult = skeletonTrigger.Fire();
+            ASSERT_TRUE(fireResult.HasValue());
+
+            EXPECT_EQ(skeletonTrigger.GetSubscriberCount(), 0U);
+            EXPECT_EQ(proxy.GetTriggerCount(), 1U);
         }
 
         TEST(SkeletonTriggerTest, SubscriberCount)

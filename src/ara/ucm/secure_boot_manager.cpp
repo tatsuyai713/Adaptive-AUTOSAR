@@ -2,6 +2,7 @@
 /// @brief Secure boot manager implementation.
 
 #include "./secure_boot_manager.h"
+#include "../crypto/rsa_provider.h"
 #include <algorithm>
 
 namespace ara
@@ -70,10 +71,26 @@ namespace ara
                 return report;
             }
 
+            if (signerCert->PublicKey.empty())
+            {
+                report.Result = BootVerifyResult::kSignatureInvalid;
+                report.Details = "Signer public key is empty";
+                return report;
+            }
+
             if (!VerifySignatureChain(signerSubject))
             {
                 report.Result = BootVerifyResult::kChainIncomplete;
                 report.Details = "Certificate chain verification failed";
+                return report;
+            }
+
+            auto verifyResult = ara::crypto::RsaVerify(
+                packageDigest, signature, signerCert->PublicKey);
+            if (!verifyResult.HasValue() || !verifyResult.Value())
+            {
+                report.Result = BootVerifyResult::kSignatureInvalid;
+                report.Details = "Package signature cryptographic verification failed";
                 return report;
             }
 

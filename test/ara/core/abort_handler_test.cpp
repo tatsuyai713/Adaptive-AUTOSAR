@@ -69,5 +69,22 @@ namespace ara
             EXPECT_EQ(_msg, "hello");
             _handler.UnregisterCallback(_idx);
         }
+
+        TEST(AbortHandlerTest, CallbackCanUnregisterDuringTriggerAbort)
+        {
+            auto &_handler = AbortHandler::Instance();
+            bool _called = false;
+            size_t _idx = 0U;
+
+            _idx = _handler.RegisterCallback(
+                [&](const AbortInfo &) {
+                    _called = true;
+                    _handler.UnregisterCallback(_idx);
+                });
+
+            _handler.TriggerAbort(AbortReason::kUserAbort, "self unregister");
+
+            EXPECT_TRUE(_called);
+        }
     }
 }

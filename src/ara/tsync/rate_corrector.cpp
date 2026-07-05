@@ -12,6 +12,19 @@ namespace ara
 {
     namespace tsync
     {
+        namespace
+        {
+#if defined(__linux__)
+            int ApplyKernelFrequencyAdjustment(long freq)
+            {
+                struct timex tx{};
+                tx.modes = ADJ_FREQUENCY;
+                tx.freq = freq;
+                return ::adjtimex(&tx);
+            }
+#endif
+        }
+
         RateCorrector::RateCorrector(const RateCorrectorConfig &config)
             : mConfig{config},
               mIntegral{0.0},
@@ -51,15 +64,30 @@ namespace ara
 
             mCorrectionPpb = Clamp(correction, mConfig.MaxCorrectionPpb);
 
+            if (mConfig.ApplyToSystemClock)
+            {
+                // Kernel ADJ_FREQUENCY unit: parts-per-million scaled by 2^16.
+                // 1 ppb = 1e-3 ppm, so kernel_freq = ppb * 65536 / 1000.
+                const long kernelFreq =
+                    static_cast<long>(mCorrectionPpb * 65.536);
+                int adjustResult = 0;
+                if (mConfig.FrequencyAdjustmentApplier)
+                {
+                    adjustResult =
+                        mConfig.FrequencyAdjustmentApplier(kernelFreq);
+                }
+                else
+                {
 #if defined(__linux__)
-            // Apply the computed frequency correction to the kernel clock.
-            // Kernel ADJ_FREQUENCY unit: parts-per-million scaled by 2^16.
-            // 1 ppb = 1e-3 ppm, so kernel_freq = ppb * 65536 / 1000.
-            struct timex tx{};
-            tx.modes = ADJ_FREQUENCY;
-            tx.freq = static_cast<long>(mCorrectionPpb * 65.536);
-            ::adjtimex(&tx);
+                    adjustResult = ApplyKernelFrequencyAdjustment(kernelFreq);
 #endif
+                }
+                if (adjustResult < 0)
+                {
+                    return core::Result<double>::FromError(
+                        MakeErrorCode(TsyncErrc::kQueryFailed));
+                }
+            }
 
             return mCorrectionPpb;
         }

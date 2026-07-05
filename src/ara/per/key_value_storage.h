@@ -46,7 +46,7 @@ namespace ara
             std::uint64_t mQuotaBytes{0U};
 
             void LoadFromFile();
-            void SaveToFile() const;
+            core::Result<void> SaveToFile() const;
 
             static std::string EncodeBase64(
                 const std::vector<std::uint8_t> &data);

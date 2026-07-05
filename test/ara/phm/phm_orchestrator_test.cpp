@@ -123,5 +123,24 @@ namespace ara
             // Callback may have been triggered during failure report
             // Either way the test should not crash
         }
+
+        TEST(PhmOrchestratorTest, PlatformHealthCallbackCanQueryState)
+        {
+            PhmOrchestrator _orch(0.0, 0.5);
+            _orch.RegisterEntity("entity_a");
+
+            bool _called = false;
+            _orch.SetPlatformHealthCallback(
+                [&](PlatformHealthState, PlatformHealthState newState) {
+                    _called = true;
+                    EXPECT_EQ(_orch.EvaluatePlatformHealth(), newState);
+                });
+
+            auto _result = _orch.ReportSupervisionFailure(
+                "entity_a", TypeOfSupervision::AliveSupervision);
+
+            EXPECT_TRUE(_result.HasValue());
+            EXPECT_TRUE(_called);
+        }
     }
 }

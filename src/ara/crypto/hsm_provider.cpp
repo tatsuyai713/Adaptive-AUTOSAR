@@ -4,6 +4,8 @@
 
 #include "./hsm_provider.h"
 #include "./crypto_provider.h"
+#include "./ecdsa_provider.h"
+#include "./rsa_provider.h"
 #include <algorithm>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -32,7 +34,9 @@ namespace ara
             std::lock_guard<std::mutex> lock(mMutex);
             mInitialized = false;
             mSlots.clear();
+            mAlgorithms.clear();
             mKeyData.clear();
+            mPublicKeyData.clear();
             mNextSlotId = 1;
         }
 
@@ -46,6 +50,50 @@ namespace ara
                     MakeErrorCode(CryptoErrc::kProcessingNotStarted));
             }
 
+            std::vector<uint8_t> key;
+            std::vector<uint8_t> publicKey;
+            switch (algorithm)
+            {
+            case HsmAlgorithm::kRsa2048:
+            case HsmAlgorithm::kRsa4096:
+            {
+                auto keyPair = GenerateRsaKeyPair(AlgorithmKeySize(algorithm));
+                if (!keyPair.HasValue())
+                {
+                    return core::Result<uint32_t>::FromError(keyPair.Error());
+                }
+                key = keyPair.Value().PrivateKeyDer;
+                publicKey = keyPair.Value().PublicKeyDer;
+                break;
+            }
+            case HsmAlgorithm::kEcdsaP256:
+            case HsmAlgorithm::kEcdsaP384:
+            {
+                auto curve = (algorithm == HsmAlgorithm::kEcdsaP256)
+                                 ? EllipticCurve::kP256
+                                 : EllipticCurve::kP384;
+                auto keyPair = GenerateEcKeyPair(curve);
+                if (!keyPair.HasValue())
+                {
+                    return core::Result<uint32_t>::FromError(keyPair.Error());
+                }
+                key = keyPair.Value().PrivateKeyDer;
+                publicKey = keyPair.Value().PublicKeyDer;
+                break;
+            }
+            default:
+            {
+                uint32_t keyBytes = AlgorithmKeySize(algorithm) / 8;
+                key.resize(keyBytes);
+                if (::RAND_bytes(key.data(), static_cast<int>(keyBytes)) != 1)
+                {
+                    return core::Result<uint32_t>::FromError(
+                        MakeErrorCode(CryptoErrc::kEntropySourceFailure));
+                }
+                break;
+            }
+            }
+
             uint32_t slotId = mNextSlotId++;
             HsmSlotInfo info;
             info.SlotId = slotId;
@@ -55,17 +103,12 @@ namespace ara
             info.KeySizeBits = AlgorithmKeySize(algorithm);
             mSlots[slotId] = info;
 
-            // Generate cryptographically secure random key material.
-            uint32_t keyBytes = info.KeySizeBits / 8;
-            std::vector<uint8_t> key(keyBytes);
-            if (::RAND_bytes(key.data(), static_cast<int>(keyBytes)) != 1)
-            {
-                // RAND_bytes failed; key slot was already registered, clean up.
-                mSlots.erase(slotId);
-                return core::Result<uint32_t>::FromError(
-                    MakeErrorCode(CryptoErrc::kEntropySourceFailure));
-            }
+            mAlgorithms[slotId] = algorithm;
             mKeyData[slotId] = std::move(key);
+            if (!publicKey.empty())
+            {
+                mPublicKeyData[slotId] = std::move(publicKey);
+            }
 
             return slotId;
         }
@@ -95,6 +138,17 @@ namespace ara
             info.Label = label;
             info.KeySizeBits = static_cast<uint32_t>(keyData.size() * 8);
             mSlots[slotId] = info;
+            if (type == HsmSlotType::kSymmetric &&
+                (keyData.size() == 16U || keyData.size() == 32U))
+            {
+                mAlgorithms[slotId] = (keyData.size() == 16U)
+                                          ? HsmAlgorithm::kAes128
+                                          : HsmAlgorithm::kAes256;
+            }
+            else if (type == HsmSlotType::kSymmetric)
+            {
+                mAlgorithms[slotId] = HsmAlgorithm::kHmacSha256;
+            }
             mKeyData[slotId] = keyData;
 
             return slotId;
@@ -115,7 +169,9 @@ namespace ara
                     MakeErrorCode(CryptoErrc::kInvalidArgument));
             }
             mSlots.erase(it);
+            mAlgorithms.erase(slotId);
             mKeyData.erase(slotId);
+            mPublicKeyData.erase(slotId);
             return {};
         }
 
@@ -134,10 +190,35 @@ namespace ara
             }
 
             const auto &key = keyIt->second;
+            auto algIt = mAlgorithms.find(slotId);
+            HsmAlgorithm algorithm = (algIt != mAlgorithms.end())
+                                         ? algIt->second
+                                         : HsmAlgorithm::kHmacSha256;
+
+            if (algorithm == HsmAlgorithm::kRsa2048 ||
+                algorithm == HsmAlgorithm::kRsa4096)
+            {
+                auto publicIt = mPublicKeyData.find(slotId);
+                if (publicIt == mPublicKeyData.end())
+                {
+                    result.ErrorMessage = "RSA public key is unavailable";
+                    return result;
+                }
+                auto encResult = ara::crypto::RsaEncrypt(plaintext, publicIt->second);
+                if (!encResult.HasValue())
+                {
+                    result.ErrorMessage = "RSA encrypt failed";
+                    return result;
+                }
+                result.OutputData = encResult.Value();
+                result.Success = true;
+                return result;
+            }
 
             // For AES-128 or AES-256 keys, use real AES-CBC via ara::crypto.
             // A fresh 16-byte IV is prepended to the ciphertext output.
-            if (key.size() == 16 || key.size() == 32)
+            if (algorithm == HsmAlgorithm::kAes128 ||
+                algorithm == HsmAlgorithm::kAes256)
             {
                 std::vector<uint8_t> iv(16);
                 if (::RAND_bytes(iv.data(), 16) != 1)
@@ -160,30 +241,7 @@ namespace ara
                 return result;
             }
 
-            // Fallback for non-AES key sizes: use HMAC-based XOR stream cipher.
-            std::vector<uint8_t> keystream;
-            keystream.reserve(plaintext.size());
-            for (size_t block = 0; keystream.size() < plaintext.size(); ++block)
-            {
-                std::vector<uint8_t> counter{
-                    static_cast<uint8_t>(block >> 24),
-                    static_cast<uint8_t>(block >> 16),
-                    static_cast<uint8_t>(block >> 8),
-                    static_cast<uint8_t>(block)};
-                auto hmacResult = ara::crypto::ComputeHmac(counter, key);
-                if (!hmacResult.HasValue()) break;
-                for (auto b : hmacResult.Value())
-                {
-                    keystream.push_back(b);
-                    if (keystream.size() == plaintext.size()) break;
-                }
-            }
-            result.OutputData.resize(plaintext.size());
-            for (size_t i = 0; i < plaintext.size(); ++i)
-            {
-                result.OutputData[i] = plaintext[i] ^ keystream[i];
-            }
-            result.Success = true;
+            result.ErrorMessage = "Algorithm does not support encryption";
             return result;
         }
 
@@ -202,9 +260,28 @@ namespace ara
             }
 
             const auto &key = keyIt->second;
+            auto algIt = mAlgorithms.find(slotId);
+            HsmAlgorithm algorithm = (algIt != mAlgorithms.end())
+                                         ? algIt->second
+                                         : HsmAlgorithm::kHmacSha256;
+
+            if (algorithm == HsmAlgorithm::kRsa2048 ||
+                algorithm == HsmAlgorithm::kRsa4096)
+            {
+                auto decResult = ara::crypto::RsaDecrypt(ciphertext, key);
+                if (!decResult.HasValue())
+                {
+                    result.ErrorMessage = "RSA decrypt failed";
+                    return result;
+                }
+                result.OutputData = decResult.Value();
+                result.Success = true;
+                return result;
+            }
 
             // For AES keys, extract the IV (first 16 bytes) and decrypt the rest.
-            if ((key.size() == 16 || key.size() == 32) &&
+            if ((algorithm == HsmAlgorithm::kAes128 ||
+                 algorithm == HsmAlgorithm::kAes256) &&
                 ciphertext.size() > 16)
             {
                 std::vector<uint8_t> iv(
@@ -222,30 +299,7 @@ namespace ara
                 return result;
             }
 
-            // Fallback: XOR stream (symmetric).
-            std::vector<uint8_t> keystream;
-            keystream.reserve(ciphertext.size());
-            for (size_t block = 0; keystream.size() < ciphertext.size(); ++block)
-            {
-                std::vector<uint8_t> counter{
-                    static_cast<uint8_t>(block >> 24),
-                    static_cast<uint8_t>(block >> 16),
-                    static_cast<uint8_t>(block >> 8),
-                    static_cast<uint8_t>(block)};
-                auto hmacResult = ara::crypto::ComputeHmac(counter, key);
-                if (!hmacResult.HasValue()) break;
-                for (auto b : hmacResult.Value())
-                {
-                    keystream.push_back(b);
-                    if (keystream.size() == ciphertext.size()) break;
-                }
-            }
-            result.OutputData.resize(ciphertext.size());
-            for (size_t i = 0; i < ciphertext.size(); ++i)
-            {
-                result.OutputData[i] = ciphertext[i] ^ keystream[i];
-            }
-            result.Success = true;
+            result.ErrorMessage = "Algorithm does not support decryption";
             return result;
         }
 
@@ -264,6 +318,38 @@ namespace ara
             }
 
             const auto &key = keyIt->second;
+            auto algIt = mAlgorithms.find(slotId);
+            HsmAlgorithm algorithm = (algIt != mAlgorithms.end())
+                                         ? algIt->second
+                                         : HsmAlgorithm::kHmacSha256;
+
+            if (algorithm == HsmAlgorithm::kRsa2048 ||
+                algorithm == HsmAlgorithm::kRsa4096)
+            {
+                auto signResult = ara::crypto::RsaSign(data, key);
+                if (!signResult.HasValue())
+                {
+                    result.ErrorMessage = "RSA sign failed";
+                    return result;
+                }
+                result.OutputData = signResult.Value();
+                result.Success = true;
+                return result;
+            }
+
+            if (algorithm == HsmAlgorithm::kEcdsaP256 ||
+                algorithm == HsmAlgorithm::kEcdsaP384)
+            {
+                auto signResult = ara::crypto::EcdsaSign(data, key);
+                if (!signResult.HasValue())
+                {
+                    result.ErrorMessage = "ECDSA sign failed";
+                    return result;
+                }
+                result.OutputData = signResult.Value();
+                result.Success = true;
+                return result;
+            }
 
             // Use real HMAC-SHA256 via ara::crypto.
             auto hmacResult = ara::crypto::ComputeHmac(data, key);
@@ -282,9 +368,36 @@ namespace ara
             const std::vector<uint8_t> &data,
             const std::vector<uint8_t> &signature)
         {
-            auto result = Sign(slotId, data);
-            if (!result.Success) return false;
-            return result.OutputData == signature;
+            std::lock_guard<std::mutex> lock(mMutex);
+            auto algIt = mAlgorithms.find(slotId);
+            HsmAlgorithm algorithm = (algIt != mAlgorithms.end())
+                                         ? algIt->second
+                                         : HsmAlgorithm::kHmacSha256;
+
+            if (algorithm == HsmAlgorithm::kRsa2048 ||
+                algorithm == HsmAlgorithm::kRsa4096)
+            {
+                auto publicIt = mPublicKeyData.find(slotId);
+                if (publicIt == mPublicKeyData.end()) return false;
+                auto verifyResult = ara::crypto::RsaVerify(
+                    data, signature, publicIt->second);
+                return verifyResult.HasValue() && verifyResult.Value();
+            }
+
+            if (algorithm == HsmAlgorithm::kEcdsaP256 ||
+                algorithm == HsmAlgorithm::kEcdsaP384)
+            {
+                auto publicIt = mPublicKeyData.find(slotId);
+                if (publicIt == mPublicKeyData.end()) return false;
+                auto verifyResult = ara::crypto::EcdsaVerify(
+                    data, signature, publicIt->second);
+                return verifyResult.HasValue() && verifyResult.Value();
+            }
+
+            auto keyIt = mKeyData.find(slotId);
+            if (keyIt == mKeyData.end() || !mInitialized) return false;
+            auto hmacResult = ara::crypto::ComputeHmac(data, keyIt->second);
+            return hmacResult.HasValue() && hmacResult.Value() == signature;
         }
 
         core::Result<HsmSlotInfo> HsmProvider::GetSlotInfo(

@@ -28,9 +28,26 @@ namespace ara
             return mBasePath + "/" + fileName;
         }
 
+        bool FileStorage::IsValidFileName(
+            const std::string &fileName) const noexcept
+        {
+            return !fileName.empty() &&
+                   fileName != "." &&
+                   fileName != ".." &&
+                   fileName.find('/') == std::string::npos &&
+                   fileName.find('\\') == std::string::npos &&
+                   fileName.find('\0') == std::string::npos;
+        }
+
         core::Result<UniqueHandle<ReadAccessor>> FileStorage::OpenFileReadOnly(
             const std::string &fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<UniqueHandle<ReadAccessor>>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             std::string fullPath = GetFullPath(fileName);
             struct stat st;
             if (::stat(fullPath.c_str(), &st) != 0)
@@ -55,6 +72,12 @@ namespace ara
         core::Result<UniqueHandle<ReadWriteAccessor>>
         FileStorage::OpenFileReadWrite(const std::string &fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<UniqueHandle<ReadWriteAccessor>>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             std::string fullPath = GetFullPath(fileName);
 
             UniqueHandle<ReadWriteAccessor> accessor(
@@ -73,6 +96,12 @@ namespace ara
         core::Result<void> FileStorage::DeleteFile(
             const std::string &fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             std::string fullPath = GetFullPath(fileName);
             if (std::remove(fullPath.c_str()) != 0)
             {
@@ -84,6 +113,11 @@ namespace ara
 
         bool FileStorage::FileExists(const std::string &fileName) const
         {
+            if (!IsValidFileName(fileName))
+            {
+                return false;
+            }
+
             std::string fullPath = GetFullPath(fileName);
             struct stat st;
             return ::stat(fullPath.c_str(), &st) == 0;
@@ -125,6 +159,12 @@ namespace ara
         core::Result<UniqueHandle<ReadWriteAccessor>>
         FileStorage::OpenFileWriteOnly(const std::string &fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<UniqueHandle<ReadWriteAccessor>>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             std::string fullPath = GetFullPath(fileName);
 
             // Truncate the file to provide write-only semantics
@@ -147,6 +187,12 @@ namespace ara
         core::Result<void> FileStorage::RecoverFile(
             const std::string &fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             // Backup directory follows naming convention: basePath + ".bak"
             const std::string backupDir{mBasePath + ".bak"};
             const std::string backupPath{backupDir + "/" + fileName};
@@ -266,6 +312,12 @@ namespace ara
         core::Result<FileInfo> FileStorage::GetFileInfo(
             const std::string &fileName) const
         {
+            if (!IsValidFileName(fileName))
+            {
+                return core::Result<FileInfo>::FromError(
+                    MakeErrorCode(PerErrc::kValidationFailed));
+            }
+
             std::string fullPath = GetFullPath(fileName);
             struct stat st;
             if (::stat(fullPath.c_str(), &st) != 0)

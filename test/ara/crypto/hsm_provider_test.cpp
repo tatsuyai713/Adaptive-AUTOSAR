@@ -87,5 +87,46 @@ namespace ara
             bool _valid = _hsm.Verify(_slotId, _tampered, _sig.OutputData);
             EXPECT_FALSE(_valid);
         }
+
+        TEST(HsmProviderTest, HmacKeyDoesNotEncryptWithFallbackCipher)
+        {
+            HsmProvider _hsm;
+            _hsm.Initialize("TestSlot");
+            auto _genResult = _hsm.GenerateKey(HsmAlgorithm::kHmacSha256, "hmac");
+            ASSERT_TRUE(_genResult.HasValue());
+
+            auto _encrypted = _hsm.Encrypt(_genResult.Value(), {0x01, 0x02});
+            EXPECT_FALSE(_encrypted.Success);
+        }
+
+        TEST(HsmProviderTest, RsaGeneratedKeySignsAndVerifies)
+        {
+            HsmProvider _hsm;
+            _hsm.Initialize("TestSlot");
+            auto _genResult = _hsm.GenerateKey(HsmAlgorithm::kRsa2048, "rsa");
+            ASSERT_TRUE(_genResult.HasValue());
+
+            std::vector<uint8_t> _data = {0x52, 0x53, 0x41};
+            auto _sig = _hsm.Sign(_genResult.Value(), _data);
+            ASSERT_TRUE(_sig.Success);
+
+            EXPECT_TRUE(_hsm.Verify(_genResult.Value(), _data, _sig.OutputData));
+            EXPECT_FALSE(_hsm.Verify(_genResult.Value(), {0x00}, _sig.OutputData));
+        }
+
+        TEST(HsmProviderTest, EcdsaGeneratedKeySignsAndVerifies)
+        {
+            HsmProvider _hsm;
+            _hsm.Initialize("TestSlot");
+            auto _genResult = _hsm.GenerateKey(HsmAlgorithm::kEcdsaP256, "ecdsa");
+            ASSERT_TRUE(_genResult.HasValue());
+
+            std::vector<uint8_t> _data = {0x45, 0x43};
+            auto _sig = _hsm.Sign(_genResult.Value(), _data);
+            ASSERT_TRUE(_sig.Success);
+
+            EXPECT_TRUE(_hsm.Verify(_genResult.Value(), _data, _sig.OutputData));
+            EXPECT_FALSE(_hsm.Verify(_genResult.Value(), {0x00}, _sig.OutputData));
+        }
     }
 }

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../../src/ara/ucm/secure_boot_manager.h"
+#include "../../../src/ara/crypto/rsa_provider.h"
 
 namespace ara
 {
@@ -106,6 +107,48 @@ namespace ara
             _mgr.SetTpmQuoteType(TpmQuoteType::kNone);
             auto _report = _mgr.RequestTpmAttestation({});
             EXPECT_EQ(_report.Result, BootVerifyResult::kTpmAttestationFailed);
+        }
+
+        TEST(SecureBootManagerTest, VerifyPackageSignatureUsesSignerPublicKey)
+        {
+            auto _keyPair = ara::crypto::GenerateRsaKeyPair(2048U);
+            ASSERT_TRUE(_keyPair.HasValue());
+
+            SecureBootManager _mgr;
+            CertificateEntry _root;
+            _root.SubjectName = "RootCA";
+            _root.IssuerName = "RootCA";
+            _root.PublicKey = _keyPair.Value().PublicKeyDer;
+            _root.NotBefore = std::chrono::system_clock::now() -
+                              std::chrono::hours(1);
+            _root.NotAfter = std::chrono::system_clock::now() +
+                             std::chrono::hours(24);
+            _mgr.SetRootCertificate(_root);
+
+            CertificateEntry _signer;
+            _signer.SubjectName = "Signer";
+            _signer.IssuerName = "RootCA";
+            _signer.PublicKey = _keyPair.Value().PublicKeyDer;
+            _signer.NotBefore = std::chrono::system_clock::now() -
+                                std::chrono::hours(1);
+            _signer.NotAfter = std::chrono::system_clock::now() +
+                               std::chrono::hours(24);
+            _mgr.AddIntermediateCertificate(_signer);
+
+            std::vector<uint8_t> _digest{0x10, 0x20, 0x30, 0x40};
+            auto _signature = ara::crypto::RsaSign(
+                _digest, _keyPair.Value().PrivateKeyDer);
+            ASSERT_TRUE(_signature.HasValue());
+
+            auto _ok = _mgr.VerifyPackageSignature(
+                _digest, _signature.Value(), "Signer");
+            EXPECT_EQ(BootVerifyResult::kVerified, _ok.Result);
+
+            auto _badSignature = _signature.Value();
+            _badSignature.front() ^= 0xFFU;
+            auto _bad = _mgr.VerifyPackageSignature(
+                _digest, _badSignature, "Signer");
+            EXPECT_EQ(BootVerifyResult::kSignatureInvalid, _bad.Result);
         }
     }
 }

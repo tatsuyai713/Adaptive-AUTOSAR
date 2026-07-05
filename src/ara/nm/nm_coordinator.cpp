@@ -100,21 +100,34 @@ namespace ara
             // Tick the underlying NM state machine first
             mNm.Tick(nowEpochMs);
 
-            std::lock_guard<std::mutex> _lock{mMutex};
+            {
+                std::lock_guard<std::mutex> _lock{mMutex};
+                if (!mSleepRequested || mSleepReadyNotified)
+                {
+                    return;
+                }
+            }
 
-            if (!mSleepRequested)
+            auto _status = GetStatus();
+            if (!_status.CoordinatedSleepReady)
             {
                 return;
             }
 
-            auto _status = GetStatus();
-            if (_status.CoordinatedSleepReady && !mSleepReadyNotified)
+            std::function<void()> callback;
             {
-                mSleepReadyNotified = true;
-                if (mSleepReadyCallback)
+                std::lock_guard<std::mutex> _lock{mMutex};
+                if (!mSleepRequested || mSleepReadyNotified)
                 {
-                    mSleepReadyCallback();
+                    return;
                 }
+                mSleepReadyNotified = true;
+                callback = mSleepReadyCallback;
+            }
+
+            if (callback)
+            {
+                callback();
             }
         }
 

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <sys/stat.h>
 #include "../../../src/ara/per/file_storage.h"
 
 namespace ara
@@ -128,6 +129,24 @@ namespace ara
 
             auto result = storage.OpenFileReadOnly("nonexistent.dat");
             EXPECT_FALSE(result.HasValue());
+        }
+
+        TEST_F(FileStorageTest, RejectsTraversalAndAbsoluteFileNames)
+        {
+            const std::string outsidePath{"/tmp/ara_per_escape.dat"};
+            std::remove(outsidePath.c_str());
+
+            FileStorage storage(cTestDir);
+
+            EXPECT_FALSE(storage.OpenFileReadWrite("../ara_per_escape.dat").HasValue());
+            EXPECT_FALSE(storage.OpenFileReadWrite("/tmp/ara_per_escape.dat").HasValue());
+            EXPECT_FALSE(storage.OpenFileReadWrite("nested/file.dat").HasValue());
+            EXPECT_FALSE(storage.OpenFileReadWrite("nested\\file.dat").HasValue());
+            EXPECT_FALSE(storage.FileExists("../ara_per_escape.dat"));
+            EXPECT_FALSE(storage.DeleteFile("../ara_per_escape.dat").HasValue());
+
+            struct stat st;
+            EXPECT_NE(::stat(outsidePath.c_str(), &st), 0);
         }
 
         TEST_F(FileStorageTest, GetFileSize)

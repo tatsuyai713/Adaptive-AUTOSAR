@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
+#include "../../entry/service_entry.h"
+#include "../../option/ipv4_endpoint_option.h"
 #include "./someip_sd_client.h"
 
 #if ARA_COM_USE_VSOMEIP
@@ -40,6 +42,106 @@ namespace ara
                     (void)initialDelayMax;
                     (void)repetitionBaseDelay;
                     (void)repetitionMax;
+
+                    if (CommunicationLayer != nullptr)
+                    {
+                        auto receiver =
+                            std::bind(
+                                &SomeIpSdClient::onMessageReceived,
+                                this,
+                                std::placeholders::_1);
+                        CommunicationLayer->SetReceiver(this, receiver);
+                    }
+                }
+
+                void SomeIpSdClient::sendFindService()
+                {
+                    if (CommunicationLayer == nullptr)
+                    {
+                        return;
+                    }
+
+                    SomeIpSdMessage message;
+                    message.AddEntry(
+                        entry::ServiceEntry::CreateFindServiceEntry(mServiceId));
+                    CommunicationLayer->Send(message);
+                }
+
+                void SomeIpSdClient::onMessageReceived(SomeIpSdMessage &&message)
+                {
+                    core::Optional<std::string> offeredIpAddress;
+                    core::Optional<uint16_t> offeredPort;
+                    bool hasRelevantOffer{false};
+                    bool available{false};
+
+                    for (const auto &entryPtr : message.Entries())
+                    {
+                        const auto *serviceEntry =
+                            dynamic_cast<const entry::ServiceEntry *>(
+                                entryPtr.get());
+                        if (serviceEntry == nullptr ||
+                            serviceEntry->Type() != entry::EntryType::Offering ||
+                            serviceEntry->ServiceId() != mServiceId)
+                        {
+                            continue;
+                        }
+
+                        hasRelevantOffer = true;
+                        available = serviceEntry->TTL() > 0U;
+
+                        if (available)
+                        {
+                            for (const auto &optionPtr : serviceEntry->FirstOptions())
+                            {
+                                const auto *endpoint =
+                                    dynamic_cast<const option::Ipv4EndpointOption *>(
+                                        optionPtr.get());
+                                if (endpoint != nullptr)
+                                {
+                                    offeredIpAddress =
+                                        endpoint->IpAddress().ToString();
+                                    offeredPort = endpoint->Port();
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+
+                    if (!hasRelevantOffer)
+                    {
+                        return;
+                    }
+
+                    std::lock_guard<std::mutex> stateLock(mStateEventMutex);
+                    mServiceOffered = available;
+                    if (offeredIpAddress && offeredPort)
+                    {
+                        mOfferedIpAddress = offeredIpAddress.Value();
+                        mOfferedPort = offeredPort.Value();
+                    }
+
+                    if (mServiceRequested)
+                    {
+                        SetState(
+                            available ? helper::SdClientState::ServiceReady
+                                      : helper::SdClientState::Stopped);
+                    }
+                    else
+                    {
+                        SetState(
+                            available ? helper::SdClientState::ServiceSeen
+                                      : helper::SdClientState::ServiceNotSeen);
+                    }
+
+                    if (available)
+                    {
+                        mOfferingConditionVariable.notify_all();
+                    }
+                    else
+                    {
+                        mStopOfferingConditionVariable.notify_all();
+                    }
                 }
 
                 void SomeIpSdClient::ensureApplication()
@@ -143,6 +245,22 @@ namespace ara
                 void SomeIpSdClient::StartAgent(helper::SdClientState state)
                 {
                     (void)state;
+
+                    if (CommunicationLayer != nullptr)
+                    {
+                        {
+                            std::lock_guard<std::mutex> stateLock(mStateEventMutex);
+                            mServiceRequested = true;
+                            SetState(
+                                mServiceOffered
+                                    ? helper::SdClientState::ServiceReady
+                                    : helper::SdClientState::InitialWaitPhase);
+                        }
+
+                        sendFindService();
+                        return;
+                    }
+
                     ensureApplication();
 
                     {
@@ -164,7 +282,7 @@ namespace ara
                                             : helper::SdClientState::ServiceNotSeen);
                     }
 
-                    if (mApplication)
+                    if (CommunicationLayer == nullptr && mApplication)
                     {
                         mApplication->release_service(mServiceId, vsomeip::ANY_INSTANCE);
                     }
@@ -216,6 +334,11 @@ namespace ara
 
                 SomeIpSdClient::~SomeIpSdClient()
                 {
+                    if (CommunicationLayer != nullptr)
+                    {
+                        CommunicationLayer->RemoveReceiver(this);
+                    }
+
                     if (mApplication)
                     {
                         mApplication->unregister_availability_handler(

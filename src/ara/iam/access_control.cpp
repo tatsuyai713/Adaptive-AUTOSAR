@@ -73,33 +73,38 @@ namespace ara
                     MakeErrorCode(IamErrc::kInvalidArgument));
             }
 
-            std::lock_guard<std::mutex> _lock{mMutex};
-
-            // Evaluate exact match first, then progressively broader wildcard matches.
-            const std::array<PolicyKey, 8U> cLookupOrder{
-                PolicyKey{subject, resource, action},
-                PolicyKey{subject, resource, cWildcard},
-                PolicyKey{subject, cWildcard, action},
-                PolicyKey{subject, cWildcard, cWildcard},
-                PolicyKey{cWildcard, resource, action},
-                PolicyKey{cWildcard, resource, cWildcard},
-                PolicyKey{cWildcard, cWildcard, action},
-                PolicyKey{cWildcard, cWildcard, cWildcard}};
-
             bool _allowed{false};
-            for (const auto &_lookupKey : cLookupOrder)
+            AuditCallback _auditCallback;
             {
-                auto _iterator = mPolicies.find(_lookupKey);
-                if (_iterator != mPolicies.end())
+                std::lock_guard<std::mutex> _lock{mMutex};
+
+                // Evaluate exact match first, then progressively broader wildcard matches.
+                const std::array<PolicyKey, 8U> cLookupOrder{
+                    PolicyKey{subject, resource, action},
+                    PolicyKey{subject, resource, cWildcard},
+                    PolicyKey{subject, cWildcard, action},
+                    PolicyKey{subject, cWildcard, cWildcard},
+                    PolicyKey{cWildcard, resource, action},
+                    PolicyKey{cWildcard, resource, cWildcard},
+                    PolicyKey{cWildcard, cWildcard, action},
+                    PolicyKey{cWildcard, cWildcard, cWildcard}};
+
+                for (const auto &_lookupKey : cLookupOrder)
                 {
-                    _allowed = (_iterator->second == PermissionDecision::kAllow);
-                    break;
+                    auto _iterator = mPolicies.find(_lookupKey);
+                    if (_iterator != mPolicies.end())
+                    {
+                        _allowed = (_iterator->second == PermissionDecision::kAllow);
+                        break;
+                    }
                 }
+
+                _auditCallback = mAuditCallback;
             }
 
-            if (mAuditCallback)
+            if (_auditCallback)
             {
-                mAuditCallback(subject, resource, action, _allowed);
+                _auditCallback(subject, resource, action, _allowed);
             }
 
             return core::Result<bool>::FromValue(_allowed);

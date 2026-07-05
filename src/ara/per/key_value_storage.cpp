@@ -167,7 +167,7 @@ namespace ara
             mCommittedData = mData;
         }
 
-        void KeyValueStorage::SaveToFile() const
+        core::Result<void> KeyValueStorage::SaveToFile() const
         {
             // Atomic write: write to tmp file, then rename
             std::string tmpPath = mFilePath + ".tmp";
@@ -176,7 +176,8 @@ namespace ara
                 std::ofstream file(tmpPath);
                 if (!file.is_open())
                 {
-                    return;
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PerErrc::kPhysicalStorageFailure));
                 }
 
                 for (const auto &kv : mData)
@@ -184,9 +185,32 @@ namespace ara
                     file << kv.first << "="
                          << EncodeBase64(kv.second) << "\n";
                 }
+
+                file.flush();
+                if (!file.good())
+                {
+                    std::remove(tmpPath.c_str());
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+                }
+
+                file.close();
+                if (!file.good())
+                {
+                    std::remove(tmpPath.c_str());
+                    return core::Result<void>::FromError(
+                        MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+                }
             }
 
-            std::rename(tmpPath.c_str(), mFilePath.c_str());
+            if (std::rename(tmpPath.c_str(), mFilePath.c_str()) != 0)
+            {
+                std::remove(tmpPath.c_str());
+                return core::Result<void>::FromError(
+                    MakeErrorCode(PerErrc::kPhysicalStorageFailure));
+            }
+
+            return core::Result<void>::FromValue();
         }
 
         // ── Public API ───────────────────────────────────────
@@ -260,14 +284,21 @@ namespace ara
 
         core::Result<void> KeyValueStorage::SyncToStorage()
         {
-            SaveToFile();
+            auto saveResult = SaveToFile();
+            if (!saveResult.HasValue())
+            {
+                return saveResult;
+            }
+
             mCommittedData = mData;
+            mPendingChanges = 0U;
             return core::Result<void>::FromValue();
         }
 
         void KeyValueStorage::DiscardPendingChanges()
         {
             mData = mCommittedData;
+            mPendingChanges = 0U;
         }
 
         std::size_t KeyValueStorage::GetPendingChangeCount() const noexcept
