@@ -70,6 +70,13 @@ fi
 
 mkdir -p "${BUILD_DIR}"
 
+BUILD_JOBS="1"
+if command -v nproc >/dev/null 2>&1; then
+  BUILD_JOBS="$(nproc)"
+elif command -v getconf >/dev/null 2>&1; then
+  BUILD_JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+fi
+
 echo "[INFO] Configure switchable pub/sub user app"
 echo "       app_dir=${SWITCHABLE_APP_DIR}"
 echo "       build_dir=${BUILD_DIR}"
@@ -84,7 +91,7 @@ cmake -S "${SWITCHABLE_APP_DIR}" -B "${BUILD_DIR}" \
   -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
   -DAdaptiveAutosarAP_DIR="${AP_CMAKE_DIR}"
 
-cmake --build "${BUILD_DIR}" -j"$(nproc)"
+cmake --build "${BUILD_DIR}" -j"${BUILD_JOBS}"
 
 echo "[OK] Build completed"
 echo "[INFO] Generated artifacts:"
@@ -196,6 +203,28 @@ wait_for_roudi_ready() {
   grep -Eq "RouDi is ready|RouDi is ready for clients" "${log_file}" 2>/dev/null
 }
 
+wait_for_log_pattern() {
+  local pid="$1"
+  local log_file="$2"
+  local pattern="$3"
+  local timeout_sec="$4"
+  local end_at=$((SECONDS + timeout_sec))
+
+  while ((SECONDS < end_at)); do
+    if [[ -n "${pid}" ]] && ! kill -0 "${pid}" >/dev/null 2>&1; then
+      return 1
+    fi
+
+    if grep -Eiq "${pattern}" "${log_file}" 2>/dev/null; then
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  grep -Eiq "${pattern}" "${log_file}" 2>/dev/null
+}
+
 dump_log_tail() {
   local title="$1"
   local file="$2"
@@ -304,28 +333,53 @@ export ARA_COM_BINDING_MANIFEST="${BUILD_DIR}/generated/switchable_manifest_vsom
 unset ARA_COM_EVENT_BINDING
 unset ARA_COM_PREFER_SOMEIP
 export VSOMEIP_CONFIGURATION="${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json"
+export VSOMEIP_ROUTING="autosar_vsomeip_routing_manager"
 VSOMEIP_PUB_LOG="${BUILD_DIR}/switchable_vsomeip_pub.log"
 VSOMEIP_SUB_LOG="${BUILD_DIR}/switchable_vsomeip_sub.log"
 VSOMEIP_RM_LOG="${BUILD_DIR}/switchable_vsomeip_routing_manager.log"
 rm -f "${VSOMEIP_PUB_LOG}" "${VSOMEIP_SUB_LOG}" "${VSOMEIP_RM_LOG}"
 (run_with_timeout 12s "${AUTOSAR_AP_PREFIX}/bin/autosar_vsomeip_routing_manager" >"${VSOMEIP_RM_LOG}" 2>&1) &
 RM_PID=$!
-sleep 1
-(run_with_timeout 6s "${SUB_BIN}" >"${VSOMEIP_SUB_LOG}" 2>&1) &
+if ! wait_for_log_pattern "${RM_PID}" "${VSOMEIP_RM_LOG}" "routing manager registered|REGISTERED|Application\\(autosar_vsomeip_routing_manager" 8; then
+  echo "[ERROR] vSomeIP-profile smoke failed: routing manager did not become ready." >&2
+  dump_log_tail "vSomeIP routing manager log" "${VSOMEIP_RM_LOG}"
+  safe_wait_with_deadline "${RM_PID}" "vSomeIP routing manager smoke process" 6
+  exit 1
+fi
+(
+  export ADAPTIVE_AUTOSAR_VSOMEIP_CLIENT_APP="adaptive_autosar_pubsub_consumer"
+  run_with_timeout 8s "${SUB_BIN}"
+) >"${VSOMEIP_SUB_LOG}" 2>&1 &
 VSOMEIP_SUB_PID=$!
-sleep 1
-(run_with_timeout 4s "${PUB_BIN}" >"${VSOMEIP_PUB_LOG}" 2>&1) || true
+if ! wait_for_log_pattern "${VSOMEIP_SUB_PID}" "${VSOMEIP_SUB_LOG}" "Starting subscriber|Application\\(adaptive_autosar_pubsub_consumer|REGISTERED" 6; then
+  echo "[ERROR] vSomeIP-profile smoke failed: subscriber did not become ready." >&2
+  dump_log_tail "vSomeIP subscriber log" "${VSOMEIP_SUB_LOG}"
+  dump_log_tail "vSomeIP routing manager log" "${VSOMEIP_RM_LOG}"
+  safe_wait_with_deadline "${VSOMEIP_SUB_PID}" "vSomeIP subscriber smoke process" 6
+  safe_wait_with_deadline "${RM_PID}" "vSomeIP routing manager smoke process" 6
+  exit 1
+fi
+(
+  export ADAPTIVE_AUTOSAR_VSOMEIP_SERVER_APP="adaptive_autosar_pubsub_provider"
+  run_with_timeout 6s "${PUB_BIN}" --period-ms=100
+) >"${VSOMEIP_PUB_LOG}" 2>&1 || true
 safe_wait_with_deadline "${VSOMEIP_SUB_PID}" "vSomeIP subscriber smoke process" 12
 safe_wait_with_deadline "${RM_PID}" "vSomeIP routing manager smoke process" 18
 
 VSOMEIP_HEARD_COUNT=$(grep -c "I heard seq=" "${VSOMEIP_SUB_LOG}" || true)
 if [[ "${VSOMEIP_HEARD_COUNT}" -lt 1 ]]; then
   echo "[ERROR] vSomeIP-profile smoke failed: subscriber did not receive samples." >&2
+  dump_log_tail "vSomeIP subscriber log" "${VSOMEIP_SUB_LOG}"
+  dump_log_tail "vSomeIP publisher log" "${VSOMEIP_PUB_LOG}"
+  dump_log_tail "vSomeIP routing manager log" "${VSOMEIP_RM_LOG}"
   exit 1
 fi
 
 if ! grep -Eqi "REGISTER EVENT|SUBSCRIBE|vsomeip|routing" "${VSOMEIP_PUB_LOG}" "${VSOMEIP_SUB_LOG}" "${VSOMEIP_RM_LOG}"; then
   echo "[ERROR] vSomeIP-profile smoke failed: expected routing/vsomeip logs were not found." >&2
+  dump_log_tail "vSomeIP subscriber log" "${VSOMEIP_SUB_LOG}"
+  dump_log_tail "vSomeIP publisher log" "${VSOMEIP_PUB_LOG}"
+  dump_log_tail "vSomeIP routing manager log" "${VSOMEIP_RM_LOG}"
   exit 1
 fi
 

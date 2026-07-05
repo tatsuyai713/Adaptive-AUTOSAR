@@ -116,13 +116,6 @@ namespace ara
                         }
                     });
 
-                app->subscribe(
-                    static_cast<vsomeip::service_t>(mConfig.ServiceId),
-                    static_cast<vsomeip::instance_t>(mConfig.InstanceId),
-                    static_cast<vsomeip::eventgroup_t>(mConfig.EventGroupId),
-                    static_cast<vsomeip::major_version_t>(mConfig.MajorVersion),
-                    static_cast<vsomeip::event_t>(mConfig.EventId));
-
                 // Register subscription status handler for async ACK from remote
                 app->register_subscription_status_handler(
                     static_cast<vsomeip::service_t>(mConfig.ServiceId),
@@ -162,6 +155,13 @@ namespace ara
                             notify(newState);
                         }
                     });
+
+                app->subscribe(
+                    static_cast<vsomeip::service_t>(mConfig.ServiceId),
+                    static_cast<vsomeip::instance_t>(mConfig.InstanceId),
+                    static_cast<vsomeip::eventgroup_t>(mConfig.EventGroupId),
+                    static_cast<vsomeip::major_version_t>(mConfig.MajorVersion),
+                    static_cast<vsomeip::event_t>(mConfig.EventId));
 
                 // Set kSubscribed as a fallback for local routing (no async ACK)
                 {
