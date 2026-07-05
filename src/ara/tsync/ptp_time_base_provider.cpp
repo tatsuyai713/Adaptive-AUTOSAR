@@ -17,6 +17,8 @@
 //       which returns paired (system, PHC, system) timestamps in a single call.
 //       If the ioctl is unavailable (ENOTTY / ENOTSUP), fall back to offset=0
 //       — this is correct when a PTP daemon disciplines CLOCK_REALTIME.
+// macOS: no PHC dynamic clockid API.  Treat an opened device as available and
+//        use offset=0, matching the daemon-disciplined system clock fallback.
 // ---------------------------------------------------------------------------
 
 #if defined(__QNX__)
@@ -77,7 +79,7 @@ namespace
     }
 } // namespace
 
-#else // Linux
+#elif defined(__linux__)
 
 /// PHC clock ID conversion macro (Linux kernel convention).
 #ifndef CLOCKFD
@@ -85,7 +87,7 @@ namespace
 #define FD_TO_CLOCKID(fd) ((~(clockid_t)(fd) << 3) | CLOCKFD)
 #endif
 
-#endif // __QNX__
+#endif // platform-specific PHC helpers
 
 namespace ara
 {
@@ -142,7 +144,7 @@ namespace ara
             }
             return core::Result<std::chrono::nanoseconds>::FromValue(
                 std::chrono::nanoseconds{_offsetNs});
-#else
+#elif defined(__linux__)
             // Linux: derive clockid_t from the PHC file descriptor.
             clockid_t _clkId = FD_TO_CLOCKID(mFd);
             struct timespec _tsPtp;
@@ -169,6 +171,10 @@ namespace ara
 
             return core::Result<std::chrono::nanoseconds>::FromValue(
                 std::chrono::nanoseconds{_offsetNs});
+#else
+            // macOS and other POSIX targets have no Linux PHC clockid mapping.
+            return core::Result<std::chrono::nanoseconds>::FromValue(
+                std::chrono::nanoseconds{0});
 #endif
         }
 
@@ -215,10 +221,12 @@ namespace ara
             // ENOTTY / ENOTSUP: device open but ioctl not supported — treat as available
             // (offset=0 fallback will be used in ReadPtpClock).
             return (errno == ENOTTY || errno == ENOTSUP);
-#else
+#elif defined(__linux__)
             clockid_t _clkId = FD_TO_CLOCKID(mFd);
             struct timespec _ts;
             return clock_gettime(_clkId, &_ts) == 0;
+#else
+            return true;
 #endif
         }
 

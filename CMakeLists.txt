@@ -62,22 +62,22 @@ set(build_tests ${build_tests_BACKUP} CACHE BOOL "" FORCE)
 # Platform patches for cross-compiled third-party dependencies
 ########################################################################
 
-# --- Async-BSD-Socket-Lib: replace Linux epoll poller with POSIX poll() on QNX ---
+# --- Async-BSD-Socket-Lib: replace Linux epoll poller with POSIX poll() on platforms without epoll ---
 FetchContent_GetProperties(Async-BSD-Socket-Lib SOURCE_DIR _absock_src)
-if(CMAKE_SYSTEM_NAME STREQUAL "QNX" AND TARGET async_bsd_socket_lib)
+if((CMAKE_SYSTEM_NAME STREQUAL "QNX" OR APPLE) AND TARGET async_bsd_socket_lib)
   # Remove the original epoll-based poller.cpp and use the POSIX poll() version
   get_target_property(_absock_sources async_bsd_socket_lib SOURCES)
   list(FILTER _absock_sources EXCLUDE REGEX "poller\\.cpp$")
   list(APPEND _absock_sources "${CMAKE_SOURCE_DIR}/qnx/patches/poller_posix.cpp")
   set_target_properties(async_bsd_socket_lib PROPERTIES SOURCES "${_absock_sources}")
-  message(STATUS "QNX: Replaced async_bsd_socket_lib epoll poller with POSIX poll() backend")
+  message(STATUS "${CMAKE_SYSTEM_NAME}: Replaced async_bsd_socket_lib epoll poller with POSIX poll() backend")
 endif()
 
-# --- OBD-II-Emulator: exclude from QNX builds (uses Linux signalfd/termios2) ---
+# --- OBD-II-Emulator: exclude from non-Linux builds (uses Linux signalfd/termios2) ---
 FetchContent_GetProperties(OBD-II-Emulator SOURCE_DIR _obdii_src)
-if(CMAKE_SYSTEM_NAME STREQUAL "QNX" AND TARGET obd_ii_emulator)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" AND TARGET obd_ii_emulator)
   set_target_properties(obd_ii_emulator PROPERTIES EXCLUDE_FROM_ALL TRUE)
-  message(STATUS "QNX: Excluded obd_ii_emulator (uses Linux-only signalfd/termios2)")
+  message(STATUS "${CMAKE_SYSTEM_NAME}: Excluded obd_ii_emulator (uses Linux-only signalfd/termios2)")
 endif()
 
 # GoogleTest is needed for this project's tests
@@ -1239,7 +1239,7 @@ if(AUTOSAR_AP_BUILD_PLATFORM_APP)
   )
 
   # OBD-II emulator only available on Linux (uses signalfd/termios2)
-  if(NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(adaptive_autosar PRIVATE AUTOSAR_HAS_OBD_EMULATOR)
     target_link_libraries(adaptive_autosar obd_ii_emulator)
   endif()

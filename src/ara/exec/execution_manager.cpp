@@ -13,6 +13,8 @@
 
 #if defined(__QNX__) || !defined(__linux__)
 #include <spawn.h>  // posix_spawn (POSIX, preferred on QNX)
+
+extern char **environ;
 #endif
 
 namespace ara

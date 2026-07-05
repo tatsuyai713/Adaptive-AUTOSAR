@@ -20,6 +20,36 @@ VSOMEIP_PREFIX="/opt/vsomeip"
 ICEORYX_PREFIX="/opt/iceoryx"
 CYCLONEDDS_PREFIX="/opt/cyclonedds"
 
+detect_jobs() {
+  if command -v nproc >/dev/null 2>&1; then
+    nproc
+  elif [[ "$(uname -s)" == "Darwin" ]]; then
+    sysctl -n hw.ncpu
+  else
+    echo 4
+  fi
+}
+
+prepare_build_dir() {
+  local build_path="$1"
+  local cache_file="${build_path}/CMakeCache.txt"
+
+  if [[ ! -f "${cache_file}" ]]; then
+    return
+  fi
+
+  local cached_source=""
+  cached_source="$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "${cache_file}" | head -n 1)"
+
+  if [[ -n "${cached_source}" && "${cached_source}" != "${REPO_ROOT}" ]]; then
+    echo "[INFO] Removing stale CMake build directory:"
+    echo "       build_dir=${build_path}"
+    echo "       cached_source=${cached_source}"
+    echo "       current_source=${REPO_ROOT}"
+    rm -rf "${build_path}"
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --prefix)
@@ -135,6 +165,9 @@ if [[ "${INSTALL_MIDDLEWARE}" == "ON" ]]; then
   "${SCRIPT_DIR}/install_middleware_stack.sh" "${middleware_args[@]}"
 fi
 
+BUILD_PATH="${REPO_ROOT}/${BUILD_DIR}"
+prepare_build_dir "${BUILD_PATH}"
+
 cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
@@ -149,7 +182,7 @@ cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
   -DICEORYX_PREFIX="${ICEORYX_PREFIX}" \
   -DCYCLONEDDS_PREFIX="${CYCLONEDDS_PREFIX}"
 
-cmake --build "${REPO_ROOT}/${BUILD_DIR}" -j"$(nproc)"
+cmake --build "${BUILD_PATH}" -j"$(detect_jobs)"
 
 # Create install prefix if it doesn't exist (may need sudo for /opt).
 if [[ ! -d "${INSTALL_PREFIX}" ]]; then
@@ -162,7 +195,7 @@ if [[ ! -d "${INSTALL_PREFIX}" ]]; then
   fi
 fi
 
-cmake --install "${REPO_ROOT}/${BUILD_DIR}"
+cmake --install "${BUILD_PATH}"
 
 echo "[OK] Installed AUTOSAR AP runtime into: ${INSTALL_PREFIX}"
 echo "[INFO] Installed package config:"

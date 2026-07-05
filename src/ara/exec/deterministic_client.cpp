@@ -5,7 +5,7 @@
 #include <thread>
 #if defined(__QNX__)
 #include <sys/neutrino.h>  // ThreadCtl, _NTO_TCTL_RUNMASK
-#else
+#elif defined(__linux__)
 #include <sched.h>
 #endif
 #include "./deterministic_client.h"
@@ -87,8 +87,9 @@ namespace ara
                 mLifecycleState = ActivationReturnType::kRun;
                 break;
             case ActivationReturnType::kRun:
+            case ActivationReturnType::kWait:
             case ActivationReturnType::kTerminate:
-                // kRun stays in kRun; kTerminate stays in kTerminate
+                // Stable states stay unchanged.
                 break;
             }
 
@@ -186,7 +187,7 @@ namespace ara
                 }
             }
             int rc = ThreadCtl(_NTO_TCTL_RUNMASK, reinterpret_cast<void *>(static_cast<uintptr_t>(runmask)));
-#else
+#elif defined(__linux__)
             // Linux: sched_setaffinity with cpu_set_t
             cpu_set_t cpuSet;
             CPU_ZERO(&cpuSet);
@@ -198,6 +199,11 @@ namespace ara
                 }
             }
             int rc = sched_setaffinity(0, sizeof(cpuSet), &cpuSet);
+#else
+            // macOS and other POSIX targets do not expose a portable thread
+            // affinity API equivalent to sched_setaffinity().
+            (void)cpuCores;
+            int rc = 0;
 #endif
             if (rc != 0)
             {
