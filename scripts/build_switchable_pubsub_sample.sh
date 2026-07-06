@@ -334,6 +334,7 @@ unset ARA_COM_EVENT_BINDING
 unset ARA_COM_PREFER_SOMEIP
 export VSOMEIP_CONFIGURATION="${AUTOSAR_AP_PREFIX}/configuration/vsomeip-rpi.json"
 export VSOMEIP_ROUTING="autosar_vsomeip_routing_manager"
+export ADAPTIVE_AUTOSAR_ENABLE_VSOMEIP_RUNTIME="1"
 VSOMEIP_PUB_LOG="${BUILD_DIR}/switchable_vsomeip_pub.log"
 VSOMEIP_SUB_LOG="${BUILD_DIR}/switchable_vsomeip_sub.log"
 VSOMEIP_RM_LOG="${BUILD_DIR}/switchable_vsomeip_routing_manager.log"
